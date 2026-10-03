@@ -17,6 +17,8 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A7  | Technical / code   | PostgreSQL `job_outbox` records dispatch requests with application changes; retries must be safe.               |
 | A8  | Technical / code   | Clerk handles authentication; the backend enforces application permissions.                                  |
 | A10 | Technical / code   | Python for the backend API and background workers.                                                           |
+| A11 | Technical / code   | FastAPI for the Python backend HTTP API.                                                                      |
+| A12 | Technical / code   | Psycopg 3 for PostgreSQL access and Alembic for schema migrations.                                              |
 
 ### A1 — arrangement of decisions: closed
 
@@ -282,11 +284,47 @@ Status: accepted by alayala on October 3, 2026. Language selected; implementatio
 
 **Tradeoff and verification:** BullMQ's current Python development source exposes `setGlobalConcurrency`; that is not evidence that a chosen release works correctly across workers. Pin a compatible release, verify two workers respect a queue-wide limit of one active job, and exercise worker restart and duplicate-safe recovery. Verify DataFusion/PyArrow decimal compatibility and SQL isolation separately. No dependency installation or runtime test has run for this decision.
 
-**Still open:** Python version; API framework (FastAPI is recommended, not accepted); DataFusion binding/version and PyArrow version; BullMQ/Redis versions; PostgreSQL driver and migration tool; frontend; authentication integration; API contracts; SQL subset and table-reference detection; execution and row limits.
+**Still open:** Python version; DataFusion binding/version and PyArrow version; BullMQ/Redis versions; frontend; authentication integration; API contracts; SQL subset and table-reference detection; execution and row limits. A11 subsequently selects FastAPI for the API framework; A12 selects Psycopg 3 and Alembic for PostgreSQL access and migrations.
 
 **History:** Resolves the backend-language question left open in A4, A6, A8, and the October 3 handoff. It does not reopen A9 or authorize implementation or Git publication.
 
 Sources: alayala's acceptance in this conversation; [DataFusion Python concepts](https://datafusion.apache.org/python/user-guide/basics.html); [BullMQ Python source](https://github.com/taskforcesh/bullmq/blob/master/python/bullmq/queue.py). Supporting record: [Python decision session](ai/sessions/2026-10-03-python-backend-selection.md).
+
+### A11 — FastAPI for the backend HTTP API: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Framework selected; not installed or runtime-tested.
+
+**Choice and reason:** Use FastAPI for A10's Python HTTP API. Its request validation and generated OpenAPI documentation support the required catalog, preview, query, and Admin contracts. This selects the framework, not the endpoint schemas or security policy.
+
+**Flow and failure example:** A preview request passes field validation and backend identity/permission checks before accessing a permitted published dataset. The API returns JSON under the eventual response contract. A Viewer requesting generator detail must be denied before DataFusion execution. FastAPI validates request structure; Trinity must implement Clerk verification, role enforcement, SQL authorization, and resource limits.
+
+**Alternative not selected:** Assemble request validation and API documentation separately around a smaller HTTP framework. FastAPI provides these facilities together; no comparative performance claim is made.
+
+**Tradeoff and boundaries:** Request/response models must stay aligned with the API contract, including exact decimal serialization. Framework defaults are not proof of correct authentication or SQL isolation. Refresh work continues through PostgreSQL outbox dispatch to BullMQ workers under A6–A7; selecting FastAPI does not replace that path with in-process background tasks.
+
+**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, Clerk authentication, role denials, and error handling. The query binding/version, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool.
+
+Source: alayala's acceptance in this conversation; [FastAPI official features](https://fastapi.tiangolo.com/features/). Supporting record: [backend selection session](ai/sessions/2026-10-03-python-backend-selection.md#fastapi-follow-up).
+
+### A12 — Psycopg 3 and Alembic for PostgreSQL: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Tools selected; dependencies and migrations not installed or executed.
+
+**Choice and reason:** Use Psycopg 3 for PostgreSQL application-state access and Alembic for versioned schema migrations. Psycopg's explicit transaction blocks fit A7/A9's atomic state changes. Alembic tracks ordered schema revisions so the database definition can be reproduced and evolved with the application.
+
+**Flow and failure example:** An authorized Admin refresh request inserts `refresh_runs` and `job_outbox` in one PostgreSQL transaction. If the outbox insert fails, both inserts roll back; the API must not report the request as accepted. After commit, the dispatcher can enqueue the durable request under A7. Alembic supplies the schema migrations before the application uses these tables; it does not execute user outage queries.
+
+**Alternative not selected:** Build a custom migration runner around manually ordered SQL files. Alembic provides revision tracking without maintaining that mechanism ourselves. The selection does not claim that other PostgreSQL drivers cannot implement the transaction contract.
+
+**Tradeoff and scope:** Alembic adds SQLAlchemy as a dependency. This does not select ORM models for application queries; explicit parameterized SQL through Psycopg remains the proposed access style. Migration code still needs review and testing. Outage rows and user SQL remain in DataFusion over published Parquet under A4.
+
+**Verification still required:** Pin compatible Python, Psycopg, Alembic, SQLAlchemy, and PostgreSQL versions. Create and test migrations against A9, including constraints and clean-database setup. Prove run/outbox rollback, duplicate-safe requests, publication transactions, and connection cleanup. Pooling and sync/async execution details remain open.
+
+Sources: alayala's acceptance in this conversation; [Psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html); [Alembic documentation](https://alembic.sqlalchemy.org/en/latest/) and [dependencies](https://alembic.sqlalchemy.org/en/latest/front.html#dependencies). Supporting record: [database tools follow-up](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up).
 
 ## Finalized specifications
 

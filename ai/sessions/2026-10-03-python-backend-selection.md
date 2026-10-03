@@ -25,3 +25,29 @@ No application code, dependency installation, database migration, EIA request, r
 FastAPI is recommended for request validation and generated OpenAPI documentation, but not selected. Python and library versions, the PostgreSQL driver/migration tool, frontend, token/role details, catalog/preview/query/refresh contracts, supported SQL, table-reference detection, and limits remain open.
 
 Next: [ME] accept or reject FastAPI for the backend HTTP API.
+
+## FastAPI follow-up
+
+[ME] Alayala accepted FastAPI. [YOU] AI recorded [A11](../../DECISIONS.md#a11--fastapi-for-the-backend-http-api-closed), updated the current README and agent guidance, and retained the initial Python decision above as history. The existing uncommitted A10 changes were preserved. API request validation and documentation are framework facilities; authentication, authorization, SQL restrictions, and decimal serialization still need implementation and tests. Refresh execution remains in BullMQ workers.
+
+The next proposed pair is Psycopg 3 for PostgreSQL access and Alembic for versioned schema migrations. A7/A9 require the refresh run and outbox record to commit together or both roll back. Psycopg exposes explicit transaction blocks. Alembic manages migration revisions and brings SQLAlchemy as a dependency; that does not itself select ORM models for application queries. These are recommendations, not accepted choices or installed packages. Sources: [Psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html), [Alembic](https://alembic.sqlalchemy.org/en/latest/), and [its dependencies](https://alembic.sqlalchemy.org/en/latest/front.html#dependencies).
+
+Checks passed: diff review, `git diff --check`, 65 relative links/anchors, eleven unique decision headings, and whitespace checks in all five edited documents. No runtime checks, dependency installation, commits, or remote changes.
+
+Next: [ME] accept or reject Psycopg 3 plus Alembic for PostgreSQL access and schema migrations.
+
+## Backend decisions branch and commit slices
+
+[ME] Alayala requested one continuing branch for backend decisions and architecture, with the current changes committed in two slices. [YOU] AI created `docs/backend-decisions-architecture` from `docs/vault-session-handoff-20261003` at `bc5969d`, preserving its existing handoff history. The two slices are Python selection (A10) and FastAPI selection (A11), each with its matching guidance and evidence notes. This continues the same session; the earlier no-commit statements describe the discussion before this authorization.
+
+Keep subsequent backend decisions on this branch until the work is finished. This request does not accept Psycopg/Alembic, authorize implementation, or request a push or PR. The next decision remains the PostgreSQL driver and migration tool.
+
+## Database tools follow-up
+
+[ME] Alayala subsequently accepted Psycopg 3 and Alembic while the two-commit task was in progress. [YOU] AI recorded [A12](../../DECISIONS.md#a12--psycopg-3-and-alembic-for-postgresql-closed) and aligned current guidance. The Python slice was already committed as `2812313`; the second slice includes FastAPI and the newly accepted database tools. Earlier references to unaccepted tools describe the preceding discussion.
+
+This selects the driver and migration tool, not dependency versions, an ORM, database schema implementation, or a deployment. No dependencies were installed, migrations executed, or runtime behavior verified. The branch remains the place for the unfinished backend/API/security decisions.
+
+Checks passed before the second commit: 69 relative links/anchors, twelve unique decision headings, unchanged A9 and required-topic tracking, the exact five intended documentation files, and `git diff --check`. The first staged slice separately passed 61 links/anchors and ten unique decision headings.
+
+Next: [YOU] review compatible dependency versions before proposing pins; complete the API/security contract afterward.
