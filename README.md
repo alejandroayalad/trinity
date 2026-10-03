@@ -48,13 +48,13 @@ uv run --locked python -m unittest discover -s tests -v
 uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000
 ```
 
-The health response is `{"status":"ok"}`. It reports process liveness, not data readiness. No EIA key, login, database, Redis or S3 connection is needed for this scaffold.
+The health response is `{"status":"ok"}`. It reports process liveness, not data readiness. The health endpoint requires no EIA key, login, database, Redis or S3 connection. Trusted connector code can call `trinity.config.load_eia_settings()` to read `EIA_API_KEY` from the process environment; see [EIA configuration](backend/README.md#eia-configuration).
 
 | Required README content | Status |
 |---|---|
-| Prerequisites, configuration, and local startup | Python scaffold installation verified; full application/Compose startup remains pending. `backend/.env.example` reserves the future EIA key. |
+| Prerequisites, configuration, and local startup | Backend dependency resolution and locked installation verified; full application/Compose startup remains pending. `backend/.env.example` documents the environment-based EIA key loader. |
 | Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
-| Automated test command and results | Two scaffold smoke tests passed on CPython 3.14.8; product acceptance tests remain pending. |
+| Automated test command and results | Six health/configuration tests passed on CPython 3.14.8; product acceptance tests remain pending. |
 | Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. A19 selects three total attempts for temporary external failures with one- and three-second waits within the operation deadline; denied access, invalid SQL and failed validation are not retried. Refresh-stage deadlines and runtime checks remain pending. Preserve the last valid publication. |
 | Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. Historical source exports and scripts are still absent, so findings are not yet reproducible from a clean clone. |
 
@@ -86,7 +86,7 @@ The health response is `{"status":"ok"}`. It reports process liveness, not data 
 
 One shared application/account is in scope. There is no selected multi-organization or registration flow. Selecting DataFusion does not select Rust. The business guide's hypothetical examples are not EIA findings.
 
-The scaffold includes package metadata, a lockfile, a health endpoint, two smoke tests and `backend/.env.example`. The final submission still needs product source code, acceptance tests, implemented migrations, and self-contained data reproduction. The entity-relationship diagrams are now specified in the data contract. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
+The scaffold includes package metadata, a dependency lockfile, a health endpoint, an environment-based EIA key loader, six tests and `backend/.env.example`. The final submission still needs product source code, acceptance tests, implemented migrations, and self-contained data reproduction. The entity-relationship diagrams are now specified in the data contract. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
 
 The private repository is `alejandroayalad/trinity`. `EIA API KEY.md`, `First Aproximation.md`, and `IMPLEMENTATION BEFORE.md` are excluded. The challenge PDF, business guide, original analysis scripts, and bulk exports remain local. References to these items identify historical sources, not included artifacts. Historical session checks have not been rerun by this import.
 

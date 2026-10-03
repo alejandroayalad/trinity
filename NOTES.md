@@ -176,3 +176,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Minimum Python project — October 3, 2026
 
 [ME] Alayala requested the minimum Python project in GitHub. [YOU] AI created the A15 package scaffold, a FastAPI health endpoint, two smoke tests, pinned minimal dependencies, uv.lock, an environment example and setup instructions. Locked installation, tests and package builds passed on Python 3.14.8 with uv 0.12.23. Human code review and all product features remain pending. The [implementation session](ai/sessions/2026-10-03-minimum-python-project.md) records the host-tool correction, test-client warning, scope and checks.
+
+## Dependencies and EIA environment — October 3, 2026
+
+[ME] Alayala requested dependency resolution and environment-based EIA credentials. [YOU] AI resolved and installed the selected backend packages, regenerated uv.lock, and added an explicit EIA key loader with safe missing-value errors and masked secret output. Six tests, package compatibility checks and backend-module imports passed on Python 3.14.8. No live EIA call was made; tests used synthetic keys. Clerk remains omitted following the local-login choice. See the [follow-up session](ai/sessions/2026-10-03-dependencies-and-eia-environment.md) for scope and remaining verification.
