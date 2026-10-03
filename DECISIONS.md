@@ -21,6 +21,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A12 | Technical / code   | Psycopg 3 for PostgreSQL access and Alembic for schema migrations.                                              |
 | A13 | Technical / code   | PyArrow for Parquet preparation, datafusion-python for queries, and SQLGlot for SQL inspection.                 |
 | A14 | Technical / code   | Application-owned persisted outage data in S3; exploration does not fetch live EIA data.                       |
+| A15 | Technical / code   | Feature-based backend package with separate query execution and explicit ownership, validation, and recovery. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -367,6 +368,28 @@ Status: clarified and selected by alayala on October 3, 2026; not implemented.
 **History:** Withdraws review R1's disk-only conclusion. This is alayala's clarified project interpretation; the AI mistake and correction belong in Engineering Notes, not the EIA data findings.
 
 Evidence: the supplied `Backend Stack.md`, alayala's correction, and the [review session](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). A4 and A9 remain authoritative for state/query separation and publication invariants.
+
+### A15 — Backend structure and responsibility boundaries: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. File structure and the five reviewed refinements selected; implementation pending.
+
+**Choice:** Use alayala's feature-based tree at `backend/src/trinity/`, documented in [docs/backend.md](docs/backend.md). Preserve its `auth`, `catalog`, `queries`, `refresh`, `publication`, `settings`, `adapters`, `workers`, `connector`, and `contracts` responsibilities. API, background workers, and isolated query execution have separate entrypoints in the shared package. Add `workers/recovery.py`.
+
+**Accepted refinements:** The API supplies a pinned publication and permitted dataset set; runtime SQL policy checks all real table references before file registration. The launcher/supervisor enforces process isolation, deadlines, and termination in addition to runtime limits. Services own transactions shared by repositories/outbox helpers; refresh persistence owns candidate versions, artifacts, and validation results. Connector validation covers the exact written files and frozen manifest. A periodic recovery worker delegates durable unfinished-work recovery to feature services.
+
+**Reason:** Keep HTTP contracts, feature rules, persistence, external integrations, and process entrypoints distinguishable while sharing one implementation of the application rules. These boundaries give A9's publication, validation, and recovery requirements explicit owners.
+
+**Alternative not selected:** AI's earlier broad top-level `api/`, `storage/`, and `state/` grouping. Alayala's feature grouping keeps each capability's router, service, repository where applicable, and public schemas together. Also reject relying only on runtime-local timeout/config code for isolation or source-row checks for publication readiness.
+
+**Flow and failure example:** API verifies identity, builds the permitted dataset set, pins one publication, and hands the request to the query runtime. Runtime rejects an unauthorized underlying table before registering files. For refresh, one service transaction saves run/outbox; workers prepare and validate the exact candidate, then publish under A9. If a queued job is lost after dispatch acknowledgment, the recovery worker invokes the durable recovery path.
+
+**Tradeoff and remaining work:** Separate query execution requires a bounded internal protocol and process supervision. Shared package imports must not initialize privileged API/worker state in the runtime. Exact dependency versions, HTTP/SQL/authentication contracts, IPC transport, process topology, access controls, and limits remain open. The selected structure does not prove isolation or runtime correctness.
+
+**Verification required:** Implement and test the responsibilities and failure scenarios listed in [docs/backend.md](docs/backend.md#contracts-and-verification-still-required). No application skeleton or runtime check is included in this documentation decision.
+
+Evidence: alayala's supplied tree and acceptance of the five refinements; [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review). Acceptance and documentation checks: [structure session](ai/sessions/2026-10-03-backend-structure-accepted.md).
 
 ## Finalized specifications
 

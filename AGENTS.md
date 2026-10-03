@@ -38,7 +38,7 @@ A2 requires scheduled and manual Admin refreshes. A3 requires initial shared-acc
 
 Read A9 and `docs/schema.md` for the finalized data contract, keys, metric fields, validation, and publication invariants. A10 selects Python for the backend API and workers; A11 selects FastAPI for the HTTP API; A12 selects Psycopg 3 and Alembic for PostgreSQL access and migrations. Frontend, versions, SQL subset, authentication implementation, concrete retry/concurrency limits, and deployment still need decisions. Do not silently choose them because a library example uses a particular language or schema. A9 is an AI-authored specification under delegated work, not proof of user verification or runtime correctness.
 
-A13 selects PyArrow, datafusion-python, and SQLGlot. A14 retains application-owned S3 storage: “locally” means persisted data under application control, independent of live EIA requests during exploration. Do not reintroduce the withdrawn disk-only interpretation. Folder structure remains a proposal until selected.
+A13 selects PyArrow, datafusion-python, and SQLGlot. A14 retains application-owned S3 storage: “locally” means persisted data under application control, independent of live EIA requests during exploration. Do not reintroduce the withdrawn disk-only interpretation. A15 accepts the feature-based backend structure and five responsibility refinements in `docs/backend.md`; read it before backend implementation or architecture changes. The file tree is selected but not implemented.
 
 ## Evidence and data
 

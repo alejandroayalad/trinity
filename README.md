@@ -4,7 +4,7 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [stack clarification and folder proposal](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack), following the [backend selection](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up). [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: settle the proposed folder structure; dependency versions and the API/security contract remain open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: define the API/security contracts; dependency versions remain open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 ## Intended behavior
 
@@ -29,7 +29,7 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Python is selected for the backend API and workers, with FastAPI for the HTTP API and Psycopg 3/Alembic for PostgreSQL access/migrations. Frontend, component versions, SQL/authentication details, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A14.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Frontend, component versions, SQL/authentication details, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A15.
 
 ## Setup, running, and tests
 
@@ -60,6 +60,7 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
+| [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
 | [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
 
@@ -75,9 +76,7 @@ Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the acc
 
 ## Delivery structure and slices
 
-Keep the required documents at the root, the data contract in `docs/schema.md`, and supporting records in `ai/sessions/`. Create `connector/`, `backend/`, `frontend/`, `scripts/`, and `tests/` when their implementation or evidence is ready. These are proposed responsibility boundaries; no language or framework is selected by the folder names. Empty implementation folders and unverified run commands are not included.
-
-The [current folder proposal](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#flow-and-provisional-folder-responsibilities) refines those responsibility boundaries into one Python package inside `backend/`, including its connector, with separate API and worker entrypoints sharing code. It remains proposed; no folder implementation is authorized by accepting the stack.
+Keep required documents at the root, the data contract in `docs/schema.md`, backend architecture in `docs/backend.md`, and supporting records in `ai/sessions/`. A15 selects the feature tree in `backend/src/trinity/`, with backend migrations and tests beside `src/`. It includes the connector and separate API, worker, and query-runtime entrypoints. This supersedes the earlier tentative top-level connector grouping. `frontend/` remains separate; add supporting scripts only when needed. The selected tree is documented, not yet implemented. Empty implementation folders and unverified run commands are not included.
 
 1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
 2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.
