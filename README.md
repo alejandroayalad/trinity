@@ -1,0 +1,80 @@
+# Trinity — Arkham Outage Explorer
+
+Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore locally stored U.S. nuclear outage data.
+
+**Status: data analysis and documentation, October 2, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
+
+Current handoff: [repository import](ai/sessions/2026-10-02-trinity-repository-import.md). A1–A8 remain accepted. Next: review the [proposed application models](ai/sessions/2026-10-02-clerk-and-application-models.md) and close the implementation contracts. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+
+## Intended behavior
+
+| Role | Access |
+|---|---|
+| Viewer | National trends only. No facility or generator detail through any product path. |
+| Analyst | All analytical datasets, filtered previews, and permitted read-only SQL. |
+| Admin | Analyst access, manual refresh, shared settings, and publication approval when that mode is selected. |
+
+Scheduled refreshes and manual Admin refreshes use the same validation process. Initial account setup runs once for the shared account. The schedule defaults to daily, with an Admin-selected time and timezone. Publication is automatic after validation or requires Admin approval. Admins can change these settings later. Failed required checks block publication in either mode.
+
+## Selected architecture direction
+
+| Component | Responsibility |
+|---|---|
+| Connector and preparation | Fetch the three EIA routes, validate records, and produce local Parquet datasets. |
+| PostgreSQL | Store settings, refresh outcomes, approvals, and the published data version. |
+| Apache DataFusion | Query the published Parquet datasets. Outage rows are not copied into PostgreSQL for user queries. |
+| BullMQ and Redis | Run the full refresh pipeline in background workers with bounded concurrency; PostgreSQL outbox records preserve dispatch requests. |
+| Clerk | Authenticate users; the backend enforces application permissions. |
+| Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
+
+These are responsibilities, not a deployment diagram. Backend language, web frameworks, component versions, and the publication mechanism remain open. See [DECISIONS.md](DECISIONS.md), A1–A8.
+
+## Setup, running, and tests
+
+Setup and run commands are not available yet. Do not treat this draft as a runnable submission. Add commands only after they work in the project environment.
+
+| Required README content | Status |
+|---|---|
+| Prerequisites, configuration, and local startup | Pending implementation and verification. The EIA key must come from an environment variable. |
+| Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
+| Automated test command and results | No project tests or test results yet. |
+| Connector failures: credentials, network, and bad data | Required policy details remain open. A2 requires preserving the last valid published version. |
+| Data reproduction commands and schema diagram | Historical real-row checks and reproduction commands are recorded in FINDINGS and the linked sessions. Their source exports and scripts are not included in this documentation import, so they are not yet reproducible from a clean clone. The schema diagram remains open. |
+
+## Documents required by Arkham
+
+| File | Purpose |
+|---|---|
+| [README.md](README.md) | Setup, users, architecture, assumptions, limits, and document index. |
+| [DECISIONS.md](DECISIONS.md) | Accepted choices, alternatives, reasons, and unresolved required topics. |
+| [FINDINGS.md](FINDINGS.md) | Reconciliation, real anomalies, and reproducible evidence. |
+| [NOTES.md](NOTES.md) | Engineering Notes: human/AI contributions, AI errors, and verification. Arkham also permits these notes inside README. |
+
+## Documents selected by alayala
+
+| File | Purpose |
+|---|---|
+| [PRODUCT.md](PRODUCT.md) | One-page product scope and selected additions. |
+| [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
+| [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
+| [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
+
+## Assumptions and limits
+
+One shared application/account is in scope. There is no selected multi-organization or registration flow. Selecting DataFusion does not select Rust. The business guide's hypothetical examples are not EIA findings.
+
+The final submission still needs source code, automated tests, `.env.example`, an entity-relationship diagram, and self-contained data reproduction. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
+
+The private repository is `alejandroayalad/trinity`. `EIA API KEY.md`, `First Aproximation.md`, and `IMPLEMENTATION BEFORE.md` are excluded. The challenge PDF, business guide, original analysis scripts, and bulk exports remain local. References to these items identify historical sources, not included artifacts. Historical session checks have not been rerun by this import.
+
+Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the accepted decisions in this folder.
+
+## Delivery structure and slices
+
+Keep the required documents at the root and supporting records in `ai/sessions/`. Create `connector/`, `backend/`, `frontend/`, `scripts/`, `tests/`, and `docs/schema.md` when their implementation or evidence is ready. These are proposed responsibility boundaries; no language or framework is selected by the folder names. Empty implementation folders and unverified run commands are not included.
+
+1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
+2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.
+3. Close data, validation, SQL, and publication contracts before implementing the affected behavior.
+4. Implement and verify working slices: extraction/model/metric, authenticated catalog and preview, restricted SQL, refresh/publication/settings, and the complete interface. Update relevant decisions, findings, and Engineering Notes with each slice.
+5. Verify a clean checkout using the README, test all three personas, reproduce findings, and rehearse the live explanation before submission.
