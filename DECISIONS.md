@@ -22,6 +22,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A13 | Technical / code   | PyArrow for Parquet preparation, datafusion-python for queries, and SQLGlot for SQL inspection.                 |
 | A14 | Technical / code   | Application-owned persisted outage data in S3; exploration does not fetch live EIA data.                       |
 | A15 | Technical / code   | Feature-based backend package with separate query execution and explicit ownership, validation, and recovery. |
+| A17 | Technical / code   | Exact dependency versions and locked installation/update policy; compatibility checks remain pending. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -390,6 +391,38 @@ Status: accepted by alayala on October 3, 2026. File structure and the five revi
 **Verification required:** Implement and test the responsibilities and failure scenarios listed in [docs/backend.md](docs/backend.md#contracts-and-verification-still-required). No application skeleton or runtime check is included in this documentation decision.
 
 Evidence: alayala's supplied tree and acceptance of the five refinements; [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review). Acceptance and documentation checks: [structure session](ai/sessions/2026-10-03-backend-structure-accepted.md).
+
+### A17 — Dependency versions and update policy: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Exact versions selected; installation, dependency resolution, advisory review, and runtime compatibility remain unverified.
+
+**Choice:** Use CPython **3.14.8**, regular GIL build, with `requires-python = ">=3.14,<3.15"`, and **uv 0.12.23**. Record the Python patch in `.python-version` and deployment configuration. Use the exact package versions below and a committed `uv.lock` covering transitive dependencies and hashes when implementation begins. CI must install with `uv sync --locked`. Use minimal extras rather than the full FastAPI standard bundle.
+
+| Responsibility | Approved package versions | Reason |
+|---|---|---|
+| HTTP and schema validation | [fastapi 0.142.2](https://pypi.org/project/fastapi/0.142.2/), [uvicorn 0.54.0](https://pypi.org/project/uvicorn/0.54.0/), [pydantic 2.13.5](https://pypi.org/project/pydantic/2.13.5/), [pydantic-settings 2.15.0](https://pypi.org/project/pydantic-settings/2.15.0/) | Selected API plus server, typed payloads, and environment configuration. |
+| PostgreSQL runtime | [psycopg 3.3.6](https://pypi.org/project/psycopg/3.3.6/) with `binary` extra; [psycopg-pool 3.3.3](https://pypi.org/project/psycopg-pool/3.3.3/) | A12 driver and bounded connection reuse. |
+| Migrations | [alembic 1.20.0](https://pypi.org/project/alembic/1.20.0/), [SQLAlchemy 2.1.3](https://pypi.org/project/SQLAlchemy/2.1.3/) | Alembic requires SQLAlchemy; restrict its use to migration infrastructure, preserving direct Psycopg repositories. |
+| Analytical execution | [pyarrow 25.0.1](https://pypi.org/project/pyarrow/25.0.1/), [datafusion 54.0.0](https://pypi.org/project/datafusion/54.0.0/), [sqlglot 30.21.0](https://pypi.org/project/sqlglot/30.21.0/) | A13 stack; install name is `datafusion`, not `datafusion-python`. |
+| Queue | [bullmq 3.3.0](https://pypi.org/project/bullmq/3.3.0/) | Python package under A6; its metadata requires `redis==7.4.1`, `msgpack==1.2.3`, `semver==3.1.0`, and `croniter==2.0.7`. These are package versions, not the Redis server version. |
+| Identity and external HTTP | [clerk-backend-api 7.0.0](https://pypi.org/project/clerk-backend-api/7.0.0/), [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Official identity adapter; reuse HTTPX for EIA HTTP and bounded timeouts rather than adding a second HTTP client. |
+| Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. |
+
+Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server version is separate from BullMQ's `redis` Python client version. Exact deployment images/digests, frontend packages, and cloud resources remain outside this selection.
+
+**Reason:** Repeatable installations let developers reproduce behavior and review dependency changes. The libraries extend the stack selected in A10–A13 with the HTTP server, configuration, identity, connection pool, HTTP client, and S3 adapters required by those responsibilities. SQLAlchemy supports Alembic migrations; A12's application repositories continue to use Psycopg directly.
+
+**Rejected alternative:** Floating latest packages or images, development-branch dependencies, and automatic major-version upgrades. These can change behavior without a reviewed application change. Update pins and the lockfile deliberately, check advisories, prioritize security fixes, and run affected regression checks.
+
+**Flow and failure example:** A developer installs the selected Python release and committed lockfile. If project requirements and the lock disagree, the locked install fails rather than silently selecting another SQL parser. A parser upgrade must pass the SQL-policy regression corpus before deployment.
+
+**Evidence and verification:** The earlier October 3 public release/metadata lookup established the listed versions and declared constraints. DataFusion 54.0.0 requires PyArrow >=22 for Python >=3.14; 25.0.1 satisfies that declaration. Clerk 7.0.0 requires Pydantic >=2.11.2 and HTTPX >=0.28.1; the selected versions meet those declarations. These comparisons do not resolve the full dependency graph or prove security, native-wheel availability, decimal behavior, authentication, queue concurrency, or recovery. No packages, lockfile, database, or cloud resources have been installed or created. Run resolver, advisory, platform, and integration checks during implementation; report a conflict rather than silently changing an approved pin.
+
+**Scope and history:** This accepts the dependency versions and repeatability policy from the earlier proposal. Alayala explicitly keeps the API and security contracts under review. SQL restrictions, Clerk role/session lookup behavior, async/pool execution choices and their numeric limits, scheduling details, and process isolation are not approved by this dependency decision. The version numbers are unchanged from the reviewed proposal. Alayala also authorized committing and pushing the dependency update on the current branch; no API/security publication, implementation, PR, or merge was requested.
+
+Sources: [Python 3.14.8](https://www.python.org/downloads/release/python-3148/), [uv 0.12.23](https://pypi.org/project/uv/0.12.23/), per-package release links above, [PostgreSQL version policy](https://www.postgresql.org/support/versioning/), [Redis 8.10.2](https://github.com/redis/redis/releases/tag/8.10.2), and [uv locking](https://docs.astral.sh/uv/concepts/projects/sync/). Supporting record: [dependency acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md).
 
 ## Finalized specifications
 

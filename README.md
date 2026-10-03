@@ -4,7 +4,9 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: define the API/security contracts; dependency versions remain open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: define and review the API/security contracts; A17 selects dependency versions. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+
+Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending; the API and security contracts remain under review.
 
 ## Intended behavior
 
@@ -29,7 +31,7 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Frontend, component versions, SQL/authentication details, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A15.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Frontend, SQL/authentication details, and the concrete deployment remain open. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), A1–A15 and A17.
 
 ## Setup, running, and tests
 

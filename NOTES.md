@@ -140,3 +140,9 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 [ME] Alayala accepted his proposed file structure with the five reviewed refinements and requested backend documentation under `docs/`. [YOU] AI recorded A15 and created [docs/backend.md](docs/backend.md), preserving the author's feature/file names and adding `workers/recovery.py`. AI mapped all ten application models to persistence owners and documented the query handoff, process supervision, shared transaction scope, final-manifest validation, and durable recovery boundaries.
 
 [YOU] AI aligned README and agent guidance and recorded the [acceptance session](ai/sessions/2026-10-03-backend-structure-accepted.md). This is documentation of the accepted architecture, not generated application code or proof of runtime correctness. No dependencies, implementation folders, migrations, commits, or remote changes were produced by this task. Earlier pending-selection statements remain historical.
+
+## Dependency versions accepted — October 3, 2026
+
+[ME] Alayala approved the dependency versions and requested the decision update, commit, and push. He keeps the API and security contracts under review. [YOU] AI recorded A17 as accepted with the unchanged exact version table in DECISIONS.md and the lockfile/update policy. Pool execution choices and numeric limits remain proposals; version acceptance does not prove compatibility.
+
+[YOU] AI prepared a dependency-only commit from the mixed documentation work. API/security proposal text and the human overview stay local for review. No packages were installed and no runtime checks ran. The [acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md) records scope, document verification, and publication boundaries.
