@@ -253,6 +253,8 @@ Status: accepted by alayala on October 2, 2026. Provider selected; integration a
 
 **Reason:** Delegate login and identity management to an external provider while Trinity implements its data-access rules. Alayala selected Clerk after the provider discussion.
 
+**Reaffirmation:** Alayala considered local login and retained Clerk to follow the approach he would use in a professional team: delegate authentication and own Trinity's authorization and data behavior. This is his engineering rationale, not a claim that a provider earns a higher evaluation score. See the [October 3 handoff](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md).
+
 **Rejected alternative:** Implement local credentials and login management for this challenge. A local `users` table is not required solely to authenticate users with Clerk; application-specific profile or role needs must be assessed separately.
 
 **Proposed integration, not a completed schema decision:** Store the application role in metadata users cannot edit, validate the Clerk session in the backend, and record the Clerk user identifier for human actions such as refresh requests and approvals. Clerk documents a metadata-based role approach without Organizations. Exact claims, token validation, role-change propagation, and actor retention rules still need a contract. Do not store authentication secrets in application history or outbox payloads.

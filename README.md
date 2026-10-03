@@ -2,9 +2,9 @@
 
 Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore locally stored U.S. nuclear outage data.
 
-**Status: data analysis and documentation, October 2, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
+**Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [data contract v1](docs/schema.md), finalized under the request recorded in [A9](DECISIONS.md#a9--data-contract-v1-finalized). A1–A8 remain accepted. The prior application-model draft remains historical. Next: choose the runtime stack and implement the first fetch → validate → Parquet → query slice against this contract. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [vault reconciliation and session close](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md). [PR #1](https://github.com/alejandroayalad/trinity/pull/1) merged data contract v1; [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. Next: select the runtime stack before implementing against the existing contract. Python was suggested for the Parquet slice but has not been selected. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 ## Intended behavior
 
@@ -58,6 +58,7 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
+| [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
 
 ## Assumptions and limits
