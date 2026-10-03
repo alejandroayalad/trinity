@@ -1,6 +1,6 @@
 # Trinity data contract v1
 
-Status: finalized specification, October 2, 2026 (America/Merida). Prepared by AI at alayala's request to finalize the data contract. These are implementation requirements, not implemented behavior or new runtime findings. [A9](../DECISIONS.md#a9--data-contract-v1-finalized) records the choice, alternatives, and limits. A1–A8 remain in force except where the approved [A16 workflow](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) supersedes selectable publication policy and recovery behavior. October 3 amendment: analytical fields/checks remain v1; application control fields and lifecycle below implement the approved warning-based flow. The original decisions/history remain recorded.
+Status: finalized specification, October 2, 2026 (America/Merida). Prepared by AI at alayala's request to finalize the data contract. These are implementation requirements, not implemented behavior or new runtime findings. [A9](../DECISIONS.md#a9--data-contract-v1-finalized) records the choice, alternatives, and limits. A1–A8 remain in force except where the approved [A16 workflow](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) supersedes selectable publication policy and recovery behavior. October 3 amendment: analytical fields/checks remain v1; application control fields and lifecycle below implement the approved warning-based flow. The original decisions/history remain recorded. [A19 security contract](security-contract.md) reaffirms SHA-256 identity and adds query admission/container rules; it does not change analytical fields or required data checks.
 
 ## 1. Boundary and data flow
 
@@ -201,6 +201,16 @@ erDiagram
 ```
 
 `shared_settings` has one current row. A run stores its revision and a complete immutable policy snapshot; the snapshot is deliberately not a foreign key to a historical settings row. `active_publication` has one row even before it points to an event. Additional required fields and relationships are in the model table, not omitted from the contract because they are absent from a compact diagram.
+
+### Analytical admission and A19 security constraints
+
+Query capacity is separate from `refresh_control` and the single refresh lifecycle. PostgreSQL transactions must reserve analytical slots across processes, enforcing two active requests per user and four deployment-wide. Reserve before file staging; release only after the query process ends or is stopped. A timeout, disconnect, lost supervisor or expired lease alone does not release capacity. Recovery must identify the associated container and confirm no execution remains before conditional release; unknown execution state retains the slot. Exact physical query-reservation fields/DDL and rate-counter storage remain implementation details, not additions to the public API.
+
+A trusted component stages only authorized files from the one pinned publication, checks their recorded SHA-256 values, and supplies them to one network-disabled query container through a read-only mount. Query containers hold no network/S3/database credentials or Docker control. The existing immutable manifest, validation and approval bindings remain unchanged. No client path or unpublished version can extend the allowed set.
+
+A19's provisional analytical limits are 1,000 SQL output rows, 5 MiB encoded output, 30 seconds including trusted downloads/file reads, and 1 GiB per query container. They apply with the API's endpoint-specific pagination; output caps do not reduce aggregate input rows. Accepted request limits are 64 KiB JSON and 16 KiB UTF-8 SQL, with initially 30 analytical requests per user per minute excluding progress polling. Values are server-controlled; local measurements and enforcement tests remain pending.
+
+Temporary external failures permit at most three total attempts, with one- and three-second waits inside the operation deadline. Preserve attempt accounting across automatic redelivery; do not reset an exhausted budget merely by reclaiming a worker. Invalid SQL, denied access and failed validation are not retried. Refresh-stage deadlines remain unresolved; an explicit Admin rerun is a new run under A16, not an automatic bypass of failed validation. See [security rules](security-contract.md) for authority, supervision and required tests.
 
 ## 7. Lifecycle and publication consistency
 

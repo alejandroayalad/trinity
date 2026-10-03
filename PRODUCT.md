@@ -26,6 +26,6 @@ A16 includes a national dashboard with summary cards, daily trends and table val
 
 ## Data behavior and next implementation
 
-The [v1 data contract](docs/schema.md) now specifies keys, same-day capacity/outage metrics, missing observations, validation, and publication. A16 supplies the approved API flow and amends publication/recovery behavior; [the API contract](docs/api-security.md) defines fields and examples. Implementation and runtime verification remain pending.
+The [v1 data contract](docs/schema.md) now specifies keys, same-day capacity/outage metrics, missing observations, validation, and publication. A16 supplies the approved API flow and amends publication/recovery behavior; [the API contract](docs/api-contract.md) defines fields and examples. Implementation and runtime verification remain pending.
 
 Sources: [DECISIONS.md](DECISIONS.md), A2–A4 and A16; `Software Engineer - Technical Challenge.pdf`, pages 2 and 6.

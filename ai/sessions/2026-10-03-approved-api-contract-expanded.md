@@ -4,7 +4,7 @@ Date: October 3, 2026. Scope: documentation and schema specification on `docs/ba
 
 ## Objective and contributions
 
-[ME] Alayala supplied `trinity-api-contract-final.md`, explicitly identified it as the approved design, and requested missing fields, requests, responses and related details. [YOU] AI read that source, preserved its human flow in docs/api-security.md, and created docs/openapi.json for its 20 HTTP operations. The downloaded original remains unchanged; SHA-256: `f880b2544234c2ed0523c10fb6418eb4adc3a209652183391865d1680ca8fa30`.
+[ME] Alayala supplied `trinity-api-contract-final.md`, explicitly identified it as the approved design, and requested missing fields, requests, responses and related details. [YOU] AI read that source, preserved its human flow in docs/api-contract.md, and created docs/openapi.json for its 20 HTTP operations. The downloaded original remains unchanged; SHA-256: `f880b2544234c2ed0523c10fb6418eb4adc3a209652183391865d1680ca8fa30`.
 
 [YOU] AI authored detailed transport, date-window, pagination, landing-screen, safe-error, command-idempotency, ETag and recovery schemas. These are delegated completion details, not claims that alayala individually selected every field/default. Synthetic JSON examples are clearly labeled and are not EIA observations. No application code or deployed behavior is claimed.
 

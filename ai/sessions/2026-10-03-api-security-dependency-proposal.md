@@ -6,7 +6,7 @@ Date: October 3, 2026. Scope: documentation proposal on `docs/backend-decisions-
 
 [ME] Alayala requested a definition of API/security contracts and dependency versions using best practice. [YOU] AI inspected the clean repository, README, PRODUCT, A9–A15, canonical schema, backend architecture, and latest architecture session. Earlier memory was used only to locate canonical material; current repository decisions supersede its older open-stack notes.
 
-[YOU] AI drafted [docs/api-security.md](../../docs/api-security.md) and proposed [A16–A17](../../DECISIONS.md#proposed-decisions). No decision is marked accepted. The draft preserves A9 and existing roles and adds explicit recommended HTTP shapes, current Clerk authorization, SQL grammar, process limits, and candidate version pins. README/backend links and Engineering Notes identify its proposed status.
+[YOU] AI drafted [docs/api-contract.md](../../docs/api-contract.md) and proposed [A16–A17](../../DECISIONS.md#proposed-decisions). No decision is marked accepted. The draft preserves A9 and existing roles and adds explicit recommended HTTP shapes, current Clerk authorization, SQL grammar, process limits, and candidate version pins. README/backend links and Engineering Notes identify its proposed status.
 
 ## Evidence and limits
 

@@ -25,6 +25,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A16 | Product / business and Technical / code | Approved API flow, fixed warning-based publication, serialized refresh/recovery and detailed HTTP schemas. |
 | A17 | Technical / code   | Exact dependency versions and locked installation/update policy; compatibility checks remain pending. |
 | A18 | Technical / code   | Required v1 single-table SQL; joins, CTEs, and subqueries are optional after the core works and its tests pass. |
+| A19 | Technical / code | Security contract: trusted Clerk roles, selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -125,6 +126,8 @@ Source: alayala's explicit feature request and clarification in this session. Th
 
 ### A4 — PostgreSQL for state and Apache DataFusion for outage queries: closed
 
+**Current scope / supersession:** A16 supersedes references below to configurable publication mode; PostgreSQL state and DataFusion analytical separation are unchanged.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 1, 2026. This records the selected architecture direction. It is not a measured claim that this is the fastest or simplest option.
@@ -161,6 +164,8 @@ Sources: alayala's explicit selection in this session; [DataFusion SQL API](http
 
 ### A5 — Validation decides whether data is ready: closed
 
+**Current scope / supersession:** A16 supersedes only the shared publication-mode reference below: required checks plus no review warnings publish automatically; review warnings require approval. The known facility-total issue remains informational after required checks pass.
+
 Category: **Product / business**.
 
 Status: accepted by alayala on October 2, 2026. Not implemented or runtime-tested.
@@ -182,6 +187,8 @@ A ready version follows A3: publish automatically or wait for Admin approval, de
 Evidence: [AN-03 in FINDINGS.md](FINDINGS.md#an-03--the-facility-api-reports-more-rows-than-it-returns) and [the validation decision session](ai/sessions/2026-10-02-validation-publication-rule.md).
 
 ### A6 — Background refresh with BullMQ and Redis: closed
+
+**Current scope / supersession:** A16 closes refresh admission at one lifecycle, including pending review and unresolved failure. A19 selects external-failure attempts and analytical limits; earlier open-count/policy text below is historical.
 
 Category: **Technical / code**.
 
@@ -257,6 +264,8 @@ An outbox is a durable list of work requests waiting to be sent. It is applicati
 Sources: alayala's acceptance in this conversation; [AWS transactional outbox guidance](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) and [BullMQ idempotent jobs](https://docs.bullmq.io/patterns/idempotent-jobs). The AWS example explains the pattern; it does not select an AWS deployment or Amazon SQS for Trinity. Discussion evidence: [worker and outbox session](ai/sessions/2026-10-02-redis-bullmq-outbox-data-contract.md).
 
 ### A8 — Clerk for authentication: closed
+
+**Current scope / supersession:** A19 selects `public_metadata.role`, trusted provisioning and current uncached token/session/role checks. Earlier open implementation scope below is historical where resolved by A19.
 
 Category: **Technical / code**.
 
@@ -338,6 +347,8 @@ Sources: alayala's acceptance in this conversation; [Psycopg transactions](https
 
 ### A13 — PyArrow, datafusion-python, and SQLGlot: closed
 
+**Current scope / supersession:** A18/A19 select single-table SQL, arithmetic, CASE and the exact function names. Whole-input SQLGlot validation remains in one module before protected reads; DataFusion compatibility still requires tests.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Libraries selected; not installed or runtime-tested.
@@ -378,6 +389,8 @@ Evidence: the supplied `Backend Stack.md`, alayala's correction, and the [review
 
 ### A15 — Backend structure and responsibility boundaries: closed
 
+**Current scope / supersession:** A19 refines separate query execution to one container per query, with trusted file staging, a read-only authorized Parquet mount, no network/credentials/Docker control, and PostgreSQL query admission. The feature package remains accepted.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. File structure and the five reviewed refinements selected; implementation pending.
@@ -404,7 +417,7 @@ Category: **Product / business** and **Technical / code**.
 
 Status: high-level design accepted by alayala on October 3, 2026, through the supplied `trinity-api-contract-final.md`. Detailed request/response fields, bounded defaults and persistence amendments are AI-authored specification work under his instruction to add missing details. No implementation or runtime verification is claimed.
 
-**Choice:** Use [the approved human overview and detailed API contract](docs/api-security.md) and [OpenAPI schemas](docs/openapi.json). The 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
+**Choice:** Use [the approved human overview and detailed API contract](docs/api-contract.md) and [OpenAPI schemas](docs/openapi.json). The 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
 
 **Publication and recovery:** Publication behavior is fixed: complete required checks and no review warnings publish automatically; complete required checks with frozen warnings require Admin approval; failed or incomplete checks block publication. No editable publication mode remains. One refresh lifecycle is admitted at a time, including pending review and unresolved failure. Run-again creates a new full run and abandons the old candidate; warning deletion resolves the block without new work; publication retry preserves the same eligible candidate and original approval requirements; discard permanently prevents publication while preserving history.
 
@@ -414,7 +427,7 @@ Status: high-level design accepted by alayala on October 3, 2026, through the su
 
 **Precedence and history:** Supersedes A2/A3's selectable publication policy and A9's original recovery exclusions, while preserving analytical keys, measurements, exact reconciliation, immutable files, published-only access and monotonic publication. [schema.md](docs/schema.md) now includes the supporting warning/admission/command records and nonterminal publication_failed state. The original A2/A3 text below their current-status notices is retained as history. A5's known facility-total issue remains informational after required checks pass, not an automatic review warning.
 
-**Delegated completion details:** Exact field names/types/nullability, role landing values, 365-day yearly preset, bounded paging, command idempotency/ETags, diagnostic severity mapping, and added persistence fields are attributed to AI. The supplied design fixes behavior; these completion defaults make it implementable and reviewable without claiming separate author review of every field. A17 versions and A18 staged SQL scope remain accepted independently. Detailed authentication lookup/token rules, SQL dialect/functions, resource controls, retry budgets and sandbox deployment are not accepted by this API-flow approval.
+**Delegated completion details:** Exact field names/types/nullability, role landing values, 365-day yearly preset, bounded paging, command idempotency/ETags, diagnostic severity mapping, and added persistence fields are attributed to AI. The supplied design fixes behavior; these completion defaults make it implementable and reviewable without claiming separate author review of every field. A17 versions and A18 staged SQL scope remain accepted independently. Detailed security rules were not accepted by this API-flow approval; A19 now records their separately accepted scope. Exact implementation settings and verification remain pending.
 
 **Validation required:** Check all schema examples, every approved endpoint, safe role-specific responses, dashboard/metric agreement, pagination/version conflicts, concurrent recovery, warning publication gates, lost queues, stale workers, and terminal candidate disposition. Specification checks do not prove endpoint or database behavior. No new commit/push was requested for this expansion.
 
@@ -454,6 +467,8 @@ Sources: [Python 3.14.8](https://www.python.org/downloads/release/python-3148/),
 
 ### A18 — SQL scope by stage: closed
 
+**Current scope / supersession:** A19 resolves function names and adds arithmetic/CASE. The staged scope and optional-extension gate remain unchanged; earlier statements leaving all functions open are historical.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Scope selected; implementation and tests pending.
@@ -469,11 +484,35 @@ Status: accepted by alayala on October 3, 2026. Scope selected; implementation a
 
 **Flow and failure example:** SQL input → supported-syntax and table-permission checks → DataFusion over permitted published Parquet → query results. In v1, a query joining two otherwise permitted datasets must be rejected before file registration because joins are outside the required scope. A4/A9/A13 retain the application-state and unpublished-file boundaries.
 
-**History and remaining decisions:** Accepts the staged SQL scope previously proposed within A16. It does not accept the rest of A16, the exact aggregate-function allowlist, dialect, detailed expressions, or execution limits. Those details remain under review in [the SQL policy proposal](docs/api-security.md#sql-policy).
+**History and remaining decisions:** Accepts the staged SQL scope previously proposed within A16. It does not accept the rest of A16, the exact aggregate-function allowlist, dialect, detailed expressions, or execution limits. Those details remain under review in [the SQL policy proposal](docs/security-contract.md#sql-policy).
 
 **Verification required:** Core acceptance tests must cover single-table SELECT, filters, sorting, grouping, approved aggregates, and rejection of joins, CTEs, and subqueries. Permission and published-data boundaries must also be tested. Optional extensions need their own syntax and authorization tests before use. No runtime tests have run.
 
 Source: alayala's supplied stage/scope table. Supporting record: [SQL scope session](ai/sessions/2026-10-03-sql-scope-by-stage.md).
+
+### A19 — Security contract and local execution: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Design selected; analytical capacity limits are provisional and runtime verification is pending.
+
+**Choice:** Adopt [docs/security-contract.md](docs/security-contract.md), separate from the [A16 API contract](docs/api-contract.md). Use Clerk `public_metadata.role`, writable only by trusted administration, and verify token/current session/current role on every authenticated request without a role/session cache. Deny invalid, inactive, missing or unknown authority; verification outages allow no protected action.
+
+**SQL and isolation:** Retain A18 single-table read-only SELECT; support filters, sorting, grouping, arithmetic, CASE, COUNT, SUM, AVG, MIN, MAX, ROUND, COALESCE and NULLIF. Keep one SQLGlot validation module and verify DataFusion compatibility. Reject unsupported/nested queries, writes and external readers. Run each query in its own container with only authorized published Parquet files mounted read-only, no network, no credentials and no Docker control. A trusted component downloads/checks files; the supervisor enforces limits, stops execution and cleans temporary resources. Separate private S3 read, candidate-create and publication authority. Keep A9 SHA-256 manifests/checksums and exact-file approval binding.
+
+**Limits and recovery:** Provisional analytical limits are 1,000 output rows, 5 MiB responses, 30 seconds including file downloads/reads, 1 GiB per query container, two active analytical requests per user and four deployment-wide. Use PostgreSQL transactions for shared slots; release only after execution ends or is stopped. Accept 64 KiB JSON, 16 KiB UTF-8 SQL and initially 30 analytical requests/user/minute, excluding progress polling. Temporary external failures permit three total attempts with one- and three-second waits within the operation deadline; invalid SQL, denied access and failed validation are not retried. Preserve A16 settings revisions, single-refresh admission and explicit failed-run recovery.
+
+**Deployment:** Prepare Docker Compose local execution first; AWS/hosting remains undecided. The supplied challenge PDF requires local execution and a repository link; no public application URL requirement was found. Exact images, hardening, S3 policies, rate-window/storage mechanics and refresh-stage deadlines remain implementation work. A17 dependencies are unchanged.
+
+**Reason and rejected alternatives:** Bound query access to explicitly staged files, keep authority current and enforce deployment-wide admission. Reject client-editable roles, cached role/session authority in v1, direct S3 access from query containers, per-API-process concurrency counters as the global guard, and freeing a slot on HTTP timeout alone. Retain immutable validated files instead of allowing approval to authorize changed bytes. Choose local reproducibility before selecting public hosting.
+
+**Flow and failure example:** An authorized Analyst request pins a publication, passes the shared SQL policy, reserves a PostgreSQL slot and receives authorized staged files in a network-disabled query container. If execution exceeds its deadline, the supervisor stops it; its slot remains occupied until termination is confirmed. A restarted API cannot launch a fifth query merely because a prior supervisor lost its connection.
+
+**History and precedence:** Refines A8/A13/A15/A18. Supersedes the combined document's `trinity_role` field, ABS proposal, 2 MiB/15-second/one-user/two-instance analytical limits and direct runtime storage-read capability. The old proposal is preserved in the [split session](ai/sessions/2026-10-03-security-contract-and-api-split.md#superseded-security-proposals). A16 remains accepted for API behavior and supersedes selectable publication modes; `publication_events.publication_mode` is a derived historical outcome only. Earlier token-claim defaults and database pool choices are not silently accepted. Existing A9 SHA-256 identity is reaffirmed.
+
+**Validation required:** Local persona flows, denied-before-read evidence, SQLGlot/DataFusion fixtures, read-only mounts/no-network/no-secret/no-Docker checks, stop/cleanup proof, PostgreSQL multi-process admission/crash recovery, deadline-bounded retries, rate/polling behavior, immutable approval and publication races. Measure cold reads, previews, dashboards and grouped SQL before adjusting provisional limits. No such runtime tests have run.
+
+Source: alayala's explicit security and documentation instructions; [session evidence](ai/sessions/2026-10-03-security-contract-and-api-split.md).
 
 ## Finalized specifications
 
@@ -508,7 +547,7 @@ Supporting record: [data-contract session](ai/sessions/2026-10-02-data-contract-
 
 ## Proposed decisions
 
-Detailed authentication/token/role-cache choices, SQL dialect/functions under the accepted A18 scope, and runtime sandbox/limit mechanisms remain under review in [the security implementation proposals](docs/api-security.md#security-implementation-proposals-still-under-review). A16 now accepts the API flow; this heading is retained for historical links.
+A16 accepts the API flow and A19 accepts the security design. Remaining implementation details are listed in [the security contract](docs/security-contract.md#remaining-implementation-details); PostgreSQL pooling/sync-async defaults remain proposals in [backend architecture](docs/backend.md#proposed-database-execution-model). This heading is retained for historical links.
 
 ## Arkham decision topics still to complete
 
@@ -520,8 +559,8 @@ The brief requires a choice, a rejected alternative, and a reason for each topic
 | Meaning of kept current and how refresh achieves it | A2–A3 plus A9 specify schedule, supported history, full-window revision capture, and separate source/publication times. A product stale-age threshold remains open. |
 | Missing facilities and generator/facility disagreement | A9 specifies “not reported” for absent observations, exact cross-grain checks, blocked publication on required failure, and retained evidence. Common source omissions remain a limit. |
 | Synchronous or asynchronous refresh | Accepted in A6: the full pipeline runs in background workers with bounded concurrency. A7 defines reliable dispatch. Detailed execution mechanics and verification remain open. |
-| Supported and rejected SQL | A18 accepts required v1 single-table SELECT, filters, sorting, grouping, and approved aggregates; joins, CTEs, and subqueries are optional after the core works and its tests pass. Detailed grammar/function choices under A16 and implementation remain open. |
-| Finding every referenced table before permission checks | A16 proposes whole-input AST validation, an exact table allowlist, and rejection of nested constructs; no detection or authorization implementation exists. |
+| Supported and rejected SQL | A18 accepts required v1 single-table SELECT, filters, sorting, grouping, and approved aggregates; joins, CTEs, and subqueries are optional after the core works and its tests pass. A19 selects arithmetic, CASE and function names; exact parser/type compatibility and implementation remain pending. |
+| Finding every referenced table before permission checks | A19 requires whole-input SQLGlot validation in one module and authorization of every physical table before download/execution. Nested constructs are rejected in v1. Implementation and compatibility tests remain pending. |
 | At least one additional decision shaping the solution | A3 and A4 record additional choices. Implementation and verification remain pending. |
 
 Source: `Software Engineer - Technical Challenge.pdf`, pages 6–7. See [FINDINGS.md](FINDINGS.md) for data evidence and [NOTES.md](NOTES.md) for AI use.

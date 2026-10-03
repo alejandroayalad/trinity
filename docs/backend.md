@@ -2,7 +2,7 @@
 
 Status: structure and responsibility boundaries accepted by alayala on October 3, 2026, under [A15](../DECISIONS.md#a15--backend-structure-and-responsibility-boundaries-closed). Implementation pending. The tree below describes the files to implement; it is not a claim that they exist or run.
 
-[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-security.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. Detailed authentication, SQL grammar and internal-process controls remain separate; A18 accepts staged SQL scope.
+[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-contract.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. [A19 security contract](security-contract.md) selects current Clerk verification, SQL functions, per-query containers, shared query admission and limits; implementation details and runtime verification remain pending.
 
 ## Package and entrypoints
 
@@ -112,23 +112,25 @@ Routers validate HTTP input and call authenticated feature services. Services ow
 
 ## Query and preview flow
 
-1. `auth/service.py` verifies the identity and resolves a trusted role. The API applies `auth/permissions.py` to the requested capability. Missing or unknown roles deny access.
-2. `queries/service.py` derives permitted datasets from that identity, captures the active publication once for the request, and resolves only its permitted manifest entries. Client-supplied roles, object paths, endpoints, and publication identities are not authority.
-3. `queries/client.py` sends the validated SQL or preview request, the pinned publication identity, permitted dataset/file descriptions, and server limits through the trusted internal channel described by `contracts/queries.py`. Its precise schema and transport remain open.
-4. `runtime/sql_policy.py` parses the entire SQL input, enforces the selected subset, and checks every real table reference against the API-derived permitted set. Reject unsupported constructs in full. Apply the same permitted-file boundary to previews. This must finish before `engine.py` registers or reads analytical files.
-5. `runtime/engine.py` creates a restricted DataFusion context for that request and registers only the referenced permitted files from the pinned manifest. Return bounded output with exact decimal serialization. Never resolve a different active publication in the runtime.
+1. `auth/service.py` verifies the token and current Clerk session/`public_metadata.role` without caching role/session results. `auth/permissions.py` authorizes the capability before protected reads. Missing/unknown roles deny access.
+2. `queries/service.py` pins one active publication and derives permitted manifest entries. It invokes the single `queries/runtime/sql_policy.py` module for whole-input SQL and physical-table checks before file downloads. Do not duplicate SQL rules in the API.
+3. The trusted supervisor behind `queries/client.py` reserves a shared PostgreSQL query slot, starts the analytical deadline, downloads only authorized objects through trusted `adapters/s3.py`, checks SHA-256 identities and stages a request-specific read-only Parquet mount.
+4. Start a separate container running `queries/runtime/main.py` for the approved query/preview/dashboard operation. Supply the approved operation, pinned IDs, local-file mapping and server limits through `contracts/queries.py`; supply no network, credentials or Docker control. `engine.py` registers only those mounted authorized files.
+5. Bound output, verify it belongs to the request/publication, confirm execution ended or stop it, remove temporary resources and release the query slot only when no execution remains. Use the same path for all analytical execution, with endpoint-specific pagination.
 
-Catalog requests use `catalog/service.py` to filter registry/freshness output by the same role policy; a Viewer cannot infer facility/generator details through metadata or diagnostics. User SQL never reaches PostgreSQL application-state tables. Analytical exploration reads application-owned data and makes no EIA request.
+Catalog metadata uses the same permission policy without giving Viewer detail through registry/freshness/diagnostics. Exploration makes no EIA request. User SQL cannot reach PostgreSQL state or unpublished files. Selecting single-table scope still requires SQLGlot/DataFusion compatibility tests for arithmetic, CASE and the A19 functions.
 
-**Failure example:** an Analyst submits a CTE over `job_outbox`. If CTEs are unsupported, policy rejects the construct. If supported, the underlying table fails the permitted-set check. In either case, the runtime must reject the request before reading any analytical file. Selecting this architecture does not select CTE support.
+**Failure example:** an Analyst submits a CTE over `job_outbox`. The single policy rejects unsupported syntax before any protected file download. A permitted national query receives only authorized publication files, never S3 or application-database access from the query container.
 
 ## Query process isolation and supervision
 
-`queries/client.py`, or the deployment supervisor it uses, owns process lifecycle, external deadlines, termination, and cleanup. `runtime/limits.py` configures/enforces runtime limits, including DataFusion limits. These responsibilities complement each other: returning an HTTP timeout is not evidence that query execution stopped.
+`queries/client.py`, or its trusted supervisor, owns container launch, restricted file staging, the total deadline, stop confirmation and cleanup. Only the trusted supervisor has Docker control. No query container receives its socket, credentials or network access. `runtime/limits.py` cooperates with container-enforced memory/output bounds; it cannot establish the sandbox alone.
 
-The process launcher uses an explicitly restricted environment and filesystem/network access. It supplies only the read capability needed for permitted published objects. PostgreSQL, Clerk-management, EIA, and S3-write credentials are unavailable to the runtime. Separate config files alone do not establish this boundary. Restrict object access as well as SQL/file-reader capabilities; registering permitted tables is not a substitute for either control.
+Use one container per analytical query under A19. Runtime imports must not initialize privileged integrations. Exact image/hardening, trusted internal protocol, read-only mount enforcement and supervision/crash recovery remain to be implemented and verified locally using Docker Compose. S3 credentials stay in trusted components; query containers read local mounts only.
 
-Enforce process memory bounds, input/output byte limits, row caps, deadlines, and finite aggregate query concurrency. DataFusion memory configuration does not by itself establish a whole-process memory limit. Internal messages must come from the trusted API, and responses must be bounded and validated. One process per request versus a bounded pool, IPC transport/authentication, OS/container controls, S3 read-capability delivery, and exact limits remain open implementation choices.
+PostgreSQL transactions enforce the shared two-per-user/four-deployment analytical reservations. Hold capacity through file staging and execution; a timeout or lost lease does not free a possibly running container. Confirm termination before conditional release. Rate accounting is initially 30 analytical requests/user/minute across processes, excluding progress polling. The physical reservation schema and rate-window algorithm remain open implementation details. These records are separate from refresh admission.
+
+Provisional limits: 1,000 SQL output rows, 5 MiB response, 30 seconds including trusted downloads/file reads and 1 GiB per query container. The supervisor applies the remaining deadline after staging, not a fresh timeout at container launch. Temporary external failures allow three total attempts with one- and three-second waits within that same deadline. No retries for invalid SQL, denied access or failed validation. Four containers may use 4 GiB plus other services; measure cold reads and representative analytical work locally.
 
 ## State ownership and atomic changes
 
@@ -169,16 +171,20 @@ Recovery covers requested/running/publishing work lost from Redis, expired worke
 
 **Failure example:** Redis acknowledges enqueue and the outbox becomes delivered, then the queued job is lost. Pending-outbox dispatch alone does not find that run. The recovery trigger identifies eligible unfinished work and invokes the durable recovery path without creating duplicate publication effects.
 
+## Proposed database execution model
+
+Async FastAPI handlers and Psycopg `AsyncConnectionPool`, 1–5 connections per process with a 5-second acquisition deadline, remain earlier proposals, not accepted defaults. A17 selects versions; A19 selects PostgreSQL shared query-slot transactions without deciding pooling. Services own transactions; external downloads and retries must not hold long database transactions open.
+
 ## Contracts and verification still required
 
-The accepted tree locates responsibilities; it does not complete these contracts. [A16](api-security.md) supplies approved HTTP flow and detailed schemas; [A17](../DECISIONS.md#a17--dependency-versions-and-update-policy-closed) accepts dependency versions. Detailed authentication/SQL grammar and process-execution choices remain proposed; A18 accepts staged SQL scope. Implementation/compatibility checks remain pending:
+The accepted tree locates responsibilities; it does not complete these contracts. [A16](api-contract.md) supplies approved HTTP flow and detailed schemas; [A17](../DECISIONS.md#a17--dependency-versions-and-update-policy-closed) accepts dependency versions. A18/A19 select SQL features, authentication policy, container isolation, limits and retries. Exact implementation settings remain open. Implementation/compatibility checks remain pending:
 
 | Open item | Required outcome before implementing that path |
 |---|---|
 | Dependency versions and execution model | Compatible pinned releases; PostgreSQL pooling/sync-async choices; bounded worker/query concurrency and verified worker recovery. |
 | HTTP API implementation | Implement the 20 operations and field schemas in A16/OpenAPI, including dashboard, entity options, schedule status, rerun, warning resolution, retry and discard. |
-| SQL and authentication | Exact grammar/dialect/functions, table-reference detection, permitted/rejected examples, token checks, trusted role handling, and role-change behavior. |
-| Query process contract and deployment | Message schema and transport, caller authentication, restricted resources/credentials, object read scope, supervisor behavior, and finite limits. |
+| SQL and authentication | Exact dialect/AST/argument forms and compatibility fixtures for selected functions; token configuration and tests of selected current role/session checks. |
+| Query process contract and deployment | Trusted message transport, one network-disabled query container, authorized read-only file mounts, private S3 download permissions, termination/cleanup and shared PostgreSQL admission verification. |
 | Acceptance tests | Authorization before file reads, whole-input SQL rejection, exact decimals, snapshot consistency, transaction failures, final-file validation, timeout cleanup, resource exhaustion, and Redis/worker recovery. |
 
 No application code, packages, processes, migrations, or runtime tests were created or run for this document. Add runnable commands only after implementation and verification.

@@ -143,7 +143,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 
 ## API security and dependency proposal — October 3, 2026
 
-[ME] Alayala asked to define API/security contracts and dependency versions using best practice. [YOU] AI traced current A9–A15 and drafted [the contract proposal](docs/api-security.md), with A16–A17 explicitly proposed rather than accepted. It defines endpoint behavior, permissions, Clerk session/role checks, narrow SQL, error handling, durable mutations, starting limits, and exact candidate releases. The single-table SQL restriction and uncached Clerk lookups are AI recommendations requiring author review.
+[ME] Alayala asked to define API/security contracts and dependency versions using best practice. [YOU] AI traced current A9–A15 and drafted [the contract proposal](docs/api-contract.md), with A16–A17 explicitly proposed rather than accepted. It defines endpoint behavior, permissions, Clerk session/role checks, narrow SQL, error handling, durable mutations, starting limits, and exact candidate releases. The single-table SQL restriction and uncached Clerk lookups are AI recommendations requiring author review.
 
 [YOU] AI read official documentation and public PyPI release metadata. The network sandbox blocked the initial registry request; the approved read-only retry succeeded and installed nothing. Metadata comparisons do not prove dependency resolution, security, or runtime compatibility. The [proposal session](ai/sessions/2026-10-03-api-security-dependency-proposal.md) records document checks and pending work. No EIA key, runtime build/test, database/cloud change, commit, or push was used.
 
@@ -159,6 +159,16 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 
 ## Approved API contract expanded — October 3, 2026
 
-[ME] Alayala supplied his approved high-level API design and asked for missing requests, responses and fields. [YOU] AI expanded docs/api-security.md, added docs/openapi.json for all 20 operations, recorded A16 as accepted for the author's flow, and aligned current product/application-state documentation. The source download is preserved. Exact schema fields, bounded defaults, diagnostic severity mapping and recovery persistence details are AI-authored completion work, not independently observed user verification.
+[ME] Alayala supplied his approved high-level API design and asked for missing requests, responses and fields. [YOU] AI expanded docs/api-contract.md, added docs/openapi.json for all 20 operations, recorded A16 as accepted for the author's flow, and aligned current product/application-state documentation. The source download is preserved. Exact schema fields, bounded defaults, diagnostic severity mapping and recovery persistence details are AI-authored completion work, not independently observed user verification.
 
 [YOU] AI preserves A17 dependency versions and the separately added A18 staged SQL decision. API approval does not select the detailed authentication mechanism, SQL function allowlist, or runtime sandbox. The [completion session](ai/sessions/2026-10-03-approved-api-contract-expanded.md) records source provenance, changes, checks and remaining tests. No new commit/push or application implementation was requested.
+
+## Security contract and API split — October 3, 2026
+
+[ME] Alayala selected the security mechanisms, limits, retries, SHA-256 identity and local Docker Compose direction and requested separate API/security documents. [YOU] AI retained accepted A16, recorded A19, renamed the API document and updated references, created the security contract and aligned OpenAPI/schema/backend guidance. Older conflicting proposals are preserved as superseded history. A17 versions and existing user changes are preserved.
+
+[YOU] AI checked the supplied challenge PDF: local execution and a repository link are required; no public application URL requirement was found. Documentation/structural checks and remaining runtime work are recorded in the [split session](ai/sessions/2026-10-03-security-contract-and-api-split.md). No code, packages, containers, commits, push or cloud changes were produced. Local isolation and capacity measurements still require implementation and execution.
+
+## Backend contract publication — October 3, 2026
+
+[ME] Alayala requested focused commits, push and merge to main. [YOU] AI executes those authorized Git operations in two documentation slices and preserves the existing incremental branch history. Repository inspection confirms that backend implementation and runtime tests remain pending. See the [publication session](ai/sessions/2026-10-03-backend-contracts-publication.md) for scope, validation and the distinction between the completed design and executable work.

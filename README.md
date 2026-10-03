@@ -4,9 +4,9 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: review the completed API field specification under approved A16 and settle remaining detailed security rules; A17 dependency versions and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: review the accepted security design under A19 and its remaining implementation details; A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
-Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-security.md) records the approved API flow and expanded request/response contract; detailed authentication and SQL implementation rules remain separately marked. [OpenAPI](docs/openapi.json) defines all 20 HTTP operations. [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; detailed grammar and the aggregate-function allowlist remain under review.
+Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines all 20 HTTP operations. [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine verification remains pending.
 
 ## Intended behavior
 
@@ -31,9 +31,11 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Frontend, SQL/authentication details, and the concrete deployment remain open. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), A1–A18.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Docker Compose is selected for local execution; frontend and public hosting remain open. Exact security implementation and verification remain pending. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), A1–A19.
 
 ## Setup, running, and tests
+
+The selected local execution target is Docker Compose; no Compose configuration exists yet. The supplied challenge requires local execution (page 7) and a repository link (page 8), not a public application URL. AWS/hosting remains undecided. See the [source review](ai/sessions/2026-10-03-security-contract-and-api-split.md#challenge-delivery-evidence).
 
 Setup and run commands are not available yet. Do not treat this draft as a runnable submission. Add commands only after they work in the project environment.
 
@@ -42,7 +44,7 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | Prerequisites, configuration, and local startup | Pending implementation and verification. The EIA key must come from an environment variable. |
 | Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
 | Automated test command and results | No project tests or test results yet. |
-| Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. Concrete retry/time limits and their runtime checks remain pending. Preserve the last valid publication. |
+| Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. A19 selects three total attempts for temporary external failures with one- and three-second waits within the operation deadline; denied access, invalid SQL and failed validation are not retried. Refresh-stage deadlines and runtime checks remain pending. Preserve the last valid publication. |
 | Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. Historical source exports and scripts are still absent, so findings are not yet reproducible from a clean clone. |
 
 ## Documents required by Arkham
@@ -63,7 +65,8 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
 | [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
-| [docs/api-security.md](docs/api-security.md) | Approved A16 human flow, detailed requests/responses/errors and separately marked security proposals; A17 versions and A18 staged SQL scope remain independent. |
+| [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |
+| [docs/security-contract.md](docs/security-contract.md) | Accepted A19 roles, SQL policy, container/S3 boundaries, admission, limits, retry rules and required verification. |
 | [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for all 20 approved API operations; not implemented endpoints. |
 | [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
@@ -84,6 +87,6 @@ Keep required documents at the root, the data contract in `docs/schema.md`, back
 
 1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
 2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.
-3. Implement against A9's data, validation, and publication contract. Close the SQL and authentication implementation contracts before building those paths.
+3. Implement against A9's data, validation, and publication contract. Implement A19 security boundaries and verify them locally before enabling untrusted queries.
 4. Implement and verify working slices: extraction/model/metric, authenticated catalog and preview, restricted SQL, refresh/publication/settings, and the complete interface. Update relevant decisions, findings, and Engineering Notes with each slice.
 5. Verify a clean checkout using the README, test all three personas, reproduce findings, and rehearse the live explanation before submission.

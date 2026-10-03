@@ -3,7 +3,7 @@
   "info": {
     "title": "Trinity API contract",
     "version": "1.0.0",
-    "description": "High-level flow approved under A16. Detailed fields and bounded defaults authored under delegated specification work. Not implemented. See api-security.md for cross-field invariants and security proposals. Examples are synthetic."
+    "description": "High-level API flow accepted under A16; security design accepted under A19. Detailed HTTP fields authored under delegated specification work. See api-contract.md for API behavior and security-contract.md for enforcement rules. Not implemented or tested. Examples are synthetic."
   },
   "servers": [
     {
@@ -183,7 +183,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -432,7 +432,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -733,7 +733,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -1032,7 +1032,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -1120,7 +1120,8 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-rate-counter": "excluded_status_polling"
       }
     },
     "/catalog": {
@@ -1266,7 +1267,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -1547,7 +1548,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -1660,7 +1661,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/metrics/offline-share": {
@@ -1858,7 +1861,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -1971,7 +1974,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/datasets/{dataset_key}/preview": {
@@ -2251,7 +2256,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -2364,7 +2369,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/datasets/{dataset_key}/facilities": {
@@ -2595,7 +2602,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -2708,7 +2715,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/datasets/{dataset_key}/generators": {
@@ -2938,7 +2947,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -3051,7 +3060,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/queries": {
@@ -3061,7 +3072,7 @@
         "tags": [
           "analyst"
         ],
-        "description": "Only submitted SQL controls query filters. Capture one active publication. A18 accepts single-table v1 scope; exact SQL grammar and authentication implementation remain separately proposed; those policies must be settled and tested before execution is enabled.",
+        "description": "Only submitted SQL controls query filters. Pin one active publication. A18/A19 allow one read-only SELECT over one permitted table, filters, sorting, grouping, arithmetic, CASE, COUNT, SUM, AVG, MIN, MAX, ROUND, COALESCE and NULLIF. Validate full input and every physical table in one SQLGlot policy module before file download; verify DataFusion compatibility. Reject multiple statements, JOINs, CTEs, subqueries, writes, schema changes, URLs, external readers and custom functions. A trusted supervisor stages authorized Parquet read-only for a separate network-disabled query container with no credentials or Docker control. Output is at most 1,000 rows and provisionally 5 MiB; aggregates use all qualifying input rows. No runtime verification is claimed.",
         "x-minimum-role": "analyst",
         "parameters": [],
         "responses": {
@@ -3222,7 +3233,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -3398,7 +3409,9 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-analytical-limits": true,
+        "x-trinity-rate-counter": "analytical_user_minute"
       }
     },
     "/refresh-runs": {
@@ -3630,7 +3643,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -3939,7 +3952,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -4027,7 +4040,8 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-rate-counter": "excluded_progress_polling"
       }
     },
     "/refresh-runs/{run_id}": {
@@ -4230,7 +4244,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -4318,7 +4332,8 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-rate-counter": "excluded_progress_polling"
       }
     },
     "/refresh-runs/{run_id}/rerun": {
@@ -4631,7 +4646,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -5046,7 +5061,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -5315,7 +5330,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -5403,7 +5418,8 @@
               }
             }
           }
-        }
+        },
+        "x-trinity-rate-counter": "excluded_status_polling"
       }
     },
     "/candidates/{version_id}/approval": {
@@ -5716,7 +5732,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -6178,7 +6194,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -6593,7 +6609,7 @@
             }
           },
           "429": {
-            "description": "Safe Problem Details; see documented code mapping.",
+            "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
             "headers": {
               "X-Request-ID": {
                 "schema": {
@@ -6752,7 +6768,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "JWT",
-        "description": "Clerk session identity; exact verification and role lookup remain proposed; A18 accepts SQL scope, with dialect/functions still pending. No role is accepted from request fields."
+        "description": "Verify bearer session token, current Clerk session and public_metadata.role on every authenticated request, without role/session caching. Only trusted administration changes role. Reject invalid/inactive sessions and missing/unknown roles; verification outage permits no protected action. No client role or actor is trusted. A19; implementation and verification pending."
       }
     },
     "parameters": {
@@ -8232,7 +8248,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 16384,
-            "description": "Nonblank UTF-8 SQL; maximum 16 KiB encoded, independently of character count. No preview filters are applied."
+            "description": "Nonblank SQL, maximum 16 KiB (16,384 bytes) encoded UTF-8, independently of character count and the 64 KiB JSON body limit. No preview filters are applied. A19 defines selected SQL scope; parser/engine compatibility remains to be tested."
           }
         },
         "required": [
@@ -8275,7 +8291,8 @@
             "maximum": 1000
           },
           "truncated": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "True only when an additional result row exists beyond returned rows after the submitted query limit; no SQL result pagination."
           },
           "execution_ms": {
             "type": "integer",
@@ -8297,7 +8314,8 @@
           "truncated",
           "execution_ms",
           "diagnostics"
-        ]
+        ],
+        "description": "Bounded analytical output, provisionally at most 5 MiB encoded. SQL row cap limits output, never aggregate input. Resource failures return a safe error without partial results."
       },
       "FailureWarning": {
         "type": "object",
@@ -9444,5 +9462,48 @@
         ]
       }
     }
+  },
+  "x-trinity-security-contract": "security-contract.md",
+  "x-trinity-limits": {
+    "analytical_capacity_status": "provisional; adjust after local measurements",
+    "sql_output_rows": 1000,
+    "encoded_response_bytes": 5242880,
+    "analytical_timeout_seconds": 30,
+    "timeout_includes": [
+      "trusted_file_downloads",
+      "file_reads",
+      "container_start_and_query_execution",
+      "external_retry_waits"
+    ],
+    "query_container_memory_bytes": 1073741824,
+    "active_analytical_per_user": 2,
+    "active_analytical_deployment": 4,
+    "json_body_bytes": 65536,
+    "sql_utf8_bytes": 16384,
+    "analytical_requests_per_user_per_minute": 30,
+    "progress_polling_counted": false,
+    "configuration": "server-controlled",
+    "query_slots": "PostgreSQL transactional reservation across processes; release only after execution ended or was stopped",
+    "failure_output": "No partial results on time, memory or response-size failure; busy uses 429 rate_limited"
+  },
+  "x-trinity-external-retry-policy": {
+    "maximum_total_attempts": 3,
+    "wait_seconds": [
+      1,
+      3
+    ],
+    "deadline": "All attempts and waits fit the operation deadline; never reset analytical timeout",
+    "never_retry": [
+      "invalid_sql",
+      "denied_access",
+      "failed_validation"
+    ]
+  },
+  "x-trinity-publication-policy": {
+    "required_checks_pass_no_review_warnings": "automatic",
+    "required_checks_pass_review_warnings": "admin_approval_bound_to_exact_validated_files",
+    "required_checks_fail_or_incomplete": "blocked_without_override",
+    "configurable_mode": false,
+    "identity": "Existing SHA-256 manifests/checksums; changed files require new validation and required approval"
   }
 }
