@@ -24,8 +24,8 @@ Use a short initial configuration flow and one shared settings area. Distinguish
 
 Separate organization accounts and a new registration flow are outside the selected scope. Charts, export, SQL autocomplete, and query history are not committed features. Detailed visual design and framework choices remain open.
 
-## Next investigation
+## Data behavior and next implementation
 
-Inspect EIA metadata and real rows before selecting keys, the capacity metric fields, and anomaly-handling rules. Further product additions are not selected.
+The [v1 data contract](docs/schema.md) now specifies keys, same-day capacity/outage metrics, missing observations, validation, and publication. It preserves the selected flows above. Choose the runtime stack and build the first verified data slice. Further product additions are not selected.
 
 Sources: [DECISIONS.md](DECISIONS.md), A2–A4; `Software Engineer - Technical Challenge.pdf`, pages 2 and 6.
