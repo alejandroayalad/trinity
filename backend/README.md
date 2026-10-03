@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-This is the minimum project scaffold. It exposes process liveness at `GET /health`, returning `{"status":"ok"}`. Product routes, authentication, EIA extraction, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health` and a shared EIA client with three one-page fetch methods. Product routes, authentication, complete EIA extraction, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -28,6 +28,39 @@ The loader reads the current environment on each call. It rejects a missing, emp
 
 ## Run
 
+### Fetch one EIA page
+
+Use one `EIAClient` instance for all routes. Its constructor reads the environment; it owns one HTTPX AsyncClient and closes it on leaving the async context.
+
+```python
+from datetime import date
+from trinity.connector.client import EIAClient
+
+async def fetch_pages():
+    day = date(2026, 10, 1)
+    async with EIAClient() as client:
+        national = await client.fetch_national_page(start=day, end=day, length=1)
+        facility = await client.fetch_facility_page(start=day, end=day, length=1)
+        generator = await client.fetch_generator_page(start=day, end=day, length=1)
+    return national, facility, generator
+```
+
+All methods accept `start` and `end` as dates, a nonnegative `offset` (default 0), and `length` from 1 to 5,000 (default 5,000). Each method makes exactly one request with daily frequency, all three measurements and ascending sorting by the route's daily key. The client uses HTTPS, rejects redirects, and applies HTTPX I/O timeouts of 30 seconds (10 seconds for connection setup). These are not a total extraction deadline.
+
+`EIAResponsePage.data` contains source rows with strings and unit metadata preserved. `response` retains sanitized source metadata; `total` is the parsed advertised count, `api_version` identifies the API release, and `warnings` preserves sanitized top-level warnings. Empty pages are valid. The facility advertised total is not used to infer completeness.
+
+The client checks the JSON envelope, daily frequency, row shape, identifiers, dates, requested window, units and page size. Decimal normalization, duplicate checks, full coverage and cross-route reconciliation remain later stages. HTTP failures, API-body errors and malformed responses raise `EIAClientError` with safe `code` and optional `status_code`. Returned pages omit echoed request credentials. An HTTPX log filter masks the API key in request URLs without disabling logging; callers must still avoid logging raw credentials.
+
+After exporting `EIA_API_KEY`, run this explicit live gate from `backend/`:
+
+```bash
+uv run --locked python tests/live_eia.py -v
+```
+
+It requests one row from each route for October 1, 2026, using the same client. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
+
+### Start the API
+
 ```bash
 uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000
 ```
@@ -41,7 +74,7 @@ uv run --locked python -m unittest discover -s tests -v
 uv build
 ```
 
-Verified on CPython 3.14.8 with uv 0.12.23: dependency resolution, locked installation, six health/configuration tests, installed-package compatibility checks and backend-module imports. The initial scaffold also passed source/wheel builds. The tests cover environment loading, missing/blank keys, secret masking, fresh reads and health without credentials. Starlette still emits a deprecation warning for the approved HTTPX test client; all tests pass. No dependency was changed to hide that warning. External-service integration and live EIA credentials have not been tested.
+Verified on CPython 3.14.8 with uv 0.12.23: 18 health, configuration and mocked EIA client tests pass. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
 
 ## Layout and next slice
 

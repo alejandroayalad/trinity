@@ -180,3 +180,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Dependencies and EIA environment — October 3, 2026
 
 [ME] Alayala requested dependency resolution and environment-based EIA credentials. [YOU] AI resolved and installed the selected backend packages, regenerated uv.lock, and added an explicit EIA key loader with safe missing-value errors and masked secret output. Six tests, package compatibility checks and backend-module imports passed on Python 3.14.8. No live EIA call was made; tests used synthetic keys. Clerk remains omitted following the local-login choice. See the [follow-up session](ai/sessions/2026-10-03-dependencies-and-eia-environment.md) for scope and remaining verification.
+
+## Shared EIA client — October 3, 2026
+
+[ME] Alayala requested one shared HTTPX client and a one-page fetch method for each EIA route. [YOU] AI implemented environment authentication, daily request parameters and sorting, response-shape/unit checks, safe errors and secret redaction. All 18 offline tests passed, including 12 new client tests. A separate live gate is included but was not run because EIA_API_KEY is absent. No new data finding or complete extraction is claimed. See the [client session](ai/sessions/2026-10-03-eia-single-page-client.md).
