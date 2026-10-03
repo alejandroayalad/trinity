@@ -1,0 +1,199 @@
+# Data findings — Trinity
+
+Status: ongoing data evidence, October 2, 2026. A4 remains accepted: PostgreSQL stores application state; Apache DataFusion queries outage data in Parquet.
+
+## Authorship and evidence
+
+Alayala fetched the data, analyzed it, and wrote the original findings in this document. AI organized the text, corrected wording, and added evidence references. AI also ran separate read-only checks of the local CSV exports. These checks support the findings; they do not transfer authorship of the original analysis to AI.
+
+The evidence below distinguishes observed values from explanations and proposed product handling. Three selected anomalies are documented. Data review continues as new evidence appears; follow the [ongoing anomaly workflow](AGENTS.md#ongoing-anomaly-workflow). Remaining source-definition and verification work is tracked below. New candidates are not automatically confirmed findings.
+
+## Data inspected
+
+Local workspace files cover January 1, 2025 through October 2, 2026. A grain is the level represented by one row: national, facility, or generator.
+
+| Grain | File under the workspace `data/` folder | Rows | Distinct days |
+|---|---|---:|---:|
+| National | `us_20250101_20261002.csv` | 640 | 640 |
+| Facility | `facility_20250101_20261002.csv` | 34,949 | 640 |
+| Generator | `generator_20250101_20261002.csv` | 60,549 | 640 |
+
+Supporting local report: `data/REPORT_20250101_20261002.md`. These paths refer to the data workspace, not this Obsidian folder. The report's explanations are not all independently verified. Agreement between exports does not prove that the API download is complete.
+
+The later two-year export is in `data/last_2_years_20241002_20261002/`: 731 national rows, 39,863 facility rows, and 69,103 generator rows covering October 2, 2024–October 2, 2026. AN-02 and the new API checks use this export. All 731 dates are present, candidate keys are unique, and capacity/outage totals agree between national rows, facilities, and generators. The facility API total issue is documented below.
+
+## F1 — Calculate percentages from capacity and outage
+
+**Alayala's finding:** A facility percentage is not the simple average of its generators' percentages. Each generator has its own capacity. Apply the same rule when calculating the national percentage.
+
+**Observed example:** Millstone, `facility = 566`, on `2026-08-04`.
+
+| Row | Capacity (MW) | Outage (MW) | Percent offline |
+|---|---:|---:|---:|
+| Generator `2` | 863.4 | 863.4 | 100% |
+| Generator `3` | 1,245.0 | 0.0 | 0% |
+| Facility | 2,108.4 | 863.4 | 40.95% |
+
+The simple average is 50%. The capacity-weighted result is `863.4 / 2108.4 * 100`, which rounds to 40.95%. Capacity-weighted means that a larger generator contributes more to the total.
+
+**Evidence:** AI matched these rows in the facility and generator exports. The values support summing megawatts before calculating the percentage. They do not establish EIA's internal processing method.
+
+**Product implication:** Calculate the offline share as `sum(outage) / sum(capacity) * 100` for the same date and selected entities. Use the national row's same-day values for the national metric. Do not average percentages or reconstruct outage MW from a rounded percentage.
+
+## F2 — Identify a generator within its facility
+
+**Alayala's finding:** `generator` alone is not unique. Keep the source name `facility` in the schema. Use `facilityName` as descriptive text, not as the identifier.
+
+| Purpose | Candidate key | Example |
+|---|---|---|
+| Identify a reactor over time | `(facility, generator)` | `(46, "1")`: Browns Ferry unit 1 |
+| Identify one daily reactor row | `(period, facility, generator)` | `(2026-09-15, 46, "1")` |
+
+Another reactor example from the original notes is `(371, "2")`: Columbia unit 2. Generator numbers need not begin at 1 at each facility.
+
+**Evidence:** In the generator export, `generator = "1"` occurs at 47 distinct facilities on `2026-09-15`. AI found no duplicate `(period, facility, generator)` keys across the 60,549 generator rows. It also found no duplicate `(period, facility)` facility keys or `period` national keys in this window.
+
+**Product implication:** A join or lookup using only `generator` can combine different facilities. Include `facility`; include `period` when matching daily observations. Final schema types and key decisions remain open in [DECISIONS.md](DECISIONS.md).
+
+## F3 — MW measures power, not energy over a day
+
+**Alayala's finding:** Megawatts (MW) measure power. They do not measure energy produced or lost during the day. Megawatt-hours (MWh) measure energy over time.
+
+**Product implication:** Label `capacity` and `outage` in MW. Do not label an outage value as daily energy loss. A daily record does not by itself provide the hourly information needed to calculate that loss.
+
+**Source check:** The CSV exports omit the source unit columns. The live metadata and sample responses saved on October 2, 2026 confirm MW for capacity/outage and percent for `percentOutage`. See “API metadata and pagination checks” below for the source observation timing and remaining definition limits.
+
+## F4 — The national totals match the lower-level totals
+
+**Alayala's finding:** National totals match the sum of facilities and the sum of generators.
+
+**Verification scope:** AI independently checked every date from `2025-01-01` through `2026-10-02` in the three exports. It parsed numeric values with Python `Decimal`, which preserves decimal arithmetic for these comparisons.
+
+| Comparison | Field | Days checked | Mismatched days |
+|---|---|---:|---:|
+| National vs sum of facilities | `capacity` | 640 | 0 |
+| National vs sum of facilities | `outage` | 640 | 0 |
+| National vs sum of generators | `capacity` | 640 | 0 |
+| National vs sum of generators | `outage` | 640 | 0 |
+
+All 2,560 comparisons had an exact difference of 0 MW. Each export contains all 640 dates in this interval.
+
+**Limit:** This confirms agreement in the inspected exports. It does not prove full API history coverage, complete pagination, or the absence of reporting gaps at individual facilities. Do not invent a MW mismatch to satisfy the challenge.
+
+## F5 — Capacity changes across dates
+
+**Alayala's interpretation:** Capacity changes with the season.
+
+**Observed example:** National capacity changes across the September–October boundary.
+
+| Date | National capacity (MW) |
+|---|---:|
+| `2026-09-30` | 97,620.5 |
+| `2026-10-01` | 100,056.7 |
+| Difference | +2,436.2 |
+
+**Evidence:** AI checked the national rows. Both dates contain the same set of 55 facility identifiers. The change is therefore not explained by a facility appearing or disappearing between these two dates.
+
+**Interpretation limit:** This supports a changing denominator. It does not by itself prove which seasonal capacity definition EIA uses or the exact date of its switch. Keep the seasonal explanation provisional until a source specific to this dataset confirms it.
+
+**Product implication:** Use the capacity recorded for the same date as the outage. Do not use one fixed capacity for every day.
+
+## Anomalies
+
+Three anomalies are documented below, with observed examples, supporting checks, and proposed product handling.
+
+### AN-01 — Reported capacity increased overnight
+
+**What happened?** From September 30 to October 1, 2026, total U.S. nuclear capacity rose from **97,620.5 MW to 100,056.7 MW**. That is an increase of **2,436.2 MW**.
+
+**What did we check?** The same 55 plants appear on both days. Capacity increased at 47 plants and stayed the same at eight. Adding the changes from all plants gives exactly the national increase.
+
+For example, **Peach Bottom** (`facility = 3166`) rose from **2,549.4 to 2,694.1 MW**: an increase of **144.7 MW**, the largest among the plants.
+
+**Why is it unusual?** Many plants report higher capacity on the same day, even though no plant was added to the list. This does not mean the data is wrong.
+
+**Why did it happen?** It may be a seasonal adjustment. We have confirmed the change, but have not confirmed its cause.
+
+**How should Trinity handle it?** Use each day's reported capacity when calculating the percentage offline: `outage / capacity × 100`. Using one fixed capacity for every day would give the wrong percentage when capacity changes. This behavior is proposed, not implemented yet.
+
+**How can someone check it?** We compared the saved national and plant CSVs for those two dates. The check passed. The [supporting check](ai/sessions/2026-10-02-capacity-anomaly-facility-comparison.md#reproducible-check-for-an-01) contains the command and the five largest changes.
+
+This expands F5. Alayala selected it as an anomaly; AI checked the plant values and helped write this explanation.
+
+### AN-02 — Palisades enters the dataset fully offline
+
+**What happened?** Palisades (`facility = 1715`, generator `1`) first appears in our two-year export on **September 9, 2025**. Its capacity and outage were both **768.5 MW**, so it was **100% offline**. It stays at 100% offline for **389 consecutive daily records**, through October 2, 2026. On the last date, capacity and outage are both **815.6 MW**.
+
+**Why did it happen?** EIA explains that Palisades changed from decommissioning to restarting on September 9, 2025. It was producing no power, so EIA began counting it as an outage. This explains its entry into the dataset; the 389-day duration comes from our saved rows. [EIA explanation, January 26, 2026](https://www.eia.gov/TODAYINENERGY/detail.php?id=67047).
+
+**Why does it matter?** A plant can enter the dataset already offline. Its first appearance does not mean it suffered a new breakdown that day. Adding Palisades increased national capacity by **768.5 MW**; capacity at the existing plants did not change that day.
+
+**How should Trinity handle it?** Include the reported capacity and outage from its first available date. Show earlier dates as “not reported,” not zero outage. Keep the restart explanation separate from the measured values. This behavior is proposed, not implemented yet.
+
+**Did any plants disappear?** No. In our October 2, 2024–October 2, 2026 export, the other 54 plants appear every day. Palisades is the only plant added; no plant disappears or has a gap after its first appearance. This statement covers the saved two-year export, not all EIA history.
+
+**How can someone check it?** The [supporting check](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) compares daily plant lists and checks Palisades against its generator rows. It passed. Alayala approved this anomaly; AI performed the checks and drafted the entry.
+
+### AN-03 — The facility API reports more rows than it returns
+
+**What happened?** For **Browns Ferry** (`facility = 46`) on **October 1, 2026**, the facility API reports **3 matching rows**, but returns **1 plant row**. The generator API reports and returns **3 generator rows** for the same plant and date.
+
+**What did we check?** For all plants on that date, the facility API reports **95 rows** but returns **55**. Asking for rows after those 55 returns nothing. The same problem occurs in the two-year download: **69,103 reported**, **39,863 returned**, and no rows after the last one. The [API checks below](#api-metadata-and-pagination-checks) contain the detailed results.
+
+**Why is this an anomaly?** The advertised total does not match the number of plant rows available. Trusting that total alone could make Trinity report an incomplete download or keep requesting rows that do not exist.
+
+**Why does it happen?** The reported total matches the generator count in our examples. EIA appears to count generators instead of plants. The mismatch is confirmed; the internal cause is still an inference.
+
+**How should Trinity handle it?** Send the downloaded version to validation. If its counts and required checks pass, it is ready for publication without a user-facing warning about this known EIA count issue. If validation fails, the version stays unpublished. See [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed) for the accepted rule and its relationship to Admin approval. The checks still need implementation.
+
+**How can someone check it?** The original responses are saved in `data/api_evidence_20261002/` in the data workspace. The [supporting checks](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) verify their counts, and the same session includes requests for a live rerun. Alayala selected this as the third anomaly; AI reproduced the mismatch and wrote the explanation.
+
+## API metadata and pagination checks
+
+**Metadata describes the dataset.** A route without `/data/` returns its description, fields, units, filters, and available dates. Adding `/data/` requests actual rows. This is how EIA documents its API. [EIA API guide](https://www.eia.gov/opendata/documentation.php).
+
+We queried all three route descriptions on October 2, 2026 and saved the responses in the data workspace under `data/api_evidence_20261002/`.
+
+| Item | Confirmed response |
+|---|---|
+| Date frequency and format | Daily; `YYYY-MM-DD` |
+| Capacity and outage | `megawatts` |
+| Percent outage | `percent` |
+| Filters (called facets by EIA) | National: none. Facility: `facility`. Generator: `facility` and `generator`. |
+| Available range advertised by all routes | January 1, 2007–October 2, 2026. This is not a claim that we downloaded that full range. |
+
+The metadata names NRC's Power Reactor Status Report as its source. NRC says its status observations are collected between 4 a.m. and 8 a.m. Eastern time. These are daily status observations, not daily energy measurements. The precise seasonal capacity definition and EIA's treatment of missing source reports still need dataset-specific confirmation. [NRC daily report notes](https://www.nrc.gov/reading-rm/doc-collections/event-status/reactor-status/2025/20250508ps).
+
+**Pagination means requesting rows in batches.** `length=5000` asks for up to 5,000 rows. `offset=0`, `5000`, and `10000` ask for successive batches. The downloader stops when a batch contains fewer than 5,000 rows. EIA documents `total` as the total matching row count, but the facility route behaves inconsistently in our checks. [EIA pagination documentation](https://www.eia.gov/opendata/documentation.php).
+
+For **October 1, 2026**, live requests returned:
+
+| Request | API total | Actual returned rows |
+|---|---:|---:|
+| All plants, offset 0, length 5000 | 95 | 55 |
+| All plants, offset 55, length 5 | 95 | 0 |
+| All generators, offset 0, length 5000 | 95 | 95 |
+| Browns Ferry plant (`facility = 46`) | 3 | 1 |
+| Browns Ferry generators (`facility = 46`) | 3 | 3 |
+
+**What this means:** The facility total matches the generator count in these requests. That suggests EIA counts generators before combining them into plant rows; we have not inspected EIA's internal code. The mismatch is directly reproduced in EIA responses, not introduced by our CSV report.
+
+For the two-year request, offset **39,863** returned **zero rows**, while `total` still said **69,103**. Our saved 39,863 plant/date rows also match the groups formed from the 69,103 generator rows. The live one-day plant rows match the saved CSV values. This supports reaching the end of the returned plant rows. It does not make the misleading total valid or prove the source itself has no omissions.
+
+**Validation handling:** Follow [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed). The known source total alone cannot determine completeness. Page exhaustion, unique keys, date coverage, and agreement with generator groups are evidence for the validation design. The exact required checks and tolerances remain to be specified and implemented.
+
+The [supporting session](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md) lists the saved requests, reproduction steps, and remaining limits.
+
+## Reproduction and remaining evidence
+
+The workspace contains `fetch_eia.py`, `generate_report.py`, the exports, and the supporting report. The report lists this analysis command, run from the data workspace:
+
+```bash
+python3 generate_report.py --us data/us_20250101_20261002.csv --facility data/facility_20250101_20261002.csv --generator data/generator_20250101_20261002.csv --out REPORT_20250101_20261002.md
+```
+
+During the earlier formatting task, AI used separate inline, read-only checks and did not run or review `generate_report.py`. During the subsequent readiness review on October 2, AI reviewed the script and ran it against the full-window and September exports. The full-window report matched the stored report apart from its generation timestamp and reproduction output filename. Some explanations are fixed text rather than checked conclusions, so successful execution does not verify them. AN-01 above links to a separate executed command for its plant comparison.
+
+Before submission, review the report's methods and preserve the checks used to reproduce the final findings. The new API checks verify units, frequency, filters, and the facility count mismatch; the precise seasonal capacity definition and source revision policy remain open. All three selected anomalies are documented: the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. The remaining definition, report, and detailed validation-check work is separate from selecting anomalies; data evidence remains ongoing as defined in AGENTS.md.
+
+See [Engineering Notes](NOTES.md) for contributions and [the closed session](ai/sessions/2026-10-02-data-findings-and-handoff.md) for the handoff.
