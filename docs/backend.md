@@ -2,7 +2,7 @@
 
 Status: structure and responsibility boundaries accepted by alayala on October 3, 2026, under [A15](../DECISIONS.md#a15--backend-structure-and-responsibility-boundaries-closed). Implementation pending. The tree below describes the files to implement; it is not a claim that they exist or run.
 
-[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. It does not replace the pending HTTP, SQL, authentication, or internal-message contracts.
+[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-security.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. Detailed authentication, SQL grammar and internal-process controls remain separate; A18 accepts staged SQL scope.
 
 ## Package and entrypoints
 
@@ -135,13 +135,13 @@ Enforce process memory bounds, input/output byte limits, row caps, deadlines, an
 | Owner | Canonical application models |
 |---|---|
 | `settings/repository.py` | `shared_settings` |
-| `refresh/repository.py` | `refresh_runs`, `refresh_steps`, `data_versions`, `dataset_artifacts`, `validation_results` |
+| `refresh/repository.py` | `refresh_runs`, `refresh_steps`, `data_versions`, `dataset_artifacts`, `validation_results`, `refresh_control`, `failure_warnings`, `api_commands` |
 | `publication/repository.py` | `approvals`, `publication_events`, `active_publication` |
 | `adapters/outbox.py` | `job_outbox` persistence, claiming, and delivery state |
 
 Feature services own transactions through `adapters/postgres.py`. Repositories and outbox helpers accept the same connection and do not commit independently. A service can coordinate multiple repositories in one transaction without copying their SQL or state rules.
 
-`refresh/service.py` commits run creation and outbox intent together. `publication/service.py` coordinates approval/publication intent and later the publication event, active pointer, and run-success update under A9. `publication/checks.py` evaluates the existing evidence and eligibility rules; it does not maintain a second set of connector data-quality rules. Settings revision and execution-fence checks remain required.
+`refresh/service.py` commits run creation and outbox intent together. `publication/service.py` coordinates approval/publication intent and later the publication event, active pointer, and run-success update under A9. `publication/checks.py` evaluates the existing evidence and eligibility rules; it does not maintain a second set of connector data-quality rules. Settings/resource revisions, admission-slot ownership, command idempotency, publication generation and execution-fence checks remain required under A16. Recovery commands coordinate the same repositories in one transaction; they do not use separate HTTP-only state.
 
 **Failure example:** the run insert succeeds but the outbox insert fails. The owning service rolls back the whole transaction and does not return acceptance. Redis dispatch happens after commit. Keep external EIA, S3, and Redis operations outside long database transactions; no distributed transaction is implied.
 
@@ -155,7 +155,7 @@ The refresh service coordinates `connector/pipeline.py`: fixed-window extraction
 
 **Failure example:** source rows pass but a Parquet object is truncated or missing. Final-file validation fails and the candidate stays unpublished. The prior publication remains available. A successful queue job alone is not proof that data passed validation or was published.
 
-Automatic readiness and Admin approval both use the outbox handoff to a publication worker. The HTTP approval endpoint records acceptance; it does not run the file/publication pipeline. The worker rechecks the frozen manifest's integrity and eligibility and performs A9's atomic publication transition. All three analytical datasets in a response remain on the one publication pinned for that request.
+A16 derives automatic readiness versus required approval from the frozen warning set. Both use the outbox handoff to a publication worker. The HTTP approval endpoint records acceptance; it does not run the file/publication pipeline. The worker rechecks the frozen manifest's integrity and eligibility and performs A9's atomic publication transition. All three analytical datasets in a response remain on the one publication pinned for that request.
 
 ## Scheduling, dispatch, and recovery
 
@@ -165,18 +165,18 @@ Automatic readiness and Admin approval both use the outbox handoff to a publicat
 | `workers/outbox.py` | Dispatch committed outbox work and record delivery through the persistence helpers; handle the enqueue/acknowledgment gap safely. |
 | `workers/recovery.py` | Periodically reconcile unfinished durable runs with queue/progress state and delegate recovery decisions to feature services. |
 
-Recovery covers requested/running/publishing work lost from Redis, expired worker leases, and the dispatch-generation rules in A9. Do not replay terminal runs or candidates awaiting approval. Services own retries, fences, and legal state transitions; worker loops do not duplicate these rules.
+Recovery covers requested/running/publishing work lost from Redis, expired worker leases, and the dispatch-generation rules in A9. Do not replay terminal runs or candidates awaiting approval or publication-failed Admin recovery. A16 explicit publication retry rearms only the same eligible candidate; rerun creates a new run; warning resolution/discard prevents revival of abandoned candidates. Services own retries, fences, and legal state transitions; worker loops do not duplicate these rules.
 
 **Failure example:** Redis acknowledges enqueue and the outbox becomes delivered, then the queued job is lost. Pending-outbox dispatch alone does not find that run. The recovery trigger identifies eligible unfinished work and invokes the durable recovery path without creating duplicate publication effects.
 
 ## Contracts and verification still required
 
-The accepted tree locates responsibilities; it does not complete these contracts:
+The accepted tree locates responsibilities; it does not complete these contracts. [A16](api-security.md) supplies approved HTTP flow and detailed schemas; [A17](../DECISIONS.md#a17--dependency-versions-and-update-policy-closed) accepts dependency versions. Detailed authentication/SQL grammar and process-execution choices remain proposed; A18 accepts staged SQL scope. Implementation/compatibility checks remain pending:
 
 | Open item | Required outcome before implementing that path |
 |---|---|
 | Dependency versions and execution model | Compatible pinned releases; PostgreSQL pooling/sync-async choices; bounded worker/query concurrency and verified worker recovery. |
-| HTTP API | Catalog, filtered/paginated preview, SQL, refresh status, settings, candidate inspection, and approval request/response/error definitions. |
+| HTTP API implementation | Implement the 20 operations and field schemas in A16/OpenAPI, including dashboard, entity options, schedule status, rerun, warning resolution, retry and discard. |
 | SQL and authentication | Exact grammar/dialect/functions, table-reference detection, permitted/rejected examples, token checks, trusted role handling, and role-change behavior. |
 | Query process contract and deployment | Message schema and transport, caller authentication, restricted resources/credentials, object read scope, supervisor behavior, and finite limits. |
 | Acceptance tests | Authorization before file reads, whole-input SQL rejection, exact decimals, snapshot consistency, transaction failures, final-file validation, timeout cleanup, resource exhaustion, and Redis/worker recovery. |

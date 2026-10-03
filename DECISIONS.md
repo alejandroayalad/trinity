@@ -10,7 +10,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | --- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
 | A1  | Technical / code   | One decision document with categories.                                                                          |
 | A2  | Product / business | Scheduled and manual Admin refreshes, with validation before publication.                                       |
-| A3  | Product / business | One initial account setup; editable shared schedule and publication mode.                                       |
+| A3  | Product / business | One initial account setup and editable shared schedule; A16 replaces selectable publication mode.                                       |
 | A4  | Technical / code   | PostgreSQL for application state; Apache DataFusion for outage queries over Parquet.                            |
 | A5  | Product / business | Validation controls publication; no user warning for the known facility count issue after required checks pass. |
 | A6  | Technical / code   | Background workers run the full refresh pipeline using BullMQ and Redis, with bounded concurrency.              |
@@ -22,7 +22,9 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A13 | Technical / code   | PyArrow for Parquet preparation, datafusion-python for queries, and SQLGlot for SQL inspection.                 |
 | A14 | Technical / code   | Application-owned persisted outage data in S3; exploration does not fetch live EIA data.                       |
 | A15 | Technical / code   | Feature-based backend package with separate query execution and explicit ownership, validation, and recovery. |
+| A16 | Product / business and Technical / code | Approved API flow, fixed warning-based publication, serialized refresh/recovery and detailed HTTP schemas. |
 | A17 | Technical / code   | Exact dependency versions and locked installation/update policy; compatibility checks remain pending. |
+| A18 | Technical / code   | Required v1 single-table SQL; joins, CTEs, and subqueries are optional after the core works and its tests pass. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -40,6 +42,8 @@ Reason: one file keeps Arkham's required decisions easy to find. Categories dist
 Record each decision once. If it affects both categories, use both labels on the same entry.
 
 ### A2 — refresh and publication policy: closed
+
+**Current rule:** [A16](#a16--approved-api-flow-and-detailed-contract) supersedes the selectable publication policy and recovery behavior recorded below. Setup edits only the daily schedule; publication is automatic without review warnings and requires approval with warnings. The following original rationale is historical where it conflicts with A16.
 
 Category: **Product / business**. Related technical choices remain open.
 
@@ -82,6 +86,8 @@ On the first load, there may be no previous valid version. The app must report t
 Sources: `Software Engineer - Technical Challenge.pdf`, pages 2, 4, 5, and 7; alayala's explicit selection in the current discussion. The [Databricks expectations documentation](https://docs.databricks.com/aws/en/ldp/expectations) is background on validation behavior, not a selected dependency or implementation guarantee.
 
 ### A3 — initial account configuration: closed
+
+**Current rule:** [A16](#a16--approved-api-flow-and-detailed-contract) supersedes the selectable publication policy and recovery behavior recorded below. Setup edits only the daily schedule; publication is automatic without review warnings and requires approval with warnings. The following original rationale is historical where it conflicts with A16.
 
 Category: **Product / business**.
 
@@ -129,7 +135,7 @@ Closure confirmed on October 2, 2026. Session evidence: [A4 decision session](ai
 
 | Component | Responsibility |
 |---|---|
-| PostgreSQL | Store shared setup settings, refresh schedule and publication mode, refresh outcomes, approval records, and the identity of the published data version. |
+| PostgreSQL | Store shared setup/schedule, refresh outcomes, frozen warning policy, approvals, failure recovery and published-version identity; A16 removes a selectable account publication mode. |
 | Parquet | Store outage extracts and prepared analytical datasets. Outage records are not copied into PostgreSQL for user queries. |
 | Apache DataFusion | Execute allowed SQL against the published Parquet datasets. It is the outage query engine. |
 | Backend | Identify users, enforce permissions before reads and query execution, control supported SQL, and coordinate refresh, validation, approval, and publication. |
@@ -392,6 +398,28 @@ Status: accepted by alayala on October 3, 2026. File structure and the five revi
 
 Evidence: alayala's supplied tree and acceptance of the five refinements; [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review). Acceptance and documentation checks: [structure session](ai/sessions/2026-10-03-backend-structure-accepted.md).
 
+### A16 — Approved API flow and detailed contract
+
+Category: **Product / business** and **Technical / code**.
+
+Status: high-level design accepted by alayala on October 3, 2026, through the supplied `trinity-api-contract-final.md`. Detailed request/response fields, bounded defaults and persistence amendments are AI-authored specification work under his instruction to add missing details. No implementation or runtime verification is claimed.
+
+**Choice:** Use [the approved human overview and detailed API contract](docs/api-security.md) and [OpenAPI schemas](docs/openapi.json). The 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
+
+**Publication and recovery:** Publication behavior is fixed: complete required checks and no review warnings publish automatically; complete required checks with frozen warnings require Admin approval; failed or incomplete checks block publication. No editable publication mode remains. One refresh lifecycle is admitted at a time, including pending review and unresolved failure. Run-again creates a new full run and abandons the old candidate; warning deletion resolves the block without new work; publication retry preserves the same eligible candidate and original approval requirements; discard permanently prevents publication while preserving history.
+
+**Reason and rejected alternatives:** Follow the author's approved UI/API flow and make requests, results and recovery unambiguous. Replace the earlier selectable automatic/approval account mode. Reject resuming a failed full refresh through Run again, deleting failure history when clearing a warning, treating accepted work as publication success, and letting concurrent recovery actions both take effect.
+
+**Flow and failure example:** Admin saves setup with an ETag, then separately starts the first refresh. A validated candidate with warnings occupies the lifecycle slot and opens in the run page side panel. Approval atomically records authorization and publication outbox work. If publication later exhausts its retries, the Admin can retry that exact eligible candidate or abandon it. Simultaneous retry and discard cannot both succeed; transaction locks, revisions and worker fences protect the chosen outcome.
+
+**Precedence and history:** Supersedes A2/A3's selectable publication policy and A9's original recovery exclusions, while preserving analytical keys, measurements, exact reconciliation, immutable files, published-only access and monotonic publication. [schema.md](docs/schema.md) now includes the supporting warning/admission/command records and nonterminal publication_failed state. The original A2/A3 text below their current-status notices is retained as history. A5's known facility-total issue remains informational after required checks pass, not an automatic review warning.
+
+**Delegated completion details:** Exact field names/types/nullability, role landing values, 365-day yearly preset, bounded paging, command idempotency/ETags, diagnostic severity mapping, and added persistence fields are attributed to AI. The supplied design fixes behavior; these completion defaults make it implementable and reviewable without claiming separate author review of every field. A17 versions and A18 staged SQL scope remain accepted independently. Detailed authentication lookup/token rules, SQL dialect/functions, resource controls, retry budgets and sandbox deployment are not accepted by this API-flow approval.
+
+**Validation required:** Check all schema examples, every approved endpoint, safe role-specific responses, dashboard/metric agreement, pagination/version conflicts, concurrent recovery, warning publication gates, lost queues, stale workers, and terminal candidate disposition. Specification checks do not prove endpoint or database behavior. No new commit/push was requested for this expansion.
+
+Source and contributions: [approved API completion session](ai/sessions/2026-10-03-approved-api-contract-expanded.md). The supplied source is preserved unchanged outside the repository; its approved human flow is included in the contract.
+
 ### A17 — Dependency versions and update policy: closed
 
 Category: **Technical / code**.
@@ -424,6 +452,29 @@ Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server vers
 
 Sources: [Python 3.14.8](https://www.python.org/downloads/release/python-3148/), [uv 0.12.23](https://pypi.org/project/uv/0.12.23/), per-package release links above, [PostgreSQL version policy](https://www.postgresql.org/support/versioning/), [Redis 8.10.2](https://github.com/redis/redis/releases/tag/8.10.2), and [uv locking](https://docs.astral.sh/uv/concepts/projects/sync/). Supporting record: [dependency acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md).
 
+### A18 — SQL scope by stage: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Scope selected; implementation and tests pending.
+
+**Choice:**
+
+| Stage | SQL scope |
+|---|---|
+| Required v1 | Single-table SELECT, filters, sorting, grouping, and approved aggregate functions. |
+| Optional extension | Add joins, CTEs (WITH queries), and subqueries after the core works and its tests pass. |
+
+**Reason and alternative:** Establish and test the core query behavior before expanding SQL complexity. Do not require joins, CTEs, or subqueries for v1; these remain optional even after the core passes its tests.
+
+**Flow and failure example:** SQL input → supported-syntax and table-permission checks → DataFusion over permitted published Parquet → query results. In v1, a query joining two otherwise permitted datasets must be rejected before file registration because joins are outside the required scope. A4/A9/A13 retain the application-state and unpublished-file boundaries.
+
+**History and remaining decisions:** Accepts the staged SQL scope previously proposed within A16. It does not accept the rest of A16, the exact aggregate-function allowlist, dialect, detailed expressions, or execution limits. Those details remain under review in [the SQL policy proposal](docs/api-security.md#sql-policy).
+
+**Verification required:** Core acceptance tests must cover single-table SELECT, filters, sorting, grouping, approved aggregates, and rejection of joins, CTEs, and subqueries. Permission and published-data boundaries must also be tested. Optional extensions need their own syntax and authorization tests before use. No runtime tests have run.
+
+Source: alayala's supplied stage/scope table. Supporting record: [SQL scope session](ai/sessions/2026-10-03-sql-scope-by-stage.md).
+
 ## Finalized specifications
 
 ### A9 — Data contract v1: finalized
@@ -432,7 +483,7 @@ Category: **Technical / code** and **Product / business**.
 
 Status: finalized by AI on October 2, 2026, under alayala's instruction, “finalize the data contract.” This delegates the specification work; it is not a claim that alayala independently chose or verified every new default. No application implementation or runtime test is included. A1–A8 remain accepted.
 
-**Choice:** Use [data contract v1 and its schema diagrams](docs/schema.md) as the canonical analytical and application-state specification. It defines daily natural keys, source IDs as text, exact decimal storage, null behavior, same-day percentage calculations, validation gates, immutable manifests, the ten application models, and publication ordering.
+**Choice:** Use [data contract v1 and its schema diagrams](docs/schema.md) as the canonical analytical and application-state specification. It defines daily natural keys, source IDs as text, exact decimal storage, null behavior, same-day percentage calculations, validation gates, immutable manifests, the original ten application models, and publication ordering. A16 amends the application lifecycle and adds admission, failure-warning and command-receipt records; analytical schema rules remain unchanged.
 
 **New v1 defaults:** `DECIMAL(24,6)` with exact-fit parsing; history from 2024-10-02 through the newest national observation pinned by the worker before extraction; full-window refresh to capture source revisions; exact zero-MW reconciliation tolerance; policy frozen per run; monotonic run order plus non-regressing coverage for publication; and retention of all published artifacts. These are Trinity scope and implementation rules, not promises made by EIA. Missing entity observations stay “not reported.”
 
@@ -449,11 +500,15 @@ Status: finalized by AI on October 2, 2026, under alayala's instruction, “fina
 
 **Tradeoffs:** Full-window fetches and retaining published snapshots use more network and disk. Strict zero-tolerance reconciliation can hold back legitimate future source rounding changes; investigate and revise the rule explicitly instead of changing the evidence. The selected decimal precision is a storage boundary. No performance claim follows from these choices.
 
-**History and precedence:** The October 2 Clerk/model session remains an unchanged historical proposal. This specification replaces its proposed fields where they differ. Earlier “open” implementation lists in A2–A8 describe their original decision scope; A9 closes the logical fields, validation, policy snapshots, recovery obligations, and publication invariants covered by the contract. Finite worker/request limits, DDL, supported SQL, parser/table authorization, role-token details, and a product stale-age threshold remain separate implementation decisions. A9 does not close all Arkham decision topics.
+**History and precedence:** A16 later supersedes selectable publication modes and recovery exclusions; read the amended schema lifecycle for current rules. The October 2 Clerk/model session remains an unchanged historical proposal. This specification replaces its proposed fields where they differ. Earlier “open” implementation lists in A2–A8 describe their original decision scope; A9 closes the logical fields, validation, policy snapshots, recovery obligations, and publication invariants covered by the contract. Finite worker/request limits, DDL, supported SQL, parser/table authorization, role-token details, and a product stale-age threshold remain separate implementation decisions. A9 does not close all Arkham decision topics.
 
 **Verification required:** Implement and execute the contract's acceptance scenarios, including exact decimals, all required checks in one attempt, missing data, Redis loss, worker fencing, approval ordering, and readers that overlap publication. Restore self-contained reproduction inputs and scripts. Historical evidence was not rerun and no permission boundary was runtime-tested in this task.
 
 Supporting record: [data-contract session](ai/sessions/2026-10-02-data-contract-v1.md).
+
+## Proposed decisions
+
+Detailed authentication/token/role-cache choices, SQL dialect/functions under the accepted A18 scope, and runtime sandbox/limit mechanisms remain under review in [the security implementation proposals](docs/api-security.md#security-implementation-proposals-still-under-review). A16 now accepts the API flow; this heading is retained for historical links.
 
 ## Arkham decision topics still to complete
 
@@ -465,8 +520,8 @@ The brief requires a choice, a rejected alternative, and a reason for each topic
 | Meaning of kept current and how refresh achieves it | A2–A3 plus A9 specify schedule, supported history, full-window revision capture, and separate source/publication times. A product stale-age threshold remains open. |
 | Missing facilities and generator/facility disagreement | A9 specifies “not reported” for absent observations, exact cross-grain checks, blocked publication on required failure, and retained evidence. Common source omissions remain a limit. |
 | Synchronous or asynchronous refresh | Accepted in A6: the full pipeline runs in background workers with bounded concurrency. A7 defines reliable dispatch. Detailed execution mechanics and verification remain open. |
-| Supported and rejected SQL | Open. Selecting DataFusion does not select the allowed SQL subset. |
-| Finding every referenced table before permission checks | Open. No detection or authorization implementation exists. |
+| Supported and rejected SQL | A18 accepts required v1 single-table SELECT, filters, sorting, grouping, and approved aggregates; joins, CTEs, and subqueries are optional after the core works and its tests pass. Detailed grammar/function choices under A16 and implementation remain open. |
+| Finding every referenced table before permission checks | A16 proposes whole-input AST validation, an exact table allowlist, and rejection of nested constructs; no detection or authorization implementation exists. |
 | At least one additional decision shaping the solution | A3 and A4 record additional choices. Implementation and verification remain pending. |
 
 Source: `Software Engineer - Technical Challenge.pdf`, pages 6–7. See [FINDINGS.md](FINDINGS.md) for data evidence and [NOTES.md](NOTES.md) for AI use.

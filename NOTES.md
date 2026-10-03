@@ -141,8 +141,24 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 
 [YOU] AI aligned README and agent guidance and recorded the [acceptance session](ai/sessions/2026-10-03-backend-structure-accepted.md). This is documentation of the accepted architecture, not generated application code or proof of runtime correctness. No dependencies, implementation folders, migrations, commits, or remote changes were produced by this task. Earlier pending-selection statements remain historical.
 
+## API security and dependency proposal — October 3, 2026
+
+[ME] Alayala asked to define API/security contracts and dependency versions using best practice. [YOU] AI traced current A9–A15 and drafted [the contract proposal](docs/api-security.md), with A16–A17 explicitly proposed rather than accepted. It defines endpoint behavior, permissions, Clerk session/role checks, narrow SQL, error handling, durable mutations, starting limits, and exact candidate releases. The single-table SQL restriction and uncached Clerk lookups are AI recommendations requiring author review.
+
+[YOU] AI read official documentation and public PyPI release metadata. The network sandbox blocked the initial registry request; the approved read-only retry succeeded and installed nothing. Metadata comparisons do not prove dependency resolution, security, or runtime compatibility. The [proposal session](ai/sessions/2026-10-03-api-security-dependency-proposal.md) records document checks and pending work. No EIA key, runtime build/test, database/cloud change, commit, or push was used.
+
 ## Dependency versions accepted — October 3, 2026
 
 [ME] Alayala approved the dependency versions and requested the decision update, commit, and push. He keeps the API and security contracts under review. [YOU] AI recorded A17 as accepted with the unchanged exact version table in DECISIONS.md and the lockfile/update policy. Pool execution choices and numeric limits remain proposals; version acceptance does not prove compatibility.
 
 [YOU] AI prepared a dependency-only commit from the mixed documentation work. API/security proposal text and the human overview stay local for review. No packages were installed and no runtime checks ran. The [acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md) records scope, document verification, and publication boundaries.
+
+## SQL scope accepted — October 3, 2026
+
+[ME] Alayala supplied and accepted the two-stage SQL scope. [YOU] AI recorded [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) and aligned current references while preserving the rest of A16 as proposed. Exact function approval and implementation remain pending. See the [SQL scope session](ai/sessions/2026-10-03-sql-scope-by-stage.md) for document checks and the remaining boundary. No commit, push, or runtime test was performed.
+
+## Approved API contract expanded — October 3, 2026
+
+[ME] Alayala supplied his approved high-level API design and asked for missing requests, responses and fields. [YOU] AI expanded docs/api-security.md, added docs/openapi.json for all 20 operations, recorded A16 as accepted for the author's flow, and aligned current product/application-state documentation. The source download is preserved. Exact schema fields, bounded defaults, diagnostic severity mapping and recovery persistence details are AI-authored completion work, not independently observed user verification.
+
+[YOU] AI preserves A17 dependency versions and the separately added A18 staged SQL decision. API approval does not select the detailed authentication mechanism, SQL function allowlist, or runtime sandbox. The [completion session](ai/sessions/2026-10-03-approved-api-contract-expanded.md) records source provenance, changes, checks and remaining tests. No new commit/push or application implementation was requested.
