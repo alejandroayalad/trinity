@@ -2,7 +2,7 @@
 
 Status: explanatory companion, October 3, 2026. Adapted from alayala's Obsidian `Data Contract.md` discussion notes. The canonical fields, keys, types, and behavior are in [data contract v1](schema.md), recorded by [A9](../DECISIONS.md#a9--data-contract-v1-finalized). This guide explains why selected fields exist; it is not a second schema or a record of implemented behavior.
 
-Read [the PostgreSQL model](schema.md#6-postgresql-application-model) for the complete field inventory, including primary keys, constraints, and recovery fields not repeated below. `?` means nullable under the conditions in that contract. Clerk actor IDs are external text identifiers. Historical session notes do not override the merged specification.
+Read [the PostgreSQL model](schema.md#6-postgresql-application-model) for the complete field inventory, including primary keys, constraints, and recovery fields not repeated below. `?` means nullable under the conditions in that contract. Clerk actor IDs are external text identifiers. Historical session notes do not override the current specification. A16 amends the control model for fixed warning-based publication and durable recovery; analytical fields remain unchanged.
 
 ## 1. `shared_settings` — How should the application operate?
 
@@ -12,12 +12,13 @@ One shared configuration for the application.
 | --- | --- |
 | `setup_completed_at?` | Records whether initial setup is complete. Prevents scheduled refreshes before configuration. |
 | `schedule_enabled` | Lets an Admin pause scheduled refreshes while keeping the schedule. |
-| `schedule_expression?` | Stores when refreshes should run. |
+| `daily_time?` | Stores the selected daily local time as HH:mm; schedule_timezone supplies its timezone. |
 | `schedule_timezone?` | Gives the schedule a timezone. “Run at 08:00” is otherwise ambiguous. |
-| `publication_mode?` | Selects automatic publication or Admin approval. |
 | `revision` | Detects conflicting edits. If two Admins edit revision 4, the second save must not silently overwrite the first. |
 | `updated_at` | Records when settings last changed. |
 | `updated_by?` | Records the Clerk user who changed them. |
+
+A16 removes the old shared `publication_mode` field; frozen candidate warnings determine whether approval is required.
 
 ## 2. `refresh_runs` — What happened to one complete refresh request?
 
@@ -25,6 +26,8 @@ One row represents the whole operation, from request through publication.
 
 | Field | Why it exists |
 | --- | --- |
+| `revision`, `publication_generation` | Detect stale Admin actions and distinguish explicit same-candidate publication retries. |
+| `rerun_of_run_id?` | Connects a new full refresh to the abandoned failed run; rerun never reopens that old run. |
 | `run_seq` | Gives requests a reliable order. Helps prevent an older refresh from replacing a newer publication. |
 | `trigger_kind` | Distinguishes a manual request from a scheduled request. |
 | `requested_by?` | Identifies the Admin who requested it. Null for scheduled runs. |
@@ -85,6 +88,8 @@ A run is an operation. A version is its data output. They need separate records 
 | --- | --- |
 | `run_id` | Identifies the run that produced this version. |
 | `status` | Shows whether the version is being prepared, validated, or rejected. |
+| `disposition`, `discarded_at?`, `discarded_by?` | Records permanent abandonment separately from validation. |
+| `approval_required?`, `review_warning_count?`, `review_warning_digest?` | Freezes the review condition for this exact candidate after diagnostic completion. |
 | `created_at` | Records when the candidate was created. |
 | `validated_at?` | Records when required validation completed successfully. |
 | `validation_step_id?` | Points to the successful validation attempt. Prevents mixing passing checks from different attempts. |
@@ -122,7 +127,7 @@ One row per check and dataset scope within a validation attempt.
 | `check_code` | Identifies the check, such as unique keys or reconciliation. |
 | `check_revision` | Identifies the version of that individual check. |
 | `dataset_key` | Identifies the scope: national, facility, generator, or all. |
-| `required` | Distinguishes a publication requirement from an informational check. |
+| `required`, `severity` | Distinguishes required validation from registered info/warning diagnostics; review warnings need approval after required checks pass. |
 | `status` | Records pass, fail, or execution error. |
 | `checked_count` | Shows how much data the check examined. |
 | `failed_count` | Shows how many items failed. |
@@ -140,6 +145,7 @@ One row records an Admin's approval of one validated, immutable version. This ex
 | `version_id` | Identifies the exact version being approved. The contract permits one approval per version. |
 | `approved_by` | Records the Clerk ID of the Admin authorized at approval time. |
 | `approved_at` | Records when the approval occurred. |
+| `manifest_sha256`, `validation_step_id`, `review_warning_digest` | Binds approval to exact files, validation and warning classification. |
 
 Approval cannot waive failed validation. The approval, publishing state, and publication outbox request commit together. A worker performs publication afterward; accepting approval is not publication success.
 
@@ -153,7 +159,7 @@ One row records a successful publication.
 | `previous_publication_event_id?` | Records which publication it replaced. Null for the first publication. |
 | `approval_id?` | Connects an approval-mode publication to its authorization. Null in automatic mode. |
 | `published_at` | Records when the version became active. |
-| `publication_mode` | Preserves whether publication was automatic or approved. |
+| `publication_mode` | Records the derived publication outcome, automatic or approved; this is not an account setting. |
 | `actor_id?` | Records the human actor for approved publication. Null for automatic publication. |
 | `idempotency_key` | Gives repeated publication attempts the stable identity `publish:<version_id>`, as specified in the contract. |
 
@@ -172,6 +178,16 @@ One shared row selects the active publication event. The event identifies a vers
 Example: query Q1 resolves version 11. Version 12 is published while Q1 runs. Q1 continues using version 11, and a later query uses version 12. V1 retains all published files and evidence, so the old query keeps its files. Selecting a prepared version merely because it has the newest timestamp would bypass validation or approval.
 
 Publication inserts its event, changes the active pointer, and marks the run successful in one database transaction. A failed transaction keeps the prior publication. The full eligibility, run-order, coverage, lease, and retry rules remain in the [canonical lifecycle](schema.md#7-lifecycle-and-publication-consistency).
+
+## A16 recovery records
+
+| Model | Purpose |
+|---|---|
+| `refresh_control` | Holds the one shared lifecycle slot across active work, review and unresolved failure. |
+| `failure_warnings` | Keeps each operational failure warning and its resolution actor/time; clearing the warning preserves history. |
+| `api_commands` | Binds a client idempotency key to one authenticated action and receipt; repeated requests cannot duplicate work. |
+
+`publication_failed` is a waiting state that can retry the same candidate. A terminal full-refresh failure requires a new run. Warning deletion, rerun or discard permanently abandons the prior unpublished candidate as specified in A16. The amended canonical schema owns all fields and transition constraints.
 
 ## How this guide was reconciled
 

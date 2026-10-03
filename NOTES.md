@@ -106,3 +106,69 @@ Verification is limited to document consistency, links/anchors, decision referen
 Concrete correction: AI had assessed the older vault draft without consulting PR #1, reported missing schema/behavior work already covered by that PR, and assigned a conflicting vault A9 to the active pointer. The repository's A9 and `docs/schema.md` remain authoritative. The pointer is already part of that contract; this follow-up adds no new decision ID or schema rule. The guide consolidates the duplicate validation explanation and includes the existing approvals model. The vault originals remain unchanged.
 
 Verification covers the diff, relative links/anchors, guide fields against the canonical schema, unchanged historical sessions and contract, source-file hashes, and a bounded secret-pattern scan. No runtime tests, migrations, extraction, provider configuration, or historical-data replay ran. AI performs the requested commits and PR operations under the user's explicit authorization; these must not be attributed as manual Git work by alayala. See the [session handoff](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md).
+
+## Python backend selection — October 3, 2026
+
+[ME] Alayala accepted Python for the backend API and workers. [YOU] AI recorded A10 and aligned the current README and agent guidance. FastAPI remains a recommendation; package/version choices and the API/security contract remain open. This is a language decision, not application implementation.
+
+[YOU] AI checked official library documentation and the BullMQ Python development source during the discussion. An exposed concurrency method does not prove compatibility of a released package or correct worker recovery. Document checks and remaining validation are recorded in the [Python decision session](ai/sessions/2026-10-03-python-backend-selection.md). No dependencies, runtime tests, commits, or remote changes are part of this task.
+
+[ME] Alayala subsequently accepted FastAPI for the backend HTTP API. [YOU] AI recorded A11, aligned current guidance, and preserved the earlier decision history. Driver/migration choices and the API/security contract remain open. See the [FastAPI follow-up](ai/sessions/2026-10-03-python-backend-selection.md#fastapi-follow-up) for checks and the next decision.
+
+[ME] Alayala then requested a continuing backend decisions/architecture branch and two commits for the existing changes. [YOU] AI created `docs/backend-decisions-architecture` from the current handoff branch and split the documentation into Python (A10), then FastAPI (A11). This authorizes these local Git operations; it does not accept the proposed database tools or request a push/PR. Later backend decisions will continue on this branch.
+
+[ME] During that work, alayala also accepted Psycopg 3 and Alembic. [YOU] AI recorded A12 and included it with FastAPI in the second slice, preserving the requested two-commit split. Dependency versions, migrations, and runtime verification remain pending. The [database tools follow-up](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up) records this updated scope.
+
+## Proposed stack review — October 3, 2026
+
+[ME] Alayala supplied his Obsidian `Backend Stack.md` for review before settling the stack and folder architecture. [YOU] AI compared it with the current decisions, data contract, challenge PDF, and official library documentation. AI initially treated “locally” as a same-machine storage constraint and recommended disk storage with S3 deferred. Alayala corrected that interpretation; the recommendation is withdrawn as described below.
+
+[YOU] AI drafted a bounded folder layout and SQL rejection examples in the [stack review session](ai/sessions/2026-10-03-backend-stack-review-and-layout.md). The source note, earlier decisions, and schema are unchanged. Library documentation and document checks do not prove parser compatibility, authorization, or runtime behavior. No implementation, dependency installation, commit, or push is part of this review.
+
+### AI interpretation error — application-owned storage
+
+[YOU] AI over-interpreted the brief's word “locally” as requiring machine-local disk and presented the proposed S3 architecture as leaving a requirement unmet. [ME] Alayala identified the error: the intended boundary is application-owned persisted data, so exploration does not need to fetch observations from the external EIA source. S3 can be the application's internal storage provider.
+
+[YOU] AI withdrew R1 and the disk-only recommendation, recorded the clarified storage decision as A14, and aligned the current README. This is an engineering interpretation correction, not an EIA anomaly; `FINDINGS.md` is unchanged. The correction was established through alayala's explanation and the existing separation of refresh from published-data reads, not a runtime test.
+
+[ME] Alayala explicitly accepted PyArrow, DataFusion's Python binding, and SQLGlot. [YOU] AI recorded A13. Versions, SQL policy details, and runtime verification remain open. The next discussion is folder structure; the layout in the supporting session remains proposed, with no implementation folders created.
+
+[ME] Alayala then proposed the feature-based folder tree, including separate query execution, publication, settings, adapters, workers, connector, and shared contracts. [YOU] AI reviewed its ownership against A9 and recommends the author's layout with explicit query authorization/isolation, shared transaction ownership, final-manifest validation, and durable recovery responsibilities. The [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review) distinguishes conditional implementation failures from demonstrated defects. Folder selection remains pending; no application files were created.
+
+## Backend structure accepted — October 3, 2026
+
+[ME] Alayala accepted his proposed file structure with the five reviewed refinements and requested backend documentation under `docs/`. [YOU] AI recorded A15 and created [docs/backend.md](docs/backend.md), preserving the author's feature/file names and adding `workers/recovery.py`. AI mapped all ten application models to persistence owners and documented the query handoff, process supervision, shared transaction scope, final-manifest validation, and durable recovery boundaries.
+
+[YOU] AI aligned README and agent guidance and recorded the [acceptance session](ai/sessions/2026-10-03-backend-structure-accepted.md). This is documentation of the accepted architecture, not generated application code or proof of runtime correctness. No dependencies, implementation folders, migrations, commits, or remote changes were produced by this task. Earlier pending-selection statements remain historical.
+
+## API security and dependency proposal — October 3, 2026
+
+[ME] Alayala asked to define API/security contracts and dependency versions using best practice. [YOU] AI traced current A9–A15 and drafted [the contract proposal](docs/api-contract.md), with A16–A17 explicitly proposed rather than accepted. It defines endpoint behavior, permissions, Clerk session/role checks, narrow SQL, error handling, durable mutations, starting limits, and exact candidate releases. The single-table SQL restriction and uncached Clerk lookups are AI recommendations requiring author review.
+
+[YOU] AI read official documentation and public PyPI release metadata. The network sandbox blocked the initial registry request; the approved read-only retry succeeded and installed nothing. Metadata comparisons do not prove dependency resolution, security, or runtime compatibility. The [proposal session](ai/sessions/2026-10-03-api-security-dependency-proposal.md) records document checks and pending work. No EIA key, runtime build/test, database/cloud change, commit, or push was used.
+
+## Dependency versions accepted — October 3, 2026
+
+[ME] Alayala approved the dependency versions and requested the decision update, commit, and push. He keeps the API and security contracts under review. [YOU] AI recorded A17 as accepted with the unchanged exact version table in DECISIONS.md and the lockfile/update policy. Pool execution choices and numeric limits remain proposals; version acceptance does not prove compatibility.
+
+[YOU] AI prepared a dependency-only commit from the mixed documentation work. API/security proposal text and the human overview stay local for review. No packages were installed and no runtime checks ran. The [acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md) records scope, document verification, and publication boundaries.
+
+## SQL scope accepted — October 3, 2026
+
+[ME] Alayala supplied and accepted the two-stage SQL scope. [YOU] AI recorded [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) and aligned current references while preserving the rest of A16 as proposed. Exact function approval and implementation remain pending. See the [SQL scope session](ai/sessions/2026-10-03-sql-scope-by-stage.md) for document checks and the remaining boundary. No commit, push, or runtime test was performed.
+
+## Approved API contract expanded — October 3, 2026
+
+[ME] Alayala supplied his approved high-level API design and asked for missing requests, responses and fields. [YOU] AI expanded docs/api-contract.md, added docs/openapi.json for all 20 operations, recorded A16 as accepted for the author's flow, and aligned current product/application-state documentation. The source download is preserved. Exact schema fields, bounded defaults, diagnostic severity mapping and recovery persistence details are AI-authored completion work, not independently observed user verification.
+
+[YOU] AI preserves A17 dependency versions and the separately added A18 staged SQL decision. API approval does not select the detailed authentication mechanism, SQL function allowlist, or runtime sandbox. The [completion session](ai/sessions/2026-10-03-approved-api-contract-expanded.md) records source provenance, changes, checks and remaining tests. No new commit/push or application implementation was requested.
+
+## Security contract and API split — October 3, 2026
+
+[ME] Alayala selected the security mechanisms, limits, retries, SHA-256 identity and local Docker Compose direction and requested separate API/security documents. [YOU] AI retained accepted A16, recorded A19, renamed the API document and updated references, created the security contract and aligned OpenAPI/schema/backend guidance. Older conflicting proposals are preserved as superseded history. A17 versions and existing user changes are preserved.
+
+[YOU] AI checked the supplied challenge PDF: local execution and a repository link are required; no public application URL requirement was found. Documentation/structural checks and remaining runtime work are recorded in the [split session](ai/sessions/2026-10-03-security-contract-and-api-split.md). No code, packages, containers, commits, push or cloud changes were produced. Local isolation and capacity measurements still require implementation and execution.
+
+## Backend contract publication — October 3, 2026
+
+[ME] Alayala requested focused commits, push and merge to main. [YOU] AI executes those authorized Git operations in two documentation slices and preserves the existing incremental branch history. Repository inspection confirms that backend implementation and runtime tests remain pending. See the [publication session](ai/sessions/2026-10-03-backend-contracts-publication.md) for scope, validation and the distinction between the completed design and executable work.
