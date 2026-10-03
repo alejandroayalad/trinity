@@ -2,9 +2,9 @@
 
 Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
 
-**Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
+**Status: minimum Python scaffold implemented; product features pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. The backend now has a FastAPI health endpoint and smoke tests. The outage explorer is not yet implemented.
 
-Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: review the accepted security design under A19 and its remaining implementation details; A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. The [minimum Python scaffold](backend/README.md) starts the implementation. Next: implement the connector and typed Parquet pipeline; A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines all 20 HTTP operations. [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine verification remains pending.
 
@@ -37,13 +37,24 @@ These are responsibilities, not a deployment diagram. [Data contract v1](docs/sc
 
 The selected local execution target is Docker Compose; no Compose configuration exists yet. The supplied challenge requires local execution (page 7) and a repository link (page 8), not a public application URL. AWS/hosting remains undecided. See the [source review](ai/sessions/2026-10-03-security-contract-and-api-split.md#challenge-delivery-evidence).
 
-Setup and run commands are not available yet. Do not treat this draft as a runnable submission. Add commands only after they work in the project environment.
+The minimum backend setup is documented in [backend/README.md](backend/README.md). It exposes only `GET /health`; this is not a complete challenge submission.
+
+With CPython 3.14.8 and uv 0.12.23 installed:
+
+```bash
+cd backend
+uv sync --locked
+uv run --locked python -m unittest discover -s tests -v
+uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000
+```
+
+The health response is `{"status":"ok"}`. It reports process liveness, not data readiness. No EIA key, login, database, Redis or S3 connection is needed for this scaffold.
 
 | Required README content | Status |
 |---|---|
-| Prerequisites, configuration, and local startup | Pending implementation and verification. The EIA key must come from an environment variable. |
+| Prerequisites, configuration, and local startup | Python scaffold installation verified; full application/Compose startup remains pending. `backend/.env.example` reserves the future EIA key. |
 | Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
-| Automated test command and results | No project tests or test results yet. |
+| Automated test command and results | Two scaffold smoke tests passed on CPython 3.14.8; product acceptance tests remain pending. |
 | Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. A19 selects three total attempts for temporary external failures with one- and three-second waits within the operation deadline; denied access, invalid SQL and failed validation are not retried. Refresh-stage deadlines and runtime checks remain pending. Preserve the last valid publication. |
 | Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. Historical source exports and scripts are still absent, so findings are not yet reproducible from a clean clone. |
 
@@ -75,7 +86,7 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 
 One shared application/account is in scope. There is no selected multi-organization or registration flow. Selecting DataFusion does not select Rust. The business guide's hypothetical examples are not EIA findings.
 
-The final submission still needs source code, automated tests, `.env.example`, implemented migrations, and self-contained data reproduction. The entity-relationship diagrams are now specified in the data contract. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
+The scaffold includes package metadata, a lockfile, a health endpoint, two smoke tests and `backend/.env.example`. The final submission still needs product source code, acceptance tests, implemented migrations, and self-contained data reproduction. The entity-relationship diagrams are now specified in the data contract. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
 
 The private repository is `alejandroayalad/trinity`. `EIA API KEY.md`, `First Aproximation.md`, and `IMPLEMENTATION BEFORE.md` are excluded. The challenge PDF, business guide, original analysis scripts, and bulk exports remain local. References to these items identify historical sources, not included artifacts. Historical session checks have not been rerun by this import.
 
@@ -83,7 +94,7 @@ Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the acc
 
 ## Delivery structure and slices
 
-Keep required documents at the root, the data contract in `docs/schema.md`, backend architecture in `docs/backend.md`, and supporting records in `ai/sessions/`. A15 selects the feature tree in `backend/src/trinity/`, with backend migrations and tests beside `src/`. It includes the connector and separate API, worker, and query-runtime entrypoints. This supersedes the earlier tentative top-level connector grouping. `frontend/` remains separate; add supporting scripts only when needed. The selected tree is documented, not yet implemented. Empty implementation folders and unverified run commands are not included.
+Keep required documents at the root, the data contract in `docs/schema.md`, backend architecture in `docs/backend.md`, and supporting records in `ai/sessions/`. A15 selects the feature tree in `backend/src/trinity/`, with backend migrations and tests beside `src/`. It includes the connector and separate API, worker, and query-runtime entrypoints. This supersedes the earlier tentative top-level connector grouping. `frontend/` remains separate; add supporting scripts only when needed. Only the package root and API entrypoint are implemented so far. Add feature files as their behavior is implemented; the remaining selected tree is the roadmap.
 
 1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
 2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.

@@ -172,3 +172,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Backend contract publication — October 3, 2026
 
 [ME] Alayala requested focused commits, push and merge to main. [YOU] AI executes those authorized Git operations in two documentation slices and preserves the existing incremental branch history. Repository inspection confirms that backend implementation and runtime tests remain pending. See the [publication session](ai/sessions/2026-10-03-backend-contracts-publication.md) for scope, validation and the distinction between the completed design and executable work.
+
+## Minimum Python project — October 3, 2026
+
+[ME] Alayala requested the minimum Python project in GitHub. [YOU] AI created the A15 package scaffold, a FastAPI health endpoint, two smoke tests, pinned minimal dependencies, uv.lock, an environment example and setup instructions. Locked installation, tests and package builds passed on Python 3.14.8 with uv 0.12.23. Human code review and all product features remain pending. The [implementation session](ai/sessions/2026-10-03-minimum-python-project.md) records the host-tool correction, test-client warning, scope and checks.
