@@ -4,7 +4,7 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: data analysis and documentation, October 2, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [repository import](ai/sessions/2026-10-02-trinity-repository-import.md). A1–A8 remain accepted. Next: review the [proposed application models](ai/sessions/2026-10-02-clerk-and-application-models.md) and close the implementation contracts. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [data contract v1](docs/schema.md), finalized under the request recorded in [A9](DECISIONS.md#a9--data-contract-v1-finalized). A1–A8 remain accepted. The prior application-model draft remains historical. Next: choose the runtime stack and implement the first fetch → validate → Parquet → query slice against this contract. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 ## Intended behavior
 
@@ -27,7 +27,7 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. Backend language, web frameworks, component versions, and the publication mechanism remain open. See [DECISIONS.md](DECISIONS.md), A1–A8.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Backend language, web frameworks, component versions, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A9.
 
 ## Setup, running, and tests
 
@@ -38,8 +38,8 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | Prerequisites, configuration, and local startup | Pending implementation and verification. The EIA key must come from an environment variable. |
 | Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
 | Automated test command and results | No project tests or test results yet. |
-| Connector failures: credentials, network, and bad data | Required policy details remain open. A2 requires preserving the last valid published version. |
-| Data reproduction commands and schema diagram | Historical real-row checks and reproduction commands are recorded in FINDINGS and the linked sessions. Their source exports and scripts are not included in this documentation import, so they are not yet reproducible from a clean clone. The schema diagram remains open. |
+| Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. Concrete retry/time limits and their runtime checks remain pending. Preserve the last valid publication. |
+| Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. Historical source exports and scripts are still absent, so findings are not yet reproducible from a clean clone. |
 
 ## Documents required by Arkham
 
@@ -57,13 +57,14 @@ Setup and run commands are not available yet. Do not treat this draft as a runna
 | [PRODUCT.md](PRODUCT.md) | One-page product scope and selected additions. |
 | [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
+| [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
 
 ## Assumptions and limits
 
 One shared application/account is in scope. There is no selected multi-organization or registration flow. Selecting DataFusion does not select Rust. The business guide's hypothetical examples are not EIA findings.
 
-The final submission still needs source code, automated tests, `.env.example`, an entity-relationship diagram, and self-contained data reproduction. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
+The final submission still needs source code, automated tests, `.env.example`, implemented migrations, and self-contained data reproduction. The entity-relationship diagrams are now specified in the data contract. The initial commits import existing documents by topic; they do not represent implementation work. Future commits must record verified work incrementally, without squashing or rewriting history.
 
 The private repository is `alejandroayalad/trinity`. `EIA API KEY.md`, `First Aproximation.md`, and `IMPLEMENTATION BEFORE.md` are excluded. The challenge PDF, business guide, original analysis scripts, and bulk exports remain local. References to these items identify historical sources, not included artifacts. Historical session checks have not been rerun by this import.
 
@@ -71,10 +72,10 @@ Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the acc
 
 ## Delivery structure and slices
 
-Keep the required documents at the root and supporting records in `ai/sessions/`. Create `connector/`, `backend/`, `frontend/`, `scripts/`, `tests/`, and `docs/schema.md` when their implementation or evidence is ready. These are proposed responsibility boundaries; no language or framework is selected by the folder names. Empty implementation folders and unverified run commands are not included.
+Keep the required documents at the root, the data contract in `docs/schema.md`, and supporting records in `ai/sessions/`. Create `connector/`, `backend/`, `frontend/`, `scripts/`, and `tests/` when their implementation or evidence is ready. These are proposed responsibility boundaries; no language or framework is selected by the folder names. Empty implementation folders and unverified run commands are not included.
 
 1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
 2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.
-3. Close data, validation, SQL, and publication contracts before implementing the affected behavior.
+3. Implement against A9's data, validation, and publication contract. Close the SQL and authentication implementation contracts before building those paths.
 4. Implement and verify working slices: extraction/model/metric, authenticated catalog and preview, restricted SQL, refresh/publication/settings, and the complete interface. Update relevant decisions, findings, and Engineering Notes with each slice.
 5. Verify a clean checkout using the README, test all three personas, reproduce findings, and rehearse the live explanation before submission.

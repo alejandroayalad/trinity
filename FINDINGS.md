@@ -2,6 +2,8 @@
 
 Status: ongoing data evidence, October 2, 2026. A4 remains accepted: PostgreSQL stores application state; Apache DataFusion queries outage data in Parquet.
 
+Contract update: [A9](DECISIONS.md#a9--data-contract-v1-finalized) and [data contract v1](docs/schema.md) now specify keys, types, metric behavior, and validation rules. This is a new specification, not a rerun of the evidence below. Historical observations and source explanations remain unchanged.
+
 ## Authorship and evidence
 
 Alayala fetched the data, analyzed it, and wrote the original findings in this document. AI organized the text, corrected wording, and added evidence references. AI also ran separate read-only checks of the local CSV exports. These checks support the findings; they do not transfer authorship of the original analysis to AI.
@@ -53,7 +55,7 @@ Another reactor example from the original notes is `(371, "2")`: Columbia unit 2
 
 **Evidence:** In the generator export, `generator = "1"` occurs at 47 distinct facilities on `2026-09-15`. AI found no duplicate `(period, facility, generator)` keys across the 60,549 generator rows. It also found no duplicate `(period, facility)` facility keys or `period` national keys in this window.
 
-**Product implication:** A join or lookup using only `generator` can combine different facilities. Include `facility`; include `period` when matching daily observations. Final schema types and key decisions remain open in [DECISIONS.md](DECISIONS.md).
+**Product implication:** A join or lookup using only `generator` can combine different facilities. Include `facility`; include `period` when matching daily observations. A9 now specifies these keys and source-string identifiers in [DECISIONS.md](DECISIONS.md).
 
 ## F3 — MW measures power, not energy over a day
 
@@ -114,7 +116,7 @@ For example, **Peach Bottom** (`facility = 3166`) rose from **2,549.4 to 2,694.1
 
 **Why did it happen?** It may be a seasonal adjustment. We have confirmed the change, but have not confirmed its cause.
 
-**How should Trinity handle it?** Use each day's reported capacity when calculating the percentage offline: `outage / capacity × 100`. Using one fixed capacity for every day would give the wrong percentage when capacity changes. This behavior is proposed, not implemented yet.
+**How should Trinity handle it?** Use each day's reported capacity when calculating the percentage offline: `outage / capacity × 100`. Using one fixed capacity for every day would give the wrong percentage when capacity changes. This behavior is specified by A9, not implemented yet.
 
 **How can someone check it?** We compared the saved national and plant CSVs for those two dates. The check passed. The [supporting check](ai/sessions/2026-10-02-capacity-anomaly-facility-comparison.md#reproducible-check-for-an-01) contains the command and the five largest changes.
 
@@ -128,7 +130,7 @@ This expands F5. Alayala selected it as an anomaly; AI checked the plant values 
 
 **Why does it matter?** A plant can enter the dataset already offline. Its first appearance does not mean it suffered a new breakdown that day. Adding Palisades increased national capacity by **768.5 MW**; capacity at the existing plants did not change that day.
 
-**How should Trinity handle it?** Include the reported capacity and outage from its first available date. Show earlier dates as “not reported,” not zero outage. Keep the restart explanation separate from the measured values. This behavior is proposed, not implemented yet.
+**How should Trinity handle it?** Include the reported capacity and outage from its first available date. Show earlier dates as “not reported,” not zero outage. Keep the restart explanation separate from the measured values. This behavior is specified by A9, not implemented yet.
 
 **Did any plants disappear?** No. In our October 2, 2024–October 2, 2026 export, the other 54 plants appear every day. Palisades is the only plant added; no plant disappears or has a gap after its first appearance. This statement covers the saved two-year export, not all EIA history.
 
@@ -180,7 +182,7 @@ For **October 1, 2026**, live requests returned:
 
 For the two-year request, offset **39,863** returned **zero rows**, while `total` still said **69,103**. Our saved 39,863 plant/date rows also match the groups formed from the 69,103 generator rows. The live one-day plant rows match the saved CSV values. This supports reaching the end of the returned plant rows. It does not make the misleading total valid or prove the source itself has no omissions.
 
-**Validation handling:** Follow [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed). The known source total alone cannot determine completeness. Page exhaustion, unique keys, date coverage, and agreement with generator groups are evidence for the validation design. The exact required checks and tolerances remain to be specified and implemented.
+**Validation handling:** Follow [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed). The known source total alone cannot determine completeness. Page exhaustion, unique keys, date coverage, and agreement with generator groups are evidence for the validation design. A9 now specifies the required checks and zero-MW reconciliation tolerance; implementation and runtime verification remain pending.
 
 The [supporting session](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md) lists the saved requests, reproduction steps, and remaining limits.
 
@@ -194,6 +196,6 @@ python3 generate_report.py --us data/us_20250101_20261002.csv --facility data/fa
 
 During the earlier formatting task, AI used separate inline, read-only checks and did not run or review `generate_report.py`. During the subsequent readiness review on October 2, AI reviewed the script and ran it against the full-window and September exports. The full-window report matched the stored report apart from its generation timestamp and reproduction output filename. Some explanations are fixed text rather than checked conclusions, so successful execution does not verify them. AN-01 above links to a separate executed command for its plant comparison.
 
-Before submission, review the report's methods and preserve the checks used to reproduce the final findings. The new API checks verify units, frequency, filters, and the facility count mismatch; the precise seasonal capacity definition and source revision policy remain open. All three selected anomalies are documented: the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. The remaining definition, report, and detailed validation-check work is separate from selecting anomalies; data evidence remains ongoing as defined in AGENTS.md.
+Before submission, review the report's methods and preserve the checks used to reproduce the final findings. The new API checks verify units, frequency, filters, and the facility count mismatch; the precise seasonal capacity definition and EIA's revision methodology remain open. A9 selects full-window re-fetching for Trinity's revision handling and specifies validation checks; it does not establish EIA's internal methods. All three selected anomalies are documented: the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. Remaining source definitions, report review, reproduction, and validation implementation are separate from selecting anomalies; data evidence remains ongoing as defined in AGENTS.md.
 
 See [Engineering Notes](NOTES.md) for contributions and [the closed session](ai/sessions/2026-10-02-data-findings-and-handoff.md) for the handoff.

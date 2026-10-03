@@ -1,6 +1,6 @@
 # Decisions — Trinity
 
-Status: documentation baseline, October 2, 2026. Accepted means the author selected the choice. It does not mean the choice is implemented or tested.
+Status: documentation and data-contract specification, October 2, 2026. Accepted means the author selected the choice. A9 is an AI-authored specification produced under the user's request to finalize the contract; individual new defaults have not been separately reviewed by the author. Neither status means implemented or tested.
 
 This is the main decision record. A1–A4 were moved from `First Aproximation.md` without changing their accepted scope. Use one file with unique IDs and Product / business or Technical / code categories. Keep the history when a later decision changes an earlier one.
 
@@ -263,15 +263,46 @@ Status: accepted by alayala on October 2, 2026. Provider selected; integration a
 
 Sources: alayala's explicit selection in this conversation; [Clerk metadata-based access control](https://clerk.com/docs/guides/secure/basic-rbac). Supporting record and proposed models: [Clerk and application models session](ai/sessions/2026-10-02-clerk-and-application-models.md).
 
+## Finalized specifications
+
+### A9 — Data contract v1: finalized
+
+Category: **Technical / code** and **Product / business**.
+
+Status: finalized by AI on October 2, 2026, under alayala's instruction, “finalize the data contract.” This delegates the specification work; it is not a claim that alayala independently chose or verified every new default. No application implementation or runtime test is included. A1–A8 remain accepted.
+
+**Choice:** Use [data contract v1 and its schema diagrams](docs/schema.md) as the canonical analytical and application-state specification. It defines daily natural keys, source IDs as text, exact decimal storage, null behavior, same-day percentage calculations, validation gates, immutable manifests, the ten application models, and publication ordering.
+
+**New v1 defaults:** `DECIMAL(24,6)` with exact-fit parsing; history from 2024-10-02 through the newest national observation pinned by the worker before extraction; full-window refresh to capture source revisions; exact zero-MW reconciliation tolerance; policy frozen per run; monotonic run order plus non-regressing coverage for publication; and retention of all published artifacts. These are Trinity scope and implementation rules, not promises made by EIA. Missing entity observations stay “not reported.”
+
+**Reason and evidence:** [F1–F5 and AN-01–AN-03](FINDINGS.md) support the daily keys, same-date metric, changes in membership/capacity, and the need to validate independently of the facility API's misleading total. Immutable versions and one complete validation attempt keep mixed or partial data from becoming visible. The outbox preserves both initial refresh dispatch and publication dispatch. Newer publications cannot be replaced by late approval of older candidates.
+
+**Rejected alternatives:**
+
+- Generator-only identifiers or plant names as keys: the source reuses generator labels across plants, and names are descriptive.
+- Binary floats, averaged percentages, or zero-filled missing rows: these can change source values or the metric's meaning.
+- Incremental append-only history: it assumes that older source values never change, which has not been established.
+- Treating the facility advertised total as the expected count: AN-03 directly contradicts that rule.
+- Combining passing checks from different attempts or updating live files in place: neither guarantees that queries use the complete validated candidate.
+- Applying edited settings to pending versions or approving old versions without ordering: this can change the agreed workflow or move users back to older data.
+
+**Tradeoffs:** Full-window fetches and retaining published snapshots use more network and disk. Strict zero-tolerance reconciliation can hold back legitimate future source rounding changes; investigate and revise the rule explicitly instead of changing the evidence. The selected decimal precision is a storage boundary. No performance claim follows from these choices.
+
+**History and precedence:** The October 2 Clerk/model session remains an unchanged historical proposal. This specification replaces its proposed fields where they differ. Earlier “open” implementation lists in A2–A8 describe their original decision scope; A9 closes the logical fields, validation, policy snapshots, recovery obligations, and publication invariants covered by the contract. Finite worker/request limits, DDL, supported SQL, parser/table authorization, role-token details, and a product stale-age threshold remain separate implementation decisions. A9 does not close all Arkham decision topics.
+
+**Verification required:** Implement and execute the contract's acceptance scenarios, including exact decimals, all required checks in one attempt, missing data, Redis loss, worker fencing, approval ordering, and readers that overlap publication. Restore self-contained reproduction inputs and scripts. Historical evidence was not rerun and no permission boundary was runtime-tested in this task.
+
+Supporting record: [data-contract session](ai/sessions/2026-10-02-data-contract-v1.md).
+
 ## Arkham decision topics still to complete
 
 The brief requires a choice, a rejected alternative, and a reason for each topic. This table tracks coverage; it does not close missing choices.
 
 | Required topic | Current status |
 |---|---|
-| Natural keys for national, facility, and generator data | Open. Inspect metadata, dimensions, and real-row uniqueness. |
-| Meaning of kept current and how refresh achieves it | Partly covered by A2–A3. Supported history, source revision handling, and acceptable data age remain open. |
-| Missing facilities and generator/facility disagreement | Open. Needs real-row evidence and product handling. |
+| Natural keys for national, facility, and generator data | Specified by A9: `period`; `(period, facility)`; `(period, facility, generator)`. Implementation and new extraction checks remain pending. |
+| Meaning of kept current and how refresh achieves it | A2–A3 plus A9 specify schedule, supported history, full-window revision capture, and separate source/publication times. A product stale-age threshold remains open. |
+| Missing facilities and generator/facility disagreement | A9 specifies “not reported” for absent observations, exact cross-grain checks, blocked publication on required failure, and retained evidence. Common source omissions remain a limit. |
 | Synchronous or asynchronous refresh | Accepted in A6: the full pipeline runs in background workers with bounded concurrency. A7 defines reliable dispatch. Detailed execution mechanics and verification remain open. |
 | Supported and rejected SQL | Open. Selecting DataFusion does not select the allowed SQL subset. |
 | Finding every referenced table before permission checks | Open. No detection or authorization implementation exists. |

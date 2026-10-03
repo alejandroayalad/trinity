@@ -36,7 +36,7 @@ PostgreSQL stores application state. Apache DataFusion executes outage queries o
 
 A2 requires scheduled and manual Admin refreshes. A3 requires initial shared-account configuration and editable schedule/publication settings. Setup is not repeated per Admin. Required validation failures block publication in both modes.
 
-Backend language, SQL subset, key definitions, metric fields, and publication mechanics need evidence or further decisions. Do not silently choose them because a library example uses a particular language or schema.
+Read A9 and `docs/schema.md` for the finalized data contract, keys, metric fields, validation, and publication invariants. Backend language, SQL subset, authentication implementation, concrete retry/concurrency limits, and deployment still need decisions. Do not silently choose them because a library example uses a particular language or schema. A9 is an AI-authored specification under delegated work, not proof of user verification or runtime correctness.
 
 ## Evidence and data
 

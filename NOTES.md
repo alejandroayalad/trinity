@@ -90,3 +90,11 @@ Source: the current conversation and `Software Engineer - Technical Challenge.pd
 [YOU] AI prepared the selected documents in a separate local repository folder and executes the authorized Git operations. The Obsidian originals and data workspace remain unchanged. AGENTS and CLAUDE are regular files. Four focused import commits separate repository boundaries, decisions/product, data findings, and the final handoff. Their timestamps reflect the actual commits; October 1–2 work dates remain in the original records. This is an import of existing work, not a reconstructed development history or evidence of new application implementation.
 
 Validation and evidence limits are recorded in the [import session](ai/sessions/2026-10-02-trinity-repository-import.md). Historical data checks remain attributed to their original sessions. No new EIA request or application test is part of this documentation import.
+
+## Data contract v1 — October 2, 2026
+
+[ME] Alayala requested: “finalize the data contract.” [YOU] AI specified the analytical schema, validation rules, application-state model, and ER diagrams in [docs/schema.md](docs/schema.md), with the choice and alternatives recorded as A9. New defaults are attributed to AI's delegated specification work; no independent author verification is claimed.
+
+The review corrected two concrete draft errors: freezing the data end date at request creation would require EIA work before the background worker; ordering publication by run sequence alone could still shrink the active date window. The final contract freezes the end once in the worker and rechecks coverage during the publication transaction. Publication approval also uses a durable outbox handoff to a worker, preserving A6.
+
+Verification is limited to document consistency, links/anchors, decision references, preserved historical records, and whitespace. No application tests, database migrations, live EIA extraction, or replay of the historical exports ran. See the [contract session](ai/sessions/2026-10-02-data-contract-v1.md) for scope and remaining work.
