@@ -1,6 +1,6 @@
 # Decisions — Trinity
 
-Status: documentation and data-contract specification, October 2, 2026. Accepted means the author selected the choice. A9 is an AI-authored specification produced under the user's request to finalize the contract; individual new defaults have not been separately reviewed by the author. Neither status means implemented or tested.
+Status: documentation and data-contract specification, October 3, 2026. Accepted means the author selected the choice. A9 is an AI-authored specification produced under the user's request to finalize the contract; individual new defaults have not been separately reviewed by the author. Neither status means implemented or tested.
 
 This is the main decision record. A1–A4 were moved from `First Aproximation.md` without changing their accepted scope. Use one file with unique IDs and Product / business or Technical / code categories. Keep the history when a later decision changes an earlier one.
 
@@ -16,6 +16,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A6  | Technical / code   | Background workers run the full refresh pipeline using BullMQ and Redis, with bounded concurrency.              |
 | A7  | Technical / code   | PostgreSQL `job_outbox` records dispatch requests with application changes; retries must be safe.               |
 | A8  | Technical / code   | Clerk handles authentication; the backend enforces application permissions.                                  |
+| A10 | Technical / code   | Python for the backend API and background workers.                                                           |
 
 ### A1 — arrangement of decisions: closed
 
@@ -264,6 +265,28 @@ Status: accepted by alayala on October 2, 2026. Provider selected; integration a
 **Verification still required:** Provision Viewer, Analyst, and Admin test identities; verify login and invalid/expired-session rejection; prove permissions on catalog, previews, SQL, refresh, settings, and approval. Missing or unknown roles must not grant access. No authentication runtime test has run.
 
 Sources: alayala's explicit selection in this conversation; [Clerk metadata-based access control](https://clerk.com/docs/guides/secure/basic-rbac). Supporting record and proposed models: [Clerk and application models session](ai/sessions/2026-10-02-clerk-and-application-models.md).
+
+### A10 — Python for the backend API and workers: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Language selected; implementation and runtime verification pending.
+
+**Choice:** Use Python for the backend API and the background workers that execute A6's full refresh pipeline. Keep PostgreSQL for application state, DataFusion for published Parquet queries, BullMQ with Redis for background jobs, and Clerk for authentication under A4 and A6–A8.
+
+**Reason:** Python fits the proposed PyArrow file preparation and DataFusion Python query path and lets the API and refresh workers share one application language. This is a design rationale, not a compatibility or performance result. Concrete packages and versions still need selection and verification.
+
+**Flow and failure example:** A request presents a Clerk token; the backend verifies identity, resolves a trusted role, and authorizes the operation. Permitted analytical reads capture one active publication and use only authorized files from that version. Decimal results preserve A9's exact-value contract. An Analyst query referencing PostgreSQL `job_outbox` must be rejected before execution. Selecting Python does not implement table-reference detection or authorization.
+
+**Alternative not selected:** Use separate application languages for the API and data workers. A single language avoids adding a second application toolchain for this scope. No comparative benchmark or user rejection of a specific competing language is claimed.
+
+**Tradeoff and verification:** BullMQ's current Python development source exposes `setGlobalConcurrency`; that is not evidence that a chosen release works correctly across workers. Pin a compatible release, verify two workers respect a queue-wide limit of one active job, and exercise worker restart and duplicate-safe recovery. Verify DataFusion/PyArrow decimal compatibility and SQL isolation separately. No dependency installation or runtime test has run for this decision.
+
+**Still open:** Python version; API framework (FastAPI is recommended, not accepted); DataFusion binding/version and PyArrow version; BullMQ/Redis versions; PostgreSQL driver and migration tool; frontend; authentication integration; API contracts; SQL subset and table-reference detection; execution and row limits.
+
+**History:** Resolves the backend-language question left open in A4, A6, A8, and the October 3 handoff. It does not reopen A9 or authorize implementation or Git publication.
+
+Sources: alayala's acceptance in this conversation; [DataFusion Python concepts](https://datafusion.apache.org/python/user-guide/basics.html); [BullMQ Python source](https://github.com/taskforcesh/bullmq/blob/master/python/bullmq/queue.py). Supporting record: [Python decision session](ai/sessions/2026-10-03-python-backend-selection.md).
 
 ## Finalized specifications
 

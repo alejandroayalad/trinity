@@ -106,3 +106,9 @@ Verification is limited to document consistency, links/anchors, decision referen
 Concrete correction: AI had assessed the older vault draft without consulting PR #1, reported missing schema/behavior work already covered by that PR, and assigned a conflicting vault A9 to the active pointer. The repository's A9 and `docs/schema.md` remain authoritative. The pointer is already part of that contract; this follow-up adds no new decision ID or schema rule. The guide consolidates the duplicate validation explanation and includes the existing approvals model. The vault originals remain unchanged.
 
 Verification covers the diff, relative links/anchors, guide fields against the canonical schema, unchanged historical sessions and contract, source-file hashes, and a bounded secret-pattern scan. No runtime tests, migrations, extraction, provider configuration, or historical-data replay ran. AI performs the requested commits and PR operations under the user's explicit authorization; these must not be attributed as manual Git work by alayala. See the [session handoff](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md).
+
+## Python backend selection — October 3, 2026
+
+[ME] Alayala accepted Python for the backend API and workers. [YOU] AI recorded A10 and aligned the current README and agent guidance. FastAPI remains a recommendation; package/version choices and the API/security contract remain open. This is a language decision, not application implementation.
+
+[YOU] AI checked official library documentation and the BullMQ Python development source during the discussion. An exposed concurrency method does not prove compatibility of a released package or correct worker recovery. Document checks and remaining validation are recorded in the [Python decision session](ai/sessions/2026-10-03-python-backend-selection.md). No dependencies, runtime tests, commits, or remote changes are part of this task.

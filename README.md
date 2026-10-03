@@ -4,7 +4,7 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [vault reconciliation and session close](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md). [PR #1](https://github.com/alejandroayalad/trinity/pull/1) merged data contract v1; [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. Next: select the runtime stack before implementing against the existing contract. Python was suggested for the Parquet slice but has not been selected. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [Python backend selection](ai/sessions/2026-10-03-python-backend-selection.md), following the [vault reconciliation](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md). [PR #1](https://github.com/alejandroayalad/trinity/pull/1) merged data contract v1; [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. Python is selected for the backend API and workers under [A10](DECISIONS.md#a10--python-for-the-backend-api-and-workers-closed). Next: select the API framework; versions and the API/security contract remain open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 ## Intended behavior
 
@@ -27,7 +27,7 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Backend language, web frameworks, component versions, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A9.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Python is selected for the backend API and workers. Web frameworks, component versions, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A10.
 
 ## Setup, running, and tests
 
