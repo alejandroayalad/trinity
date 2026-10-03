@@ -118,3 +118,19 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 [ME] Alayala then requested a continuing backend decisions/architecture branch and two commits for the existing changes. [YOU] AI created `docs/backend-decisions-architecture` from the current handoff branch and split the documentation into Python (A10), then FastAPI (A11). This authorizes these local Git operations; it does not accept the proposed database tools or request a push/PR. Later backend decisions will continue on this branch.
 
 [ME] During that work, alayala also accepted Psycopg 3 and Alembic. [YOU] AI recorded A12 and included it with FastAPI in the second slice, preserving the requested two-commit split. Dependency versions, migrations, and runtime verification remain pending. The [database tools follow-up](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up) records this updated scope.
+
+## Proposed stack review — October 3, 2026
+
+[ME] Alayala supplied his Obsidian `Backend Stack.md` for review before settling the stack and folder architecture. [YOU] AI compared it with the current decisions, data contract, challenge PDF, and official library documentation. AI initially treated “locally” as a same-machine storage constraint and recommended disk storage with S3 deferred. Alayala corrected that interpretation; the recommendation is withdrawn as described below.
+
+[YOU] AI drafted a bounded folder layout and SQL rejection examples in the [stack review session](ai/sessions/2026-10-03-backend-stack-review-and-layout.md). The source note, earlier decisions, and schema are unchanged. Library documentation and document checks do not prove parser compatibility, authorization, or runtime behavior. No implementation, dependency installation, commit, or push is part of this review.
+
+### AI interpretation error — application-owned storage
+
+[YOU] AI over-interpreted the brief's word “locally” as requiring machine-local disk and presented the proposed S3 architecture as leaving a requirement unmet. [ME] Alayala identified the error: the intended boundary is application-owned persisted data, so exploration does not need to fetch observations from the external EIA source. S3 can be the application's internal storage provider.
+
+[YOU] AI withdrew R1 and the disk-only recommendation, recorded the clarified storage decision as A14, and aligned the current README. This is an engineering interpretation correction, not an EIA anomaly; `FINDINGS.md` is unchanged. The correction was established through alayala's explanation and the existing separation of refresh from published-data reads, not a runtime test.
+
+[ME] Alayala explicitly accepted PyArrow, DataFusion's Python binding, and SQLGlot. [YOU] AI recorded A13. Versions, SQL policy details, and runtime verification remain open. The next discussion is folder structure; the layout in the supporting session remains proposed, with no implementation folders created.
+
+[ME] Alayala then proposed the feature-based folder tree, including separate query execution, publication, settings, adapters, workers, connector, and shared contracts. [YOU] AI reviewed its ownership against A9 and recommends the author's layout with explicit query authorization/isolation, shared transaction ownership, final-manifest validation, and durable recovery responsibilities. The [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review) distinguishes conditional implementation failures from demonstrated defects. Folder selection remains pending; no application files were created.

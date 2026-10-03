@@ -1,10 +1,10 @@
 # Trinity — Arkham Outage Explorer
 
-Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore locally stored U.S. nuclear outage data.
+Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
 
 **Status: data contract specified; implementation pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. There is no runnable application in this documentation set.
 
-Current handoff: [backend selection](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up), following the [vault reconciliation](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md). [PR #1](https://github.com/alejandroayalad/trinity/pull/1) merged data contract v1; [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. [A10](DECISIONS.md#a10--python-for-the-backend-api-and-workers-closed) selects Python for the backend API and workers; [A11](DECISIONS.md#a11--fastapi-for-the-backend-http-api-closed) selects FastAPI; [A12](DECISIONS.md#a12--psycopg-3-and-alembic-for-postgresql-closed) selects Psycopg 3 and Alembic. Continue on `docs/backend-decisions-architecture`. Next: review compatible dependency versions; the API/security contract remains open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current handoff: [stack clarification and folder proposal](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack), following the [backend selection](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up). [docs/schema.md](docs/schema.md) and [A9](DECISIONS.md#a9--data-contract-v1-finalized) remain canonical. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. Continue on `docs/backend-decisions-architecture`. Next: settle the proposed folder structure; dependency versions and the API/security contract remain open. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
 ## Intended behavior
 
@@ -20,14 +20,16 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 
 | Component | Responsibility |
 |---|---|
-| Connector and preparation | Fetch the three EIA routes, validate records, and produce local Parquet datasets. |
+| Connector and PyArrow | Fetch the three EIA routes, validate records, and prepare typed Parquet datasets. |
+| Application-owned S3 | Hold immutable data versions and their manifest files under A9/A14. |
 | PostgreSQL | Store settings, refresh outcomes, approvals, and the published data version. |
-| Apache DataFusion | Query the published Parquet datasets. Outage rows are not copied into PostgreSQL for user queries. |
+| datafusion-python | Query the permitted published Parquet files. Outage rows are not copied into PostgreSQL for user queries. |
+| SQLGlot and backend policy | Inspect SQL structure and enforce the supported grammar and table permissions before analytical reads. |
 | BullMQ and Redis | Run the full refresh pipeline in background workers with bounded concurrency; PostgreSQL outbox records preserve dispatch requests. |
 | Clerk | Authenticate users; the backend enforces application permissions. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Python is selected for the backend API and workers, with FastAPI for the HTTP API and Psycopg 3/Alembic for PostgreSQL access/migrations. Frontend, component versions, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A12.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. Python is selected for the backend API and workers, with FastAPI for the HTTP API and Psycopg 3/Alembic for PostgreSQL access/migrations. Frontend, component versions, SQL/authentication details, and the concrete deployment remain open. See [DECISIONS.md](DECISIONS.md), A1–A14.
 
 ## Setup, running, and tests
 
@@ -74,6 +76,8 @@ Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the acc
 ## Delivery structure and slices
 
 Keep the required documents at the root, the data contract in `docs/schema.md`, and supporting records in `ai/sessions/`. Create `connector/`, `backend/`, `frontend/`, `scripts/`, and `tests/` when their implementation or evidence is ready. These are proposed responsibility boundaries; no language or framework is selected by the folder names. Empty implementation folders and unverified run commands are not included.
+
+The [current folder proposal](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#flow-and-provisional-folder-responsibilities) refines those responsibility boundaries into one Python package inside `backend/`, including its connector, with separate API and worker entrypoints sharing code. It remains proposed; no folder implementation is authorized by accepting the stack.
 
 1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
 2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.

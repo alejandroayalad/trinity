@@ -19,6 +19,8 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A10 | Technical / code   | Python for the backend API and background workers.                                                           |
 | A11 | Technical / code   | FastAPI for the Python backend HTTP API.                                                                      |
 | A12 | Technical / code   | Psycopg 3 for PostgreSQL access and Alembic for schema migrations.                                              |
+| A13 | Technical / code   | PyArrow for Parquet preparation, datafusion-python for queries, and SQLGlot for SQL inspection.                 |
+| A14 | Technical / code   | Application-owned persisted outage data in S3; exploration does not fetch live EIA data.                       |
 
 ### A1 — arrangement of decisions: closed
 
@@ -284,7 +286,7 @@ Status: accepted by alayala on October 3, 2026. Language selected; implementatio
 
 **Tradeoff and verification:** BullMQ's current Python development source exposes `setGlobalConcurrency`; that is not evidence that a chosen release works correctly across workers. Pin a compatible release, verify two workers respect a queue-wide limit of one active job, and exercise worker restart and duplicate-safe recovery. Verify DataFusion/PyArrow decimal compatibility and SQL isolation separately. No dependency installation or runtime test has run for this decision.
 
-**Still open:** Python version; DataFusion binding/version and PyArrow version; BullMQ/Redis versions; frontend; authentication integration; API contracts; SQL subset and table-reference detection; execution and row limits. A11 subsequently selects FastAPI for the API framework; A12 selects Psycopg 3 and Alembic for PostgreSQL access and migrations.
+**Still open:** Python and dependency versions; frontend; authentication integration; API contracts; SQL subset and table-reference detection; execution and row limits. A11 selects FastAPI; A12 selects Psycopg 3 and Alembic; A13 selects PyArrow, datafusion-python, and SQLGlot. A14 clarifies the application-owned storage boundary.
 
 **History:** Resolves the backend-language question left open in A4, A6, A8, and the October 3 handoff. It does not reopen A9 or authorize implementation or Git publication.
 
@@ -304,7 +306,7 @@ Status: accepted by alayala on October 3, 2026. Framework selected; not installe
 
 **Tradeoff and boundaries:** Request/response models must stay aligned with the API contract, including exact decimal serialization. Framework defaults are not proof of correct authentication or SQL isolation. Refresh work continues through PostgreSQL outbox dispatch to BullMQ workers under A6–A7; selecting FastAPI does not replace that path with in-process background tasks.
 
-**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, Clerk authentication, role denials, and error handling. The query binding/version, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool.
+**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, Clerk authentication, role denials, and error handling. Dependency versions, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool; A13 selects the query binding and parser.
 
 Source: alayala's acceptance in this conversation; [FastAPI official features](https://fastapi.tiangolo.com/features/). Supporting record: [backend selection session](ai/sessions/2026-10-03-python-backend-selection.md#fastapi-follow-up).
 
@@ -325,6 +327,46 @@ Status: accepted by alayala on October 3, 2026. Tools selected; dependencies and
 **Verification still required:** Pin compatible Python, Psycopg, Alembic, SQLAlchemy, and PostgreSQL versions. Create and test migrations against A9, including constraints and clean-database setup. Prove run/outbox rollback, duplicate-safe requests, publication transactions, and connection cleanup. Pooling and sync/async execution details remain open.
 
 Sources: alayala's acceptance in this conversation; [Psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html); [Alembic documentation](https://alembic.sqlalchemy.org/en/latest/) and [dependencies](https://alembic.sqlalchemy.org/en/latest/front.html#dependencies). Supporting record: [database tools follow-up](ai/sessions/2026-10-03-python-backend-selection.md#database-tools-follow-up).
+
+### A13 — PyArrow, datafusion-python, and SQLGlot: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Libraries selected; not installed or runtime-tested.
+
+**Choice:** Use PyArrow to prepare typed Parquet under A9; use `datafusion-python` to execute permitted analytical queries; use SQLGlot to parse and inspect SQL before execution. Trinity owns the grammar allowlist, table authorization, function restrictions, and result/resource limits. SQLGlot is not itself the security boundary.
+
+**Reason:** These libraries cover the existing Python preparation and DataFusion query responsibilities and provide structural SQL inspection. No existing application implementation is replaced by this selection.
+
+**Alternative not selected:** Detect table references with text matching or regular expressions. SQL structure, aliases, and any supported nested queries need structured inspection rather than matching names in raw text.
+
+**Flow and failure example:** Authenticated SQL input → supported-grammar checks → resolve and authorize all real table references → register only permitted published manifest files → bounded DataFusion execution → exact decimal response. An Analyst's CTE over `job_outbox` must either be rejected as unsupported syntax or denied for its underlying table before any analytical read.
+
+**Tradeoff and open details:** SQLGlot and DataFusion use different parsers. Pin compatible versions and test the chosen subset; a successful SQLGlot parse is not permission to execute. The dialect, allowed grammar/functions, nested-query support, exact detection algorithm, numeric expressions, and limits remain open.
+
+**Verification required:** A9 decimal round trips; accepted/rejected SQL examples; nested table authorization where supported; whole-input multi-statement rejection; file/URL and write rejection; parser/engine agreement; isolation between request contexts. No such runtime checks have run.
+
+Sources: alayala's explicit acceptance; [PyArrow filesystems](https://arrow.apache.org/docs/python/filesystems.html); [DataFusion Python](https://datafusion.apache.org/python/user-guide/data-sources.html); [SQLGlot behavior](https://sqlglot.com/sqlglot.html). Supporting record: [stack clarification](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack).
+
+### A14 — Application-owned storage and source independence: closed
+
+Category: **Technical / code**.
+
+Status: clarified and selected by alayala on October 3, 2026; not implemented.
+
+**Choice:** Retain S3 from the proposed backend stack as application-owned storage for immutable Parquet versions. Alayala interprets “locally” as data persisted under the application's control, independent of fetching live data from the external EIA source during exploration. It does not impose a same-machine-disk-only storage choice. Local application startup remains a delivery requirement.
+
+**Reason and alternative rejected:** S3 is an internal storage dependency of this application. Reject AI's proposed requirement to replace it with local disk and defer S3 solely because of that interpretation of “locally.” The service that holds application-owned files and the external service that supplies fresh observations have different responsibilities.
+
+**Flow and failure example:** A refresh fetches EIA records and prepares/validates application-owned Parquet objects. Publication updates the PostgreSQL active pointer only after A9's checks and approval rules pass. Catalog, previews, and SQL use that publication without requesting EIA data. If EIA is unavailable, the last valid publication remains queryable when the application's own storage is available.
+
+**Contract boundary:** Keep A9's normalized relative `storage_path`; resolve it against trusted server configuration and the immutable version root. Clients cannot supply bucket names, endpoints, object paths, or unpublished manifests. S3 storage does not replace PostgreSQL publication state or make files immutable automatically.
+
+**Open implementation details:** S3 service/deployment, credentials and access policy, object-write protection, complete-manifest registration, and dependency versions. Verify refresh failure preservation, exact-manifest reads, unauthorized path rejection, and publication/read overlap. No cloud resource or cost is authorized by this documentation choice.
+
+**History:** Withdraws review R1's disk-only conclusion. This is alayala's clarified project interpretation; the AI mistake and correction belong in Engineering Notes, not the EIA data findings.
+
+Evidence: the supplied `Backend Stack.md`, alayala's correction, and the [review session](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). A4 and A9 remain authoritative for state/query separation and publication invariants.
 
 ## Finalized specifications
 
