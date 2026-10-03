@@ -1,8 +1,10 @@
-"""One-page EIA requests. Pagination and retry orchestration belong above this layer."""
+"""Shared EIA requests and bounded pagination. Retry orchestration is still pending."""
 
+import asyncio
 from dataclasses import dataclass
 from datetime import date
 import logging
+import math
 import re
 from typing import Any
 from urllib.parse import quote, quote_plus
@@ -56,6 +58,43 @@ class EIAResponsePage:
     @property
     def data(self) -> list[dict[str, Any]]:
         return self.response["data"]
+
+
+@dataclass(frozen=True)
+class EIACollection:
+    """Rows and page evidence from one route after confirmed empty-page exhaustion."""
+
+    dataset: str
+    data: list[dict[str, Any]]
+    pages: list[EIAResponsePage]
+    advertised_total: int | None
+    page_size: int
+
+    @property
+    def record_count(self) -> int:
+        return len(self.data)
+
+    @property
+    def page_count(self) -> int:
+        """All successful responses, including the final empty probe."""
+        return len(self.pages)
+
+    @property
+    def data_page_count(self) -> int:
+        return sum(bool(page.data) for page in self.pages)
+
+    @property
+    def total_matches(self) -> bool | None:
+        if self.advertised_total is None:
+            return None
+        return self.record_count == self.advertised_total
+
+    @property
+    def minimum_data_pages(self) -> int | None:
+        """Derived lower bound, not an EIA page-count field or completion signal."""
+        if self.dataset == "facility" or self.advertised_total is None:
+            return None
+        return (self.advertised_total + self.page_size - 1) // self.page_size
 
 
 def _sanitize(value: Any, secret: str) -> Any:
@@ -193,6 +232,80 @@ class EIAClient:
         self, *, start: date, end: date, offset: int = 0, length: int = 5000
     ) -> EIAResponsePage:
         return await self._fetch_page("generator", start, end, offset, length)
+
+    async def fetch_national(
+        self, *, start: date, end: date, page_size: int = 5000,
+        max_pages: int = 1000, timeout_seconds: float = 300.0,
+    ) -> EIACollection:
+        return await self._fetch_all("national", start, end, page_size, max_pages, timeout_seconds)
+
+    async def fetch_facility(
+        self, *, start: date, end: date, page_size: int = 5000,
+        max_pages: int = 1000, timeout_seconds: float = 300.0,
+    ) -> EIACollection:
+        return await self._fetch_all("facility", start, end, page_size, max_pages, timeout_seconds)
+
+    async def fetch_generator(
+        self, *, start: date, end: date, page_size: int = 5000,
+        max_pages: int = 1000, timeout_seconds: float = 300.0,
+    ) -> EIACollection:
+        return await self._fetch_all("generator", start, end, page_size, max_pages, timeout_seconds)
+
+    async def _fetch_all(
+        self, dataset: str, start: date, end: date, page_size: int,
+        max_pages: int, timeout_seconds: float,
+    ) -> EIACollection:
+        if type(max_pages) is not int or max_pages < 1:
+            raise ValueError("max_pages must be a positive integer including the empty probe.")
+        if (
+            type(timeout_seconds) not in (int, float)
+            or not math.isfinite(timeout_seconds)
+            or timeout_seconds <= 0
+        ):
+            raise ValueError("timeout_seconds must be a finite positive number.")
+
+        data: list[dict[str, Any]] = []
+        pages: list[EIAResponsePage] = []
+        seen: set[tuple[str, ...]] = set()
+        key_fields = _ROUTES[dataset][1]
+        advertised_total: int | None = None
+        offset = 0
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout_seconds
+        try:
+            async with asyncio.timeout_at(deadline):
+                for _ in range(max_pages):
+                    if loop.time() >= deadline:
+                        raise EIAClientError("pagination_deadline")
+                    page = await self._fetch_page(dataset, start, end, offset, page_size)
+                    if loop.time() >= deadline:
+                        raise EIAClientError("pagination_deadline")
+                    pages.append(page)
+                    if page.total is not None:
+                        if advertised_total is not None and page.total != advertised_total:
+                            raise EIAClientError("unstable_total")
+                        advertised_total = page.total
+
+                    for row in page.data:
+                        key = tuple(row[field] for field in key_fields)
+                        if key in seen:
+                            # Reject overlap and repeated pages even if their values changed.
+                            raise EIAClientError("duplicate_key")
+                        seen.add(key)
+                    data.extend(page.data)
+                    if dataset != "facility" and advertised_total is not None:
+                        if len(data) > advertised_total or (
+                            not page.data and len(data) != advertised_total
+                        ):
+                            raise EIAClientError("total_mismatch")
+                    if not page.data:
+                        return EIACollection(dataset, data, pages, advertised_total, page_size)
+                    # A short page is not exhaustion. Probe after its actual last row.
+                    offset += len(page.data)
+        except TimeoutError:
+            raise EIAClientError("pagination_deadline") from None
+        # Never return partial data when the empty probe could not be reached.
+        raise EIAClientError("page_limit")
 
     async def _fetch_page(
         self, dataset: str, start: date, end: date, offset: int, length: int

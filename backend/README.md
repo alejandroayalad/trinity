@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health` and a shared EIA client with three one-page fetch methods. Product routes, authentication, complete EIA extraction, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health` and a shared EIA client with one-page and paginated methods for all three routes. Product routes, authentication, retries/retrieval records, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -49,7 +49,7 @@ All methods accept `start` and `end` as dates, a nonnegative `offset` (default 0
 
 `EIAResponsePage.data` contains source rows with strings and unit metadata preserved. `response` retains sanitized source metadata; `total` is the parsed advertised count, `api_version` identifies the API release, and `warnings` preserves sanitized top-level warnings. Empty pages are valid. The facility advertised total is not used to infer completeness.
 
-The client checks the JSON envelope, daily frequency, row shape, identifiers, dates, requested window, units and page size. Decimal normalization, duplicate checks, full coverage and cross-route reconciliation remain later stages. HTTP failures, API-body errors and malformed responses raise `EIAClientError` with safe `code` and optional `status_code`. Returned pages omit echoed request credentials. An HTTPX log filter masks the API key in request URLs without disabling logging; callers must still avoid logging raw credentials.
+The one-page methods check the JSON envelope, daily frequency, row shape, identifiers, dates, requested window, units and page size. Paginated collection also checks duplicate keys, as described below. Decimal normalization, full coverage and cross-route reconciliation remain later stages. HTTP failures, API-body errors and malformed responses raise `EIAClientError` with safe `code` and optional `status_code`. Returned pages omit echoed request credentials. An HTTPX log filter masks the API key in request URLs without disabling logging; callers must still avoid logging raw credentials.
 
 After exporting `EIA_API_KEY`, run this explicit live gate from `backend/`:
 
@@ -57,7 +57,35 @@ After exporting `EIA_API_KEY`, run this explicit live gate from `backend/`:
 uv run --locked python tests/live_eia.py -v
 ```
 
-It requests one row from each route for October 1, 2026, using the same client. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
+It checks one page and then paginated extraction for each route on October 1, 2026. The paginated check uses a page size of 50, at most 25 responses and a 120-second deadline per route. It compares local page/row counts and supplied totals under the route-specific rules below. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
+
+### Fetch all pages for a route
+
+`fetch_national()`, `fetch_facility()` and `fetch_generator()` return an `EIACollection`. Use the same date arguments as the one-page methods:
+
+```python
+async with EIAClient() as client:
+    result = await client.fetch_generator(
+        start=date(2026, 10, 1), end=date(2026, 10, 1), page_size=50
+    )
+    records = result.data
+    counts = (result.page_count, result.data_page_count, result.record_count)
+```
+
+Each collection starts at offset zero and advances by the actual number of returned rows. A short page or reaching the advertised total does not end collection. An empty page confirms exhaustion. Duplicate keys, repeated/overlapping pages and changing supplied totals fail the collection. National/generator totals must equal the final record count when supplied. Facility totals are preserved and compared, but a mismatch does not fail or stop collection under A5/A9.
+
+| Result field | Meaning |
+|---|---|
+| `data` / `record_count` | Combined source rows and their count. |
+| `pages` / `page_count` | Sanitized page responses and count, including the final empty probe. |
+| `data_page_count` | Number of nonempty pages. |
+| `advertised_total` | Stable total across pages where supplied; null if absent everywhere. |
+| `total_matches` | Whether the final record count matches that total; null if no total exists. |
+| `minimum_data_pages` | Ceiling of total/page size for national/generator; null for facility or missing totals. |
+
+EIA supplies a record total, not a separate page count. `minimum_data_pages` is a derived lower bound: short nonterminal pages can increase the actual count. No expected count is invented when metadata is missing.
+
+The implementation defaults to `max_pages=1000` (including the empty probe) and `timeout_seconds=300` for the entire route collection. Both are configurable positive bounds, not EIA guarantees or measured performance targets. Exhausting either limit raises `page_limit` or `pagination_deadline`; partial rows are never returned as success. These route-extraction bounds are separate from analytical query limits. Retries, persistent retrieval records, numeric normalization, full-window/cross-route validation and Parquet remain pending. Successful pagination is not proof that a candidate is ready for publication.
 
 ### Start the API
 
@@ -74,7 +102,7 @@ uv run --locked python -m unittest discover -s tests -v
 uv build
 ```
 
-Verified on CPython 3.14.8 with uv 0.12.23: 18 health, configuration and mocked EIA client tests pass. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
+Verified on CPython 3.14.8 with uv 0.12.23: 32 health, configuration and mocked EIA client/pagination tests pass. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
 
 ## Layout and next slice
 
