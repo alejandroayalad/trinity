@@ -1,0 +1,53 @@
+"""Run all three EIA routes and save one JSONL evidence record per route."""
+
+import argparse
+import asyncio
+from datetime import date
+import json
+import os
+from pathlib import Path
+import sys
+
+from trinity.connector.pipeline import retrieve_all
+from trinity.connector.retrieval import RetrievalResult
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--start", type=date.fromisoformat, required=True)
+    parser.add_argument("--end", type=date.fromisoformat, required=True)
+    parser.add_argument("--output", type=Path, required=True,
+                        help="New JSONL evidence file; existing files are never overwritten.")
+    parser.add_argument("--page-size", type=int, default=5000)
+    parser.add_argument("--max-pages", type=int, default=1000)
+    parser.add_argument("--timeout-seconds", type=float, default=300.0,
+                        help="Total deadline per route, including retries.")
+    args = parser.parse_args(argv)
+
+    try:
+        # Reserve the output before network access. Each completed route is
+        # flushed and synced before starting the next one.
+        with args.output.open("x", encoding="utf-8") as output:
+            def save(result: RetrievalResult) -> None:
+                output.write(json.dumps(result.metadata.to_dict(), ensure_ascii=True) + "\n")
+                output.flush()
+                os.fsync(output.fileno())
+                print(json.dumps(result.metadata.to_dict(include_attempts=False)))
+
+            results = asyncio.run(retrieve_all(
+                start=args.start, end=args.end, page_size=args.page_size,
+                max_pages=args.max_pages, timeout_seconds=args.timeout_seconds,
+                on_result=save,
+            ))
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        print("Extraction cancelled. Completed route evidence was retained.", file=sys.stderr)
+        return 130
+    except OSError:
+        print("Cannot create or write retrieval output; use a new file in a writable directory.",
+              file=sys.stderr)
+        return 2
+    return 0 if all(r.metadata.final_status == "success" for r in results) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -172,3 +172,35 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Backend contract publication — October 3, 2026
 
 [ME] Alayala requested focused commits, push and merge to main. [YOU] AI executes those authorized Git operations in two documentation slices and preserves the existing incremental branch history. Repository inspection confirms that backend implementation and runtime tests remain pending. See the [publication session](ai/sessions/2026-10-03-backend-contracts-publication.md) for scope, validation and the distinction between the completed design and executable work.
+
+## Minimum Python project — October 3, 2026
+
+[ME] Alayala requested the minimum Python project in GitHub. [YOU] AI created the A15 package scaffold, a FastAPI health endpoint, two smoke tests, pinned minimal dependencies, uv.lock, an environment example and setup instructions. Locked installation, tests and package builds passed on Python 3.14.8 with uv 0.12.23. Human code review and all product features remain pending. The [implementation session](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-1--minimum-python-project) records the host-tool correction, test-client warning, scope and checks.
+
+## Dependencies and EIA environment — October 3, 2026
+
+[ME] Alayala requested dependency resolution and environment-based EIA credentials. [YOU] AI resolved and installed the selected backend packages, regenerated uv.lock, and added an explicit EIA key loader with safe missing-value errors and masked secret output. Six tests, package compatibility checks and backend-module imports passed on Python 3.14.8. No live EIA call was made; tests used synthetic keys. Clerk remains omitted following the local-login choice. See the [dependency stage](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-2--dependencies-and-eia-environment-configuration) for scope and remaining verification.
+
+## Shared EIA client — October 3, 2026
+
+[ME] Alayala requested one shared HTTPX client and a one-page fetch method for each EIA route. [YOU] AI implemented environment authentication, daily request parameters and sorting, response-shape/unit checks, safe errors and secret redaction. All 18 offline tests passed, including 12 new client tests. A separate live gate is included but was not run because EIA_API_KEY is absent. No new data finding or complete extraction is claimed. See the [client stage](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-3--shared-eia-client-and-one-page-fetchers).
+
+## EIA pagination — October 3, 2026
+
+[ME] Alayala requested complete page collection, combined route records and page/record count checks against available metadata. [YOU] AI added bounded pagination, empty-page confirmation, duplicate and total checks, result counters and 14 regression tests. All 32 offline tests passed. The live gate now includes pagination but remains unrun without an environment key. Facility total mismatches remain evidence under A5/A9. No new data finding is claimed. See the [pagination stage](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-4--eia-pagination).
+
+## Bounded EIA retries — October 3, 2026
+
+[ME] Alayala requested temporary-failure retries, a three-attempt limit, short backoff and no retries for permanent errors. [YOU] AI added the A19 three-total-attempt policy with one-/three-second waits, an HTTP status allowlist, selected temporary transport failures and a total page deadline inside the existing route deadline. Eleven new tests plus the updated prior checks pass: 43 offline tests total. No live EIA request was made. See the [retry stage](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-5--bounded-eia-retries).
+
+
+## Retrieval records and orchestration — October 3, 2026
+
+[ME] Alayala requested metadata for successful and failed retrievals and one command for all routes. [YOU] AI added per-call route metadata, sanitized attempt evidence/checksums, one shared-client orchestration function and a JSONL command. It continues after route failure, reports missing-key failures for all routes, preserves cancellation, refuses output overwrite and returns meaningful exit codes. All 59 offline tests passed on CPython 3.14.8, including 16 new retrieval/command tests. The existing retry-pagination test now checks metadata counts. Locked installation and module help passed. No live EIA call or new data finding is claimed. The [same continuous session, stage 6](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-6--retrieval-metadata-and-orchestration-command) records semantics, command-check corrections and persistence limits. Human review, the live gate, normalization and Parquet remain pending.
+
+## Connector session closed after review — October 3, 2026
+
+[ME] Alayala confirmed that the final diff was reviewed and correct, requested closing the implementation session/slice with the local fetch still pending, and explicitly authorized merging PR #4. The reviewed implementation head is `edbde7cb9f1160a9bfc0e1de80323fee8b409c3b`.
+[YOU] AI recorded this acceptance in the [same session](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#session-close--reviewed-implementation-local-fetch-pending) and prepared a merge commit preserving the existing history. This close is documentation-only. The latest executed suite passed 59 offline tests; no tests were rerun and no live EIA request was made during closure.
+
+Status: implementation and human review complete; session closed. Local/live extraction remains pending and the live/full-challenge gates remain unpassed. Next: execute the documented fixed-window command locally with EIA_API_KEY and inspect all three outcomes.
