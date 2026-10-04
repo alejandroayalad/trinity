@@ -58,3 +58,9 @@ Pending at this record: the authorized documentation commit/push and final remot
 Blocker: none for this slice's code delivery; Docker/Compose execution is unavailable on this machine.
 
 Next: [ME] follow `backend/README.md` at “Local API and three personas” to provision your own retained local accounts.
+
+## Reviewed slice closure
+
+[ME] Alayala confirmed review, requested closure through a PR to `main`, and selected live S3 + EIA verification as the next step. He will perform the merge. This supersedes the earlier no-PR delivery boundary, without claiming Compose/fresh-install verification or an observed explanation beyond his review confirmation.
+
+[YOU] The [separate closure record](2026-10-04-local-login-review-close.md) records reconciliation with current main, checks and the next action. The implementation and evidence commits `2ce4c59` and `7b0f072` were previously pushed and their local/remote heads matched.

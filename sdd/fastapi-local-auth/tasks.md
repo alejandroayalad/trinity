@@ -1,7 +1,7 @@
 # Tasks: FastAPI and local login
 
 Date: 2026-10-04
-Status: Implementation completed under alayala's explicit request to complete, commit and push this slice. Local acceptance passed; delivery state is in the [implementation session](../../ai/sessions/2026-10-04-fastapi-local-auth-implementation.md).
+Status: Reviewed and closed by alayala on October 4, 2026. PR delivery to main is authorized; alayala will merge it. See the [review closure](../../ai/sessions/2026-10-04-local-login-review-close.md). Local runtime evidence remains in the implementation session.
 Branch: `feat/fastapi-local-auth`
 Basis: [proposal](proposal.md), [specification](spec.md), [design](design.md), A21.
 
@@ -39,7 +39,7 @@ Local login now works for Viewer, Analyst and Admin. The server checks current s
 - [x] [YOU] Verified all landing-table outcomes, unpublished-candidate exclusion, consistent publication snapshots and distinct dependency failure handling.
 - [x] [YOU] Implemented Admin blocker/actions, strict bodies/queries, streamed 64 KiB limits, safe Problem fields and no-store/request-ID headers.
 - [x] [YOU] Tested critical review/publishing/publication-failure actions and approval binding; checked error responses/logs for secret canaries. Test-only SQL guards are absent from the production app.
-- [ ] [ME] Explain why a database outage returns 503 instead of `data_ready=false`. No observed human explanation is claimed.
+- [x] [ME] Confirmed review of the completed slice and requested closure/PR. This satisfies the requested review gate; a separate observed explanation of the 503 behavior is not claimed.
 
 ### Step 5 — Direct API acceptance and handoff
 
@@ -47,7 +47,7 @@ Local login now works for Viewer, Analyst and Admin. The server checks current s
 - [x] [YOU] Ran focused authentication and full backend regression tests. Results and exact runtime boundaries are in the session; opt-in skips were exercised separately.
 - [x] [YOU] Updated setup/run/seed/test instructions, canonical implementation references, SDD state and AI contributions; reviewed source and documentation diffs.
 - [ ] [ME] Repeat the persona check with retained accounts and perform a fresh locked installation/Compose walkthrough. Agent acceptance is not evaluator-owned evidence.
-- [x] [ME] Authorized incremental commits and branch push. No PR/merge was requested; actual commit/push results belong in the session and final handoff.
+- [x] [ME] Authorized incremental commits/push, then requested the PR to `main` after review. Alayala owns the final merge. Next work: live S3 + EIA verification against the existing setup.
 
 ### Acceptance coverage
 
