@@ -1,6 +1,6 @@
 # Docker local setup — API and PostgreSQL
 
-Date: 2026-10-04. Branch: `feat/docker-local`, based on `main` at `d46fe19`. Mode: implementation.
+Date: 2026-10-04. Branch: `feat/catalog-permissions` (uncommitted). Mode: implementation.
 
 ## Objective
 
@@ -8,7 +8,7 @@ Run the existing API and PostgreSQL with Docker Compose for local development. K
 
 ## Contributions
 
-- [ME] alayala requested the Docker setup and its constraints, then asked for a Docker-only branch and pull request without unrelated feature work.
+- [ME] alayala requested the Docker setup and its constraints.
 - [YOU] AI inspected the existing `compose.yaml` (database only), `backend/pyproject.toml`, `uv.lock`, `alembic.ini`, `migrations/env.py`, `trinity.config.ApiSettings` and the seed/check commands. It extended the existing Compose file instead of creating a second one, added `backend/Dockerfile`, `backend/.dockerignore` and `backend/docker-entrypoint.sh`, ran the checks below and updated `backend/README.md` and `README.md`.
 
 ## Choices made during implementation
@@ -22,22 +22,22 @@ These are implementation details inside A19/A21, not new entries in `DECISIONS.m
 
 ## Checks and results
 
-The setup was first built and tested in another working tree. This record reports the repeat run on this branch's own code. That run used a throwaway Compose project (`-p trinity-verify-main`) with a generated password and synthetic persona passwords. alayala's own `trinity` stack was using ports 8000/15432 at that time, so a temporary override file moved the throwaway project to `127.0.0.1:18000` and `127.0.0.1:25432`. The project, its volume, the override and the temporary password files were removed afterwards. alayala's running stack was not changed.
+All runtime checks used a separate throwaway Compose project (`-p trinity-verify`) with a generated password and synthetic persona passwords. The project, its volume and the temporary password files were removed afterwards. The default `trinity_postgres_data` volume was not created, so alayala's first `up` initializes it with his own password.
 
 | Check | Result |
 |---|---|
 | Unset `TRINITY_POSTGRES_PASSWORD` | `docker compose up` exit 1: secret requires the variable. Passed (fails closed). |
 | Empty password | PostgreSQL container exits 1 before init. Passed (fails closed). |
 | Image build | `uv sync --locked --no-dev` succeeded on linux/arm64. Image 758 MB. Runs as `trinity` (10001). No `.env` file in the image. `trinity.main`, pyarrow 25.0.1, datafusion 54.0.0 and sqlglot import. |
-| Startup | `docker compose up -d --build --wait`: postgres healthy, api healthy. |
+| Startup | `docker compose up -d --wait`: postgres healthy, api healthy; uvicorn "Application startup complete". |
 | Before migration | `/health` 200; login 503. |
 | Migration | `docker compose run --rm api alembic upgrade head` exit 0; `alembic current` → `0002_app_entry (head)`. |
-| DB connectivity | After migration, unknown-user login 401 (database read succeeds). |
-| Personas | Synthetic seed created viewer/analyst/admin; rerun created none. `trinity.auth.check.check_persona` passed for all three: landings `waiting`, `waiting`, `setup`. |
+| DB connectivity | After migration, unknown-user login 401 (database read succeeds); `/me` and `/catalog` without token 401. |
+| Personas | Synthetic seed created viewer/analyst/admin; rerun created none. `check_persona(..., catalog=True)` passed for all three: landings `waiting`, `waiting`, `setup`. |
 | Credential exposure | Generated password found 0 times in `docker inspect` (both containers), `docker compose config`, container logs and `docker history`. |
-| Loopback only | Published ports bound to `127.0.0.1` only; request to the LAN IP refused. |
+| Loopback only | Listeners `127.0.0.1:8000` and `127.0.0.1:15432`; request to the LAN IP refused. |
 | Persistence | `docker compose down` then `up`: 3 users and `0002_app_entry` still present. Wrong password over TCP: `password authentication failed`. |
-| Backend tests | With `TRINITY_TEST_DATABASE_URL` pointing at a `trinity_test_docker` database in the throwaway container: 248 tests OK. Without it: 248 OK, 25 skipped. The existing local virtual environment was used with `PYTHONPATH` set to this branch's `src`. |
+| Backend tests | With `TRINITY_TEST_DATABASE_URL` pointing at a `trinity_test_docker` database in the throwaway container: 272 tests OK. Without it: 272 OK, 36 skipped. |
 
 ## Corrections found during the run
 
@@ -59,7 +59,3 @@ The setup was first built and tested in another working tree. This record report
 ## Next action
 
 [ME] Run steps 1–3 of "Run with Docker Compose" in `backend/README.md` with your own password.
-
-## Earlier catalog-inclusive run
-
-The original uncommitted checkout's [catalog-inclusive Docker verification](2026-10-04-docker-catalog-initial-verification.md) is preserved separately. It used a different throwaway project and included catalog tests. Its 272-test count and this Docker-only branch's 248-test count describe separate historical runs; neither is a new check performed during branch reconciliation.

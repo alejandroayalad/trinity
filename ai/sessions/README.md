@@ -2,20 +2,22 @@
 
 Start with the relevant theme, then follow its dated records. Filenames and paths stay unchanged so existing evidence links remain valid. Each session has one primary theme; cross-topic links inside the record preserve related decisions. Earlier statements describe their historical gate, not current authorization or delivery status.
 
-The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates requirements, design, implementation and measured review evidence. This branch publishes the catalog slice; SQL implementation and preview SDD are separate workstreams and are not included here.
+The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates requirements, design, implementation and measured review evidence. The active continuation branch is `feat/catalog-permissions`: catalog and SQL are committed, and preview planning is preserved. The synchronized delivery branch is retained only as an equal reference. See the [reconciliation record](2026-10-04-catalog-sql-preview-reconciliation.md) for remaining implementation and runtime gates.
 
 | Theme | Records |
 |---|---:|
-| [Catalog and permissions](#catalog-and-permissions) | 6 |
+| [Catalog and permissions](#catalog-and-permissions) | 7 |
 | [Authentication](#authentication) | 5 |
 | [Data evidence and findings](#data-evidence-and-findings) | 5 |
 | [Connector, Parquet and storage](#connector-parquet-and-storage) | 8 |
 | [Architecture and contracts](#architecture-and-contracts) | 12 |
-| [SQL scope](#sql-scope) | 1 |
-| [Delivery and working practices](#delivery-and-working-practices) | 5 |
+| [SQL implementation](#sql-implementation) | 9 |
+| [Dataset previews](#dataset-previews) | 3 |
+| [Delivery and working practices](#delivery-and-working-practices) | 6 |
 
 ## Catalog and permissions
 
+- [2026-10-04 — Earlier catalog-inclusive Docker verification](2026-10-04-docker-catalog-initial-verification.md)
 - [2026-10-04 — Catalog Docker operator check — October 4, 2026](2026-10-04-catalog-docker-operator-check.md)
 - [2026-10-04 — Catalog and permissions — design and tasks](2026-10-04-catalog-permissions-design-tasks.md)
 - [2026-10-04 — Catalog and permissions — implementation and evidence](2026-10-04-catalog-permissions-implementation.md)
@@ -65,9 +67,23 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-03 — Session — Python backend selection](2026-10-03-python-backend-selection.md)
 - [2026-10-03 — Session Security contract and API split](2026-10-03-security-contract-and-api-split.md)
 
-## SQL scope
+## SQL implementation
 
 - [2026-10-03 — Session SQL scope by stage](2026-10-03-sql-scope-by-stage.md)
+- [2026-10-04 — One-table read-only SQL — design and tasks](2026-10-04-single-table-sql-design-tasks.md)
+- [2026-10-04 — One-table read-only SQL — proposal](2026-10-04-single-table-sql-proposal.md)
+- [2026-10-04 — One-table read-only SQL — specification](2026-10-04-single-table-sql-specification.md)
+- [2026-10-04 — SQL isolation and HTTP delivery commits](2026-10-04-sql-delivery-commits.md)
+- [2026-10-04 — SQL implementation — validator through delivery](2026-10-04-sql-full-implementation.md)
+- [2026-10-04 — SQL pair-programming gate — review preparation](2026-10-04-sql-pairing-review-preparation.md)
+- [2026-10-04 — SQL pairing — whole-input single-statement check](2026-10-04-sql-single-statement-pairing.md)
+- [2026-10-04 — SQL pairing — terminal semicolon and comments](2026-10-04-sql-terminal-comment-pairing.md)
+
+## Dataset previews
+
+- [2026-10-04 — Dataset preview design and tasks — October 4, 2026](2026-10-04-dataset-preview-design-tasks.md)
+- [2026-10-04 — Dataset preview SDD proposal — October 4, 2026](2026-10-04-dataset-preview-proposal.md)
+- [2026-10-04 — Dataset preview specification — October 4, 2026](2026-10-04-dataset-preview-specification.md)
 
 ## Delivery and working practices
 
@@ -75,4 +91,5 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-02 — Session — Trinity repository import](2026-10-02-trinity-repository-import.md)
 - [2026-10-03 — Session — Contributing and comment rules](2026-10-03-contributing-comment-rules.md)
 - [2026-10-03 — Session — Vault reconciliation and handoff](2026-10-03-vault-reconciliation-and-handoff.md)
+- [2026-10-04 — Catalog, SQL and preview branch reconciliation](2026-10-04-catalog-sql-preview-reconciliation.md)
 - [2026-10-04 — Docker local setup — API and PostgreSQL](2026-10-04-docker-local-setup.md)

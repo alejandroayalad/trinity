@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). Preview/dashboard rows and refresh workers remain pending.
 
 ## Setup
 
@@ -15,7 +15,7 @@ This installs the package and pinned backend dependencies from `uv.lock`. A chan
 
 ## Local API and three personas
 
-This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me`, `GET /api/v1/catalog` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
+This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me`, `GET /api/v1/catalog`, `POST /api/v1/queries` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
 
 Use PostgreSQL **17.11**. Root `compose.yaml` supplies PostgreSQL, pinned to `postgres:17.11-bookworm`, and the API built from `backend/Dockerfile`. Both use loopback ports; the database uses a persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization from a file. No existing database is migrated automatically. You can run the API in Docker (next section) or natively (steps 1–4 below). Both paths use the same Compose database.
 
@@ -55,7 +55,7 @@ The image uses CPython 3.14.8 and uv 0.12.23, installs only from `uv.lock` (`uv 
 
    ```zsh
    curl -s http://127.0.0.1:8000/health
-   docker compose exec api python -m trinity.auth.check
+   docker compose exec api python -m trinity.auth.check --catalog
    ```
 
 4. Stop the services and keep the data with `docker compose down`. Rebuild after code changes with `docker compose up -d --build --wait`. New migrations need step 2 again.

@@ -12,4 +12,4 @@
 
 The [implementation record](../../ai/sessions/2026-10-04-catalog-permissions-implementation.md) and [retained-account operator record](../../ai/sessions/2026-10-04-catalog-docker-operator-check.md) distinguish automated synthetic evidence from the earlier Docker operator check. Find related history in the [session index by theme](../../ai/sessions/README.md). Runtime commands are in the [backend guide](../../backend/README.md#catalog-metadata-and-operator-check).
 
-This delivery contains the catalog SDD, backend implementation, tests and handoff. SQL implementation and preview SDD remain separate. Viewer retains national metadata API access; hiding Catalog/SQL controls and denying direct frontend navigation remain pending in the frontend slice.
+This delivery contains the catalog SDD, backend implementation, tests and handoff. The reconciled branch also retains [SQL implementation](../../backend/SQL.md) and [preview planning](../dataset-preview/tasks.md); these are separate feature scopes. Viewer retains national metadata API access; hiding Catalog/SQL controls and denying direct frontend navigation remain pending in the frontend slice.

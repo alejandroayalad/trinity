@@ -108,6 +108,8 @@ These values need local cold-start, preview, dashboard and grouped-SQL measureme
 | Analytical request rate | Initially 30 requests per user per minute across processes. |
 | Polling | Progress/status polling is excluded from that analytical counter; authentication/authorization still apply. |
 
+A19 also accepts preview D02 in the [preview specification](../sdd/dataset-preview/spec.md): preview and SQL share one trusted-user rolling 60-second counter. An authorized preview request that passes primitive shape checks consumes one admitted attempt even if later filter/cursor/publication checks or execution fail. Malformed/unauthorized and rate-denied requests add no debit; each page counts separately and internal retries add none. Preserve the specification’s validation order and SQL’s existing counting boundary. Preview D03 requires fresh authorization for every cursor use; possession of a cursor grants no role or dataset access.
+
 Preserve the API's `413 request_too_large` and `429 rate_limited` responses and retry guidance. Internal external-call retries do not become new client analytical requests.
 
 ## External failure retries

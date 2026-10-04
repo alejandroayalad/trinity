@@ -374,3 +374,23 @@ The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implemen
 ## Catalog review and focused Git delivery — October 4, 2026
 
 [ME] Alayala requested review, thematic session organization, commit and push, then explicitly selected the full catalog implementation and tests. [YOU] Prepared a separate branch from current main to preserve merged live-data/Docker work and exclude SQL/preview changes. The delivery checkout passed 239 offline checks (36 database skips) and all 70 auth/catalog acceptance checks separately. No blocking catalog defect was found in the reviewed paths. Added a [thematic session index](ai/sessions/README.md), [catalog entry page](sdd/catalog-permissions/README.md) and [current review evidence](ai/sessions/2026-10-04-catalog-review-and-delivery.md). Existing session filenames remain stable. No retained-account or cloud operation was rerun, and no merge/PR was requested.
+
+## Dataset preview proposal — October 4, 2026
+
+[ME] Alayala requested preview SDD while continuing SQL implementation in another terminal. [YOU] AI drafted the [proposal](sdd/dataset-preview/proposal.md) from existing A9/A16/A19 contracts: role-filtered records, typed date/entity filters, full-key pagination, authenticated publication-bound cursors, exact serialization and shared isolated execution. Viewer keeps national-only API access for the dashboard. Choice lists, dashboard aggregates, frontend and SQL policy remain outside this proposal. The [session](ai/sessions/2026-10-04-dataset-preview-proposal.md) distinguishes existing catalog proof from planned preview offline, real database/HTTP/container and operator evidence. Proposal review precedes specification; no code, runtime action or accepted-decision change was made.
+
+## Dataset preview specification — October 4, 2026
+
+[ME] Alayala requested the specification, approving the preview proposal. [YOU] AI drafted [24 requirements and 31 acceptance scenarios](sdd/dataset-preview/spec.md), including strict parameter handling, complete-key pagination, publication/cursor consistency, safe exact serialization, shared analytical admission and isolated lifecycle checks. D01–D03 propose input, rate-debit and cursor-lifecycle refinements for review; no accepted decision was silently added. The [specification evidence](ai/sessions/2026-10-04-dataset-preview-specification.md) keeps offline, real database/HTTP/container and operator proof separate. Concurrent SQL work was preserved; this turn made no code, runtime or migration change.
+
+## Preview specification accepted — October 4, 2026
+
+[ME] Alayala confirmed strict inputs (D01), shared SQL/preview rate accounting (D02), and same-filter/publication cursor continuation with current authorization and no time-only expiry (D03). [YOU] Recorded the choices in A16/A19 and aligned the [specification](sdd/dataset-preview/spec.md), API/security prose and status links. His “installation” refers to `facility` when selecting a `generator`. The [acceptance record](ai/sessions/2026-10-04-dataset-preview-specification.md#specification-acceptance) preserves the prior draft history. No SQL code/SDD or runtime action changed; design/tasks remain the next authorization stage.
+
+## Dataset preview design and tasks — October 4, 2026
+
+[ME] Alayala requested continuation after specification approval. [YOU] AI drafted the [design](sdd/dataset-preview/design.md) and [staged tasks](sdd/dataset-preview/tasks.md), reusing the shared SQL admission/staging/container lifecycle with a typed preview operation, bounded HMAC cursors and exact response validation. Complete frozen diagnostic provenance is an explicit delivery prerequisite; the existing empty-only SQL diagnostic response is insufficient. The [session](ai/sessions/2026-10-04-dataset-preview-design-tasks.md) records document checks and separates planning from unrun offline/runtime/operator acceptance. No production code, test execution, migration, build, credential generation or commit occurred in this workstream.
+
+## Catalog/SQL reconciliation and preview baseline — October 4, 2026
+
+[ME] Alayala requested one clean continuation branch with catalog delivery and SQL implementation preserved and pushed. [YOU] Merged both histories, retained newer main evidence, reconciled shared routes/test fixtures, and preserved accepted preview planning without implementing preview. The [reconciliation record](ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md) records conflict handling, checks, the canonical branch and unresolved preview provenance/runtime gates. No existing commit was rewritten and no main merge, retained migration or cloud operation was performed.
