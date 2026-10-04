@@ -138,12 +138,12 @@ A16 fixes publication behavior: after all required checks and diagnostic evaluat
 | D03 | Negative outage | warning; preserve signed value. |
 | D04 | Outage above capacity | warning; preserve source values. |
 | D05 | Source percentage outside 0–100 | warning; preserve source percentage. |
-| D06 | Source/computed difference >0.0051 percentage points | warning where capacity is nonzero; do not invent a ratio at zero capacity. |
+| D06 | Source/computed difference >0.0051 percentage points | warning when source percentage is present and capacity is positive; otherwise record not-applicable evaluation, without inventing a ratio/comparison. D02 still applies to missing source percentage. |
 | D07 | Entity membership change | info; retain comparison evidence, not an automatic failure or review warning. |
 | D08 | Capacity change | info; retain evidence, including AN-01. |
 | D09 | Known facility advertised-total mismatch under A5 | info; Admin evidence only, no user warning or review hold after required passes. |
 
-Aggregate summaries by code/scope with affected counts, not unbounded raw rows. `review_warning_count` counts warning summaries, not affected observations. Freeze the severity registry/version, successful validation step and deterministically sorted diagnostic summary set; hash the sanitized canonical set into `review_warning_digest`. Diagnostic execution error/incompletion must not be interpreted as zero warnings. New unknown diagnostics require an explicit registry change. These warnings cannot waive a required check.
+Aggregate summaries by code/scope with affected counts, not unbounded raw rows. `review_warning_count` counts warning summaries, not affected observations. Freeze the severity registry/version, successful validation step and deterministically sorted diagnostic summary set; hash the sanitized canonical set into `review_warning_digest`. D06 applicability evaluation completes even when no rows qualify. Durably retain available failed validation and diagnostic evidence as produced; failed/partial evidence never establishes readiness. Diagnostic execution error/incompletion must not be interpreted as zero warnings. New unknown diagnostics require an explicit registry change. These warnings cannot waive a required check.
 
 ## 6. PostgreSQL application model
 

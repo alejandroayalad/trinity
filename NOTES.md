@@ -1,6 +1,6 @@
 # Engineering Notes — Trinity
 
-Status: data analysis and documentation, October 2, 2026. Application implementation has not started in this discussion. This is the Engineering Notes document required by Arkham. It must grow with actual code and verification evidence.
+Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions
 
@@ -213,10 +213,41 @@ Status: implementation and human review complete; session closed. Local/live ext
 
 [ME] Alayala requested removing the obsolete connector SDD and carrying only this local-authentication update onto current main. [YOU] Archived the five untracked SDD/planning files outside Git and cherry-picked the focused A20 commit into `docs/local-authentication-a20`. README/NOTES conflict resolution preserves the implemented connector and its historical checks. See the supporting session for transfer checks; no push, PR or merge is included.
 
+## Parquet preparation SDD proposal — October 3, 2026
+
+[ME] Alayala supplied the Parquet preparation scope and requested a branch and the Obsidian SDD pattern, starting with a proposal. [YOU] AI inspected the current connector and canonical contracts, created `feat/parquet-preparation`, and drafted [the proposal](sdd/parquet-preparation/proposal.md) with Human/LLM sections. It covers strict types/parsing, frozen artifacts, all eight checks with 16 required results, diagnostics, immutable S3 storage, one command and focused tests. Alayala subsequently approved the proposal and requested the specification; implementation remains pending.
+
+[YOU] Documentation links/anchors, fences, whitespace and diff checks passed. Runtime tests were not rerun; no live extraction or S3 operation occurred. The [session](ai/sessions/2026-10-03-parquet-preparation-sdd-proposal.md) records discovery, design questions and one next action. No accepted decision or data finding changed.
+
+[ME] Alayala stated, “proposal reviewed and agreed continue with spec please”. [YOU] AI recorded that approval and drafted [spec.md](sdd/parquet-preparation/spec.md): 14 requirements and 38 pending Given/When/Then acceptance scenarios, using the vault's Human/LLM specification pattern. Design mechanisms remain open. Documentation checks passed; no scenario was executed and no runtime test, implementation, S3 operation, commit or push occurred. The same session records the specification handoff.
+
+[ME] Alayala requested explicit full-window equality for all three datasets before specification approval, a minimal design and small, independently testable implementation steps. [YOU] AI clarified R07 using R06's saved-file measurements and expanded S12 to reject matching detail date sets that omit the same requested day. The design handoff records his delivery constraint. Specification approval and runtime verification remain pending; see the [review clarification](ai/sessions/2026-10-03-parquet-preparation-sdd-proposal.md#full-window-coverage-clarification).
+
+[ME] Alayala subsequently approved proceeding to design while requesting a rollback of the coverage clarification. [YOU] AI identified the conflict with canonical V04/V07 and requested one clarification before changing dependent requirements. It drafted [the minimal design](sdd/parquet-preparation/design.md), with five separately testable implementation steps and the coverage choice explicitly unresolved. Proposed parser, file-identity, storage and deadline mechanisms remain under design review; no code or live operations were performed. The [session](ai/sessions/2026-10-03-parquet-preparation-sdd-proposal.md#minimal-design-with-coverage-clarification-pending) preserves the sequence and evidence.
+
+[ME] Alayala resolved the coverage question with an image: a request for October 1–3 with national dates `{1,2,3}` and facility/generator dates `{1,3}` must fail; each dataset covers every requested day, while individual entity membership may vary. [YOU] AI recorded specification approval, retained R07/S12 and canonical V04/V07, and completed the design's date-set comparison. Design review is the next gate; implementation and runtime verification remain pending. See the [confirmation record](ai/sessions/2026-10-03-parquet-preparation-sdd-proposal.md#coverage-confirmed-specification-approved).
+
+[ME] Alayala authorized Step 1 schemas/exact parsing only, with human diff review before Step 2, and clarified exact trailing zeros, D06 applicability and durable failed-check evidence. [YOU] AI kept the design bounded, derived [five-step tasks](sdd/parquet-preparation/tasks.md), and implemented schemas/pure parsing with 17 focused tests. All 76 offline tests passed in the existing environment. D06 evaluation and durable validation/diagnostic persistence remain later-step requirements; no storage, command integration, publication or unrelated refactoring was added. The [Step 1 session](ai/sessions/2026-10-03-parquet-schemas-exact-parsing-step-1.md) records scope, commands, results and the human-review stop.
+
+[ME] Alayala requested committing/pushing the preparation documents and keeping Step 1 implementation local for review. [YOU] AI separated the ten staged documentation files from the four untracked source/test files and clarified that recorded Step 1 results belong to local, uncommitted work. The [delivery record](ai/sessions/2026-10-03-parquet-schemas-exact-parsing-step-1.md#separate-documentation-delivery) preserves the boundary; no Step 2 or implementation publication is authorized.
+
 ## First live EIA run — October 3, 2026
 
 [ME] Alayala supplied his EIA key and asked AI to run the EIA workflow, record it in an `evidence/` folder and commit and push to `main`. [YOU] AI ran the offline suite (59 passed), the live gate (2 passed) and the fixed-window extraction for October 1, 2026 (exit 0; national 1, facility 55 of advertised 95, generator 95 rows). The facility result reproduces AN-03. The key was not found in any output. See the [evidence brief](evidence/2026-10-03-first-live-eia-run.md) and [session](ai/sessions/2026-10-03-first-live-eia-run.md). Normalization, Parquet and full-window validation remain pending.
 
+
 ## Contributing and comment rules — October 3, 2026
 
 [ME] Alayala paused the Parquet slice and wrote rules for comments, docstrings and slice entry points, so that AI-generated code is readable for human review. [YOU] AI stashed the unfinished normalization files, added his text as `CONTRIBUTING.md` without changes, and linked it from `AGENTS.md` and `README.md`. No code or tests ran. Existing code has not been checked against the new rules. See the [session](ai/sessions/2026-10-03-contributing-comment-rules.md).
+
+## Parquet preparation Steps 2–5 and session close — October 4, 2026
+
+[ME] Alayala authorized each subsequent step, the implementation commits/pushes, and finally session closure with these notes. He will configure S3. His closure request supersedes the earlier session-note exclusion; no live EIA/S3 work or merge was requested. Authorization to deliver is recorded without claiming an observed code walkthrough or retained understanding.
+
+[YOU] AI implemented exact saved Parquet and manifest identities (`3330093`), complete saved-file validation and retained attempt evidence (`ba4dd9e`), verified conditional storage (`1d3c377`), and supervised command integration (`4e6d395`). AI wrote the synthetic tests and explanatory comments, reviewed diffs, ran checks and performed authorized Git operations. Alayala's original EIA analysis remains his contribution; these fixtures are not new findings.
+
+At closure, 18 focused command tests and all 185 offline tests passed in the existing CPython 3.14.8 environment. Command help also passed. The tests use synthetic HTTP/storage, real Parquet and spawned processes; they cover failure retention and termination without proving deployed S3 protection. No new dependencies, live calls, PostgreSQL/publication changes or cloud configuration occurred. The existing Starlette/HTTPX warning remains. Package builds and a fresh locked install were not rerun because packaging/dependencies did not change.
+
+The Step 2 handoff records a corrected settings-keyword mistake in a test fixture. Closure also corrected stale current-status text that still described Step 1 or pending Parquet. Historical session statements remain historical. Decisions and findings are unchanged. Detailed flow, Git revisions, verification limits and the S3 handoff are in the [session close](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md).
+
+Done: five implementation steps and offline verification. Pending: S3 configuration and real protection/live-preparation evidence. Blocker: real-storage acceptance remains open. Next: [ME] read the S3 requirements in `backend/README.md` before configuration.
