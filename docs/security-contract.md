@@ -43,6 +43,8 @@ Use SQLGlot to inspect the entire input and every physical table reference befor
 
 The function names and feature scope are selected; exact dialect, AST nodes, argument forms/types, comparison predicates and numeric/error semantics remain implementation details to verify. Do not silently enable an engine function because parsing succeeds. SQL `AVG` keeps its ordinary query meaning; it does not replace A9's capacity-weighted national metric. Preserve decimal values and the API's exact numeric serialization.
 
+**October 4 SQL specification refinement:** [A19](../DECISIONS.md#a19--security-contract-and-local-execution-closed) now accepts D01’s exact grammar and D02’s rolling rate-accounting boundary in the [SQL specification](../sdd/single-table-sql/spec.md); A16 records D03 presentation. These supersede the open status of those details above. Viewer is denied before SQL parsing, analytical rate/slot accounting, downloads or execution, including national-table SQL; no SQL UI controls are exposed. The [design](../sdd/single-table-sql/design.md) specifies proposed parser, staging and runtime mechanics; none is runtime proof.
+
 ## Published data and S3 access
 
 Pin one published version for the complete analytical request. Clients cannot choose storage paths, connections or credentials. Resolve only permitted entries of its immutable manifest. Preserve API pagination and publication-change restart rules; authorize every continuation request.
@@ -79,7 +81,7 @@ Use PostgreSQL transactions to reserve query capacity across processes: at most 
 
 Release a slot only after its query process has ended or been stopped. A launch failure may release it after confirming no query process exists. Do not free capacity merely because an HTTP request ended, a supervisor lease expired or a database connection was lost. Supervisor crash recovery must identify the associated container, confirm it ended or stop it, clean up temporary resources and conditionally release the recorded reservation. Unknown execution status continues to occupy capacity.
 
-Do not start unreserved work when PostgreSQL admission is unavailable. Exact reservation tables, ownership tokens and crash reconciliation are implementation details; they must preserve this lifecycle. Releasing one request must not release another's slot. Rate accounting must also cover processes consistently; its storage/window algorithm remains to be selected.
+Do not start unreserved work when PostgreSQL admission is unavailable. Exact reservation tables, ownership tokens and crash reconciliation are implementation details; they must preserve this lifecycle. Releasing one request must not release another's slot. Rate accounting must also cover processes consistently. A19’s October 4 refinement selects the rolling 60-second window and counting boundary; its physical storage/locking implementation remains to be verified.
 
 ## Limits
 

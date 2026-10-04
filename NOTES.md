@@ -281,3 +281,27 @@ Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the
 ## Local-login review closure and PR — October 4, 2026
 
 [ME] Alayala confirmed that he reviewed the slice, requested a PR to `main` so he can merge it, and selected live S3 + EIA verification next. [YOU] AI prepared that PR, integrated the newer findings commits from main without rewriting history, preserved both documentation histories, and checked the combined branch. The [closure record](ai/sessions/2026-10-04-local-login-review-close.md) distinguishes reviewed code and local test evidence from still-unverified live storage/EIA behavior. This close does not run EIA-key commands, write S3 objects or perform the final merge.
+
+## One-table SQL proposal — October 4, 2026
+
+[ME] Alayala selected the one-table read-only SQL slice, with SQLGlot validation before downloads and DataFusion execution. [YOU] AI stated the assumption that this begins the proposal stage, traced existing code and accepted A18/A19 contracts, and drafted the [Human/LLM proposal](sdd/single-table-sql/proposal.md). The proposal includes the required published-file staging, per-query container, shared admission and lifecycle checks before enabling the endpoint. Exact implementation details remain for specification/design review.
+
+The [proposal session](ai/sessions/2026-10-04-single-table-sql-proposal.md) records evidence and boundaries. Existing uncommitted catalog work is preserved. No application code, accepted decision, dependency, database or remote state changed. Documentation checks are separate from still-unverified SQLGlot/DataFusion compatibility and query isolation; no application tests ran in this documentation-only task.
+
+## One-table SQL specification — October 4, 2026
+
+[ME] Alayala approved the proposal scope and requested continuation to specification drafting. [YOU] AI drafted the [Human/LLM specification](sdd/single-table-sql/spec.md), with R01–R23 and S01–S28 covering whole-input policy before downloads, published-file authority, DataFusion isolation, limits, shared admission, recovery and safe output. D01–D03 propose the detailed grammar, rolling rate accounting and result presentation; they remain under review and have not been entered as accepted decisions.
+
+The [specification session](ai/sessions/2026-10-04-single-table-sql-specification.md) records scope and checks. Documentation checks do not prove parser/engine compatibility, container isolation or live storage. No design, application implementation, runtime test, migration, dependency or remote change occurred. Existing catalog work remains preserved.
+
+## Viewer SQL restriction clarification — October 4, 2026
+
+[ME] Alayala reaffirmed that Viewer must have no SQL button and cannot perform any action to run user-submitted SQL, matching the catalog navigation boundary. [YOU] AI made that existing A16/A19 rule explicit in the SQL proposal and specification: no SQL navigation/editor/Run control, direct-screen return to the permitted waiting/dashboard screen, and independent API denial before parsing, analytical rate/slot accounting, downloads or execution. Added R24/S29 for later frontend acceptance and strengthened R02/S03 for this backend slice. National dashboard/preview permissions remain intact.
+
+This clarification does not approve the remaining proposed D01–D03 details or authorize design/implementation. The [specification session](ai/sessions/2026-10-04-single-table-sql-specification.md) records verification. No application code or canonical permission rule changed.
+
+## One-table SQL design and tasks — October 4, 2026
+
+[ME] Alayala approved the corrected specification by requesting design/tasks. [YOU] Recorded D01–D03 under A16/A19, aligned API/security prose and drafted the [design](sdd/single-table-sql/design.md) and [five-stage task list](sdd/single-table-sql/tasks.md), preserving Viewer UI/API exclusion. The design covers bounded SQL validation, short identity/publication transactions, shared rate/capacity, immutable file staging, independent DataFusion restrictions and supervised container recovery.
+
+AI inspected installed SQLGlot/DataFusion signatures and official documentation; these checks do not prove SQL compatibility or isolation. Docker was not found in the agent PATH; no container or engine query was run. The [design/tasks session](ai/sessions/2026-10-04-single-table-sql-design-tasks.md) records document checks and remaining gates. Existing catalog/API Docker work is preserved. No implementation, dependency installation, build, migration, cloud action, commit or push occurred.
