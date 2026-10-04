@@ -59,6 +59,38 @@ class PreviewRuntimeTests(PostgresFixture,unittest.TestCase):
     def execute(self,pairs=(),dataset='national_outages',*,token=None):
         return self.previews.execute(token or self.token,dataset,pairs)
 
+    def test_operator_checker_over_real_http_and_containers(self):
+        import io
+        import pyarrow.parquet as pq
+        from trinity.auth.check import check_persona
+        from trinity.auth.preview_check import PreviewFixture
+        from trinity.contracts.datasets import DATASETS
+        from trinity.connector.validate import diagnostic_identity
+        from trinity.publication.repository import read_pinned_publication
+        from trinity.queries.preview_schemas import serialize_preview_rows
+        with self.database.transaction(QueryDeadline(10),readonly=True) as c:
+            publication=read_pinned_publication(c).publication
+        expected={}
+        for dataset,definition in DATASETS.items():
+            # Read expected values from producer bytes, independently of preview execution.
+            source=pq.read_table(io.BytesIO(self.objects[f'data/{dataset}.parquet'])).to_pylist()
+            source=[row for row in source if dataset=='national' or row['facility']=='001a']
+            source=sorted(source,key=lambda row:tuple(row[key] for key in definition.key_fields))[:2]
+            expected[definition.table_name]=serialize_preview_rows(dataset,
+                [[row[name] for name in definition.schema.names] for row in source])
+        # Expected notes come from producer results, not from the endpoint being checked.
+        summaries=diagnostic_identity(self.report.diagnostics)[2]
+        diagnostics={dataset+'_outages':[
+            {'code':note['code'],'scope':dataset,'severity':note['severity'],
+             'message':note['message'],'affected_count':str(note['affected_count'])}
+            for note in summaries if note['dataset_key']==dataset and note['code']!='D09'
+            and note['affected_count']>0] for dataset in DATASETS}
+        fixture=PreviewFixture(publication=publication,range={'start':'2026-10-01','end':'2026-10-03'},
+                               facility='001a',generator='1',rows=expected,diagnostics=diagnostics)
+        with loopback(self.app) as http:
+            for role in ('viewer','analyst','admin'):
+                check_persona(http,role,self.passwords[role],catalog=True,preview=fixture)
+        self.assert_clean()
 
     def assert_clean(self, outcome='succeeded'):
         rows=self.sql('SELECT * FROM query_reservations ORDER BY created_at')

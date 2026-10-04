@@ -1,7 +1,7 @@
 # Design: Filtered, paginated dataset previews
 
 Date: 2026-10-04
-Status: Design drafted under alayala's request to continue after specification approval. Alayala subsequently authorized Step 2 only; its pure components now pass offline checks. Later integration and runtime actions remain pending. See [Step 2 evidence](../../ai/sessions/2026-10-04-dataset-preview-step-2.md).
+Status: Steps 2–3 code implemented under separate bounded authorizations, with offline/engine checks. Preview execution stays disabled; retained migration/publication linkage remains pending. Step 4 automated disposable database/HTTP and matching-image runtime acceptance passed; the acceptance record separates that result from retained deployment readiness. Step 5 adds a guarded operator checker; the [handoff](../../ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) preserves the incomplete retained-account gate. See [Step 3 evidence](../../ai/sessions/2026-10-04-dataset-preview-step-3.md) and [Step 4 acceptance](../../ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md).
 Branch/inspection: `feat/catalog-permissions`, HEAD `e851e28`; the SQL workstream is changing shared files concurrently.
 Basis: [approved specification](spec.md), [tasks](tasks.md), A9/A15/A16/A19–A21 in [DECISIONS.md](../../DECISIONS.md), [backend architecture](../../docs/backend.md), [API](../../docs/api-contract.md), [security](../../docs/security-contract.md) and [schema](../../docs/schema.md).
 Evidence: [design/tasks session](../../ai/sessions/2026-10-04-dataset-preview-design-tasks.md).
@@ -132,3 +132,27 @@ Do not enable preview execution on synthetic adapters or missing provenance. Sha
 Done: concrete preview integration, cursor and typed-operation design.
 Pending: implementation authorization, shared-interface alignment, publication-to-evidence linkage verification and all preview runtime evidence.
 Blocker: no evidence-persistence blocker is established. Verify the existing frozen evidence’s publication/preview connection and shared execution before delivery.
+
+
+### Step 3 implementation alignment
+
+The shared envelope uses `protocol_version=1`, `operation_kind`, `operation` and
+`operation_digest`; the runtime result echoes the closed binding. SQL payload and
+policy revalidation are preserved. The producer and runtime image must match.
+`PreviewBatch` is a closed dictionary validated by `build_preview_batch_response`;
+the runtime returns only page rows and `has_more`, not the lookahead row.
+
+Inspection proved two missing stored references: bundle SHA-256 and connector
+validation-attempt UUID. Migration draft `0004_preview_evidence` adds the nullable
+pair to `data_versions`; Step 4 applies it only to disposable test databases. `read_preview_publication` joins
+the successful same-run validation step and approval binding in the caller's
+publication snapshot. `read_preview_diagnostics` verifies the existing bundle and
+complete summary/detail identities outside the transaction. The publication
+writer must freeze that pair with the validated version; it is not implemented by
+preview and no retained candidate is activated. The complete retained linkage gate
+therefore remains open. These physical references do not replace A9's logical
+validation results or regenerate evidence.
+
+`create_app()` keeps execution disabled by default. Tests use explicit adapters;
+normal requests have no synthetic or in-process engine fallback. Real deployment
+remains separate from Step 4 automated shared-runtime acceptance. See [implementation evidence](../../ai/sessions/2026-10-04-dataset-preview-step-3.md).

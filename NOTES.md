@@ -441,3 +441,26 @@ preparation code without changing executable statements. All 60 Python ASTs matc
 pre-merge main after removing docstrings; 223 offline tests passed and 25 opt-in
 PostgreSQL tests were skipped. See the main-integration section in the
 [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md).
+
+
+## Dataset preview Step 3 — October 4, 2026
+
+[ME] Alayala narrowed authorization to Step 3 only and requested comments about behavior and specific details. [YOU] Added the typed preview/runtime protocol, full-key DataFusion execution, strict service/route ordering, trusted frozen-evidence reader and shared result/cleanup integration. Comments explain behavior and limits; no change-history or line-by-line narration was added. The two missing stored evidence references are supplied as an unapplied migration draft, without backfill or activation. The default app keeps preview execution disabled.
+
+[YOU] Verified focused offline/engine behavior and existing SQL/auth/catalog regressions; the [Step 3 session](ai/sessions/2026-10-04-dataset-preview-step-3.md) records exact counts, initial test corrections and limits. A real synthetic producer bundle passes the new reader without evidence rewriting. No retained database migration, key configuration, image build, cloud call, publication, Step 4 acceptance or commit was performed. Retained publication linkage and matching-image acceptance remain pending.
+
+
+## Dataset preview Step 4 acceptance — October 4, 2026
+
+[ME] Alayala confirmed his Step 3 review and authorized Step 4. [YOU] Extended the disposable SQL runner with preview and combined database modes, added complete synthetic producer/publication fixtures and real PostgreSQL/loopback HTTP acceptance, and prepared container fault scenarios. Migration 0004 was applied only to fresh disposable PostgreSQL clusters. Retained state, saved candidate evidence and publication remain untouched.
+
+[ME] Built the matching shared query image and supplied terminal evidence. [YOU] Resolved its immutable identity and passed all 14 focused preview runtime cases, 71 combined PostgreSQL/HTTP/runtime cases and seven standalone container/frame cases. Together with the offline suite, 432 distinct tests passed; all 76 offline opt-in skips were covered by explicit runtime suites. The [acceptance record](ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md#final-checkpoint) records timing, cleanup, test corrections and the preserved production command guard. Preview delivery stays disabled pending retained publication linkage; no commit, push or Step 5 operator action occurred.
+
+
+## Dataset preview Step 5 — operator tooling and closure
+
+[ME] Alayala authorized Step 5 and subsequent closure, commits and push to `feat/catalog-permissions`. [YOU] Added an optional private-fixture preview mode to the existing persona checker. It checks known publication/rows/diagnostics, full-key continuation, exact filters, Viewer detail denial and logout/revocation; missing prerequisites return incomplete rather than pass. Default auth/catalog behavior is preserved. Passwords, tokens, cursors and response bodies are not printed.
+
+[YOU] Read-only inspection confirmed retained migration 0002 and zero publication events/active pointers. Hash-checked the existing candidate's Parquet bytes and described a concrete two-day Palisades fixture, extending AN-02 supporting evidence without changing the selected anomaly list. The [Step 5 handoff](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) records measured tests, commit/push authorization and the exact incomplete operator boundary. No retained migration, publication, key setup or live EIA/S3 call was performed. Closure delivers implemented tooling; it does not certify retained preview readiness or alayala's conceptual understanding.
+
+[YOU] Final Step 5 regression: seven focused checker tests passed; the offline suite passed 363 with 77 opt-in skips; the explicit combined PostgreSQL/HTTP/Docker suite passed 72 with no skips. Including unchanged Step 4 standalone container evidence, 440 distinct tests have passing evidence. Retained operator success is not claimed.

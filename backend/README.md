@@ -389,7 +389,7 @@ Current catalog delivery: [review and test evidence](../ai/sessions/2026-10-04-c
 ## Preview groundwork — Step 2
 
 `queries/preview.py` validates decoded query pairs and separates primitive parsing
-from semantic checks after the future shared rate debit. `queries/cursors.py`
+from semantic checks after the shared rate debit. `queries/cursors.py`
 authenticates bounded, publication-bound cursors. `queries/preview_schemas.py`
 validates canonical columns, exact decimal strings, explicit diagnostic input,
 complete-key pages and the 5 MiB response limit. No preview endpoint is enabled.
@@ -401,7 +401,122 @@ Run the focused offline checks from `backend/`:
 ```
 
 Tests use synthetic publications and public test key bytes. No active publication
-or configured secret is needed. Real key configuration, shared rate storage,
-publication/evidence linkage and isolated execution remain integration work.
+or configured secret is needed. Step 3 integration is described below; retained
+configuration and real runtime verification remain pending.
 The stored candidate stays unpublished. See [Step 2 evidence](../ai/sessions/2026-10-04-dataset-preview-step-2.md)
 and the [remaining stages](../sdd/dataset-preview/tasks.md).
+
+
+## Preview integration — Step 3
+
+`GET /api/v1/datasets/{dataset_key}/preview` now routes through `PreviewService`.
+It checks identity and primitive input before committing one shared analytical
+rate debit. Semantic/cursor checks, fresh permission, publication/evidence pinning
+and shared capacity follow. The common supervisor stages verified files and runs
+one typed preview operation in the isolated query runtime. No API-process query
+fallback exists. Diagnostic counts describe the frozen dataset, not the page.
+
+**Delivery stays disabled:** the default `create_app()` uses `enable_preview=False`.
+The internal constructor flag is for explicit acceptance configuration; it is not
+an operator environment switch or evidence of readiness. Only tests inject doubles.
+Step 4 records automated matching-image, database accounting, isolation and cleanup
+evidence below. Retained publication linkage is still required before delivery is enabled. No preview key is generated or configured by startup.
+
+The shared internal protocol now requires `protocol_version=1`, an explicit
+`operation_kind` (`sql` or `preview`) and an exact `operation_digest`. SQL retains
+its independent policy validation and public response. The API and query image
+must be deployed together; an older image fails closed. The user built the matching
+Step 4 acceptance image; this does not deploy it to the retained application.
+
+`0004_preview_evidence` has run **only in disposable test databases**. It adds nullable paired
+`data_versions.evidence_bundle_sha256` and `validation_attempt_id` references to the
+existing immutable bundle. It performs no backfill or publication. Applying it to
+the retained database requires separate approval. The publication writer must
+verify/freeze these references with the existing validation step, manifest,
+checkset and warning identity before activation; that writer remains a separate
+slice. Existing unbound versions fail the preview provenance read.
+
+The trusted reader checks the bundle hash, both summary hashes, all 16 required
+results and 23 completed diagnostics, including their detail identities. It emits
+only canonical notes for the requested dataset, never raw details or D09. These
+metadata reads do not download another dataset's Parquet.
+
+From `backend/`, run the offline preview checks:
+
+```sh
+.venv/bin/python -m unittest discover -s tests -p 'test_preview_*.py' -v
+```
+
+Without runtime opt-ins, these run temporary-Parquet/DataFusion and in-process
+TestClient checks; PostgreSQL/loopback HTTP/container cases skip. Use the explicit
+Step 4 commands below for that separate evidence. See [Step 3 evidence](../ai/sessions/2026-10-04-dataset-preview-step-3.md).
+
+
+## Preview acceptance — Step 4
+
+Automated acceptance passed: 432 distinct tests across offline, disposable
+PostgreSQL/HTTP and matching-image Docker suites. All 76 offline opt-in skips
+were covered by the explicit suites. Retained publication linkage and the
+operator check are still pending; preview execution remains disabled.
+
+The disposable SQL runner accepts `--preview` for SQL/preview acceptance and
+`--all` to include auth/catalog database regressions. `--runtime-only` selects the
+15 preview container cases (including the Step 5 checker); `--failfast` stops at the first failure. It initializes a fresh local
+PostgreSQL 17.11 cluster, migrates that temporary database through 0004, seeds
+complete synthetic producer evidence, and stops only its own cluster. It does
+not migrate or publish anything in the retained database.
+
+The user supplied the matching image with this build from the repository root:
+
+```sh
+PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH" docker build -f backend/Dockerfile.query -t trinity-query:preview-step4 backend
+```
+
+After that build, acceptance uses its immutable local image ID and the verified
+local Docker socket via `TRINITY_TEST_QUERY_IMAGE` and
+`TRINITY_TEST_DOCKER_SOCKET`. On the verified macOS Docker Desktop setup, run
+from the repository root:
+
+```sh
+export TRINITY_TEST_QUERY_IMAGE="$(/Applications/Docker.app/Contents/Resources/bin/docker image inspect trinity-query:preview-step4 --format '{{.Id}}')"
+export TRINITY_TEST_DOCKER_SOCKET="$HOME/.docker/run/docker.sock"
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --all
+backend/.venv/bin/python -m unittest discover -s backend/tests -p 'test_sql_containers.py' -v
+```
+
+Without the explicit image, database-only checks can run but container cases
+skip; exit zero then is not full Step 4 acceptance. Test storage serves exact
+synthetic bundle/Parquet bytes. A test-only bridge copies request files into a
+unique disposable daemon volume; this does not prove deployed Compose wiring or
+real S3 permissions. The acceptance record distinguishes real-container results from these remaining
+deployment and retained-publication boundaries.
+See [Step 4 evidence](../ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md).
+
+
+## Preview operator check — Step 5
+
+The optional `--preview-fixture` mode checks all three personas against an
+independently verified publication fixture. Default auth and `--catalog` behavior
+are unchanged. The fixture pins publication metadata, range, facility/generator,
+two expected rows per dataset and scoped frozen diagnostic summaries. Page size
+is fixed to 1, so the check must follow a real cursor and compare the second row.
+Missing publication, unavailable runtime, empty pages or no continuation return
+exit 2 (`not ready/incomplete`), never a pass. Other failures return 1.
+
+**Retained verification is blocked:** read-only inspection found zero retained
+publications and migration `0002_app_entry`; preview remains disabled. Do not run
+a test seed, publish the candidate or invent fixture metadata to satisfy this check.
+The [operator handoff](../ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md)
+records the concrete October 1–2 Palisades candidate, hash-checked expected rows,
+fixture fields and the missing retained publication/configuration prerequisites.
+
+Only after those prerequisites are verified, run from the repository root:
+
+```sh
+backend/.venv/bin/python -m trinity.auth.check --catalog --preview-fixture /absolute/private/preview-fixture.json
+```
+
+Keep the fixture outside Git. The terminal prompts privately for each password.
+Tokens/cursors stay in memory; the checker attempts logout on failure and checks
+revocation after successful checks. Output contains safe summaries only. This
+command neither configures nor enables preview and makes no publication changes.
