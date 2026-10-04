@@ -15,6 +15,7 @@ RetrievalStatus = Literal["success", "failed", "cancelled", "skipped"]
 
 
 def utc_now() -> datetime:
+    """Return the current time with an explicit UTC timezone."""
     return datetime.now(UTC)
 
 
@@ -58,8 +59,8 @@ class RetrievalMetadata:
     attempts: tuple[RetrievalAttempt, ...]
 
     def to_dict(self, *, include_attempts: bool = True) -> dict:
-        # JSON dates are UTC ISO 8601; sanitized_response is the exact UTF-8
-        # string whose bytes were hashed, not a reserialized source object.
+        """Return JSON-ready evidence; omit attempts for a compact route summary."""
+        # Keep sanitized_response unchanged so its UTF-8 bytes still match the hash.
         result = asdict(self)
         if not include_attempts:
             result.pop("attempts")
@@ -85,6 +86,7 @@ class RetrievalTracker:
         self, status: RetrievalStatus, *, error_code: str | None = None,
         error_message: str | None = None,
     ) -> RetrievalMetadata:
+        """Snapshot this call's evidence with a final status and completion time."""
         return RetrievalMetadata(
             dataset=self.dataset, route=self.route, started_at=self.started_at,
             completed_at=utc_now(), pages_fetched=self.pages_fetched,

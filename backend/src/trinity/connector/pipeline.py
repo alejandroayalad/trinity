@@ -1,4 +1,4 @@
-"""Fixed-window extraction for all routes; candidate preparation comes later."""
+"""Fetch raw EIA records and retrieval evidence for a fixed date window."""
 
 from collections.abc import Callable
 from datetime import date
@@ -20,11 +20,13 @@ async def retrieve_all(
     settings: EIASettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> list[RetrievalResult]:
-    """One pool, sequential routes, one final result per route on normal failure.
+    """Fetch all three routes for an inclusive date window with one shared client.
 
-    A failed route does not stop the other routes. Cancellation records the
-    interrupted route and skipped routes, then propagates. A sink failure
-    propagates immediately, since saved evidence cannot then be guaranteed.
+    Return one result per route; failed routes contain evidence but no collection.
+    Call on_result after each route so the caller can save its evidence.
+    A route failure does not stop other routes. Missing credentials fail all three.
+    Cancellation emits interrupted and skipped results, then propagates.
+    A callback failure propagates immediately because evidence may not be saved.
     """
     results: list[RetrievalResult] = []
 

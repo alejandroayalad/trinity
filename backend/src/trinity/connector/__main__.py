@@ -13,6 +13,13 @@ from trinity.connector.retrieval import RetrievalResult
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Extract a date window and save route evidence to a new JSONL file.
+
+    Use process arguments when argv is None. Sync each route before the next one.
+    Return 0 on success, 1 on route failure, 2 on file failure, or 130 on cancellation.
+    Invalid command syntax exits through argparse before retrieval starts.
+    Evidence for an unfinished route can be lost if the process is killed.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start", type=date.fromisoformat, required=True)
     parser.add_argument("--end", type=date.fromisoformat, required=True)
@@ -25,8 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        # Reserve the output before network access. Each completed route is
-        # flushed and synced before starting the next one.
+        # Refuse an existing path before making requests, so prior evidence stays intact.
         with args.output.open("x", encoding="utf-8") as output:
             def save(result: RetrievalResult) -> None:
                 output.write(json.dumps(result.metadata.to_dict(), ensure_ascii=True) + "\n")

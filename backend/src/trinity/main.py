@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
 
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
+        """Report process liveness without checking data or external services."""
         return HealthResponse()
 
     return application

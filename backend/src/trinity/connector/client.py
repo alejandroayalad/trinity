@@ -87,6 +87,7 @@ class EIAResponsePage:
 
     @property
     def data(self) -> list[dict[str, Any]]:
+        """Return sanitized source rows without numeric normalization."""
         return self.response["data"]
 
 
@@ -103,19 +104,22 @@ class EIACollection:
 
     @property
     def record_count(self) -> int:
+        """Return the number of collected rows."""
         return len(self.data)
 
     @property
     def page_count(self) -> int:
-        """All successful responses, including the final empty probe."""
+        """Count accepted pages, including the final empty probe."""
         return len(self.pages)
 
     @property
     def data_page_count(self) -> int:
+        """Count pages that contain rows, excluding the final empty probe."""
         return sum(bool(page.data) for page in self.pages)
 
     @property
     def total_matches(self) -> bool | None:
+        """Compare the row count with the advertised total; return None if absent."""
         if self.advertised_total is None:
             return None
         return self.record_count == self.advertised_total
@@ -203,7 +207,6 @@ def _validate_page(
     version = payload.get("apiVersion")
     if version is not None and not isinstance(version, str):
         raise invalid
-    # The known facility total mismatch must not reject an otherwise valid page.
     return EIAResponsePage(
         response=response,
         total=total,
@@ -218,6 +221,15 @@ class EIAClient:
     The default constructor loads EIA_API_KEY from the current environment.
     Use an async context manager, or call aclose() when finished.
     Inject a trusted transport only for testing.
+
+    Fetch methods use inclusive dates and preserve source measurement strings.
+    Page methods raise ValueError for invalid inputs and EIAClientError for
+    request or response failures. They do not attach retrieval metadata.
+    Collection methods return only after an empty page confirms exhaustion.
+    Their failures carry metadata in EIAInputError or EIAClientError;
+    EIARetrievalCancelled carries cancellation evidence. No partial collection
+    is returned. max_pages includes the empty probe; timeout_seconds covers
+    the whole route, including retries.
     """
 
     def __init__(
@@ -240,46 +252,55 @@ class EIAClient:
         )
 
     async def __aenter__(self) -> "EIAClient":
+        """Open the shared HTTP client and return this connector."""
         await self._http.__aenter__()
         return self
 
     async def __aexit__(self, *args: Any) -> None:
+        """Close the shared HTTP client when its context ends."""
         await self._http.__aexit__(*args)
 
     async def aclose(self) -> None:
+        """Close the shared HTTP client when used without a context manager."""
         await self._http.aclose()
 
     async def fetch_national_page(
         self, *, start: date, end: date, offset: int = 0, length: int = 5000
     ) -> EIAResponsePage:
+        """Fetch one national page under the shared page rules."""
         return await self._fetch_page("national", start, end, offset, length)
 
     async def fetch_facility_page(
         self, *, start: date, end: date, offset: int = 0, length: int = 5000
     ) -> EIAResponsePage:
+        """Fetch one facility page under the shared page rules."""
         return await self._fetch_page("facility", start, end, offset, length)
 
     async def fetch_generator_page(
         self, *, start: date, end: date, offset: int = 0, length: int = 5000
     ) -> EIAResponsePage:
+        """Fetch one generator page under the shared page rules."""
         return await self._fetch_page("generator", start, end, offset, length)
 
     async def fetch_national(
         self, *, start: date, end: date, page_size: int = 5000,
         max_pages: int = 1000, timeout_seconds: float = 300.0,
     ) -> EIACollection:
+        """Collect national rows under the shared collection limits and failure rules."""
         return await self._fetch_all("national", start, end, page_size, max_pages, timeout_seconds)
 
     async def fetch_facility(
         self, *, start: date, end: date, page_size: int = 5000,
         max_pages: int = 1000, timeout_seconds: float = 300.0,
     ) -> EIACollection:
+        """Collect facility rows; retain advertised total mismatches as evidence."""
         return await self._fetch_all("facility", start, end, page_size, max_pages, timeout_seconds)
 
     async def fetch_generator(
         self, *, start: date, end: date, page_size: int = 5000,
         max_pages: int = 1000, timeout_seconds: float = 300.0,
     ) -> EIACollection:
+        """Collect generator rows under the shared collection limits and failure rules."""
         return await self._fetch_all("generator", start, end, page_size, max_pages, timeout_seconds)
 
     async def _fetch_all(
@@ -316,6 +337,7 @@ class EIAClient:
 
     @staticmethod
     def retrieval_tracker(dataset: str, start: date, end: date) -> RetrievalTracker:
+        """Start route evidence; retain invalid date inputs as None for safe output."""
         route, fields = _ROUTES[dataset]
         return RetrievalTracker(
             dataset, _BASE_URL + route,
@@ -350,6 +372,7 @@ class EIAClient:
                     if loop.time() >= deadline:
                         raise EIAClientError("pagination_deadline")
                     page = await self._fetch_page(dataset, start, end, offset, page_size, tracker)
+                    # Count fetched evidence even if a later collection check rejects it.
                     tracker.pages_fetched += 1
                     tracker.records_fetched += len(page.data)
                     if loop.time() >= deadline:
@@ -367,6 +390,7 @@ class EIAClient:
                             raise EIAClientError("duplicate_key")
                         seen.add(key)
                     data.extend(page.data)
+                    # Facility totals can disagree with returned rows; keep that evidence.
                     if dataset != "facility" and advertised_total is not None:
                         if len(data) > advertised_total or (
                             not page.data and len(data) != advertised_total
@@ -408,6 +432,7 @@ class EIAClient:
             params[f"sort[{index}][column]"] = field
             params[f"sort[{index}][direction]"] = "asc"
 
+        # Retries share this page deadline; collection calls also retain the route deadline.
         deadline = asyncio.get_running_loop().time() + _PAGE_TIMEOUT_SECONDS
         try:
             async with asyncio.timeout_at(deadline):
@@ -432,6 +457,7 @@ class EIAClient:
         while True:
             attempt += 1
             if tracker is not None and attempt > 1:
+                # A cancelled backoff must not count a retry that never started.
                 tracker.retries += 1
             try:
                 reply = await self._recorded_request(route, params, attempt, tracker)
@@ -477,6 +503,7 @@ class EIAClient:
                     payload, sort_keys=True, separators=(",", ":"),
                     ensure_ascii=True, allow_nan=False,
                 )
+                # Hash the saved sanitized text, not the original secret-bearing response.
                 digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
                 if isinstance(payload, dict):
                     response = payload.get("response")

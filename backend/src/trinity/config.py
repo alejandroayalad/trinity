@@ -23,6 +23,7 @@ class EIASettings(BaseSettings):
     @field_validator("eia_api_key")
     @classmethod
     def require_nonblank_key(cls, value: SecretStr) -> SecretStr:
+        """Reject whitespace-only keys without changing the supplied secret."""
         if not value.get_secret_value().strip():
             raise ValueError("EIA_API_KEY must not be blank")
         return value
@@ -33,6 +34,7 @@ def load_eia_settings() -> EIASettings:
 
     Call this from trusted connector/worker code before an EIA operation.
     Package imports and the HTTP health endpoint do not require credentials.
+    Raise ConfigurationError for a missing or blank key. Do not test key validity.
     """
     try:
         return EIASettings()
