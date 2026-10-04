@@ -1,6 +1,21 @@
 # Tasks: One-table read-only SQL
 
 Date: 2026-10-04
+
+## Current delivery addendum
+
+Alayala subsequently authorized autonomous T05–T20, then requested local commits for isolation and HTTP delivery. This supersedes the pairing stops and lack of HTTP authorization in the original gate plan below. Validator/DataFusion, admission/staging, isolated execution/recovery and HTTP wiring are implemented. The original unchecked tasks remain the detailed acceptance checklist; they are not all proven by the current test coverage.
+
+See [delivery evidence](../../ai/sessions/2026-10-04-sql-delivery-commits.md) for exact tests and limitations and [SQL operator instructions](../../backend/SQL.md) for commands. Actual supervisor-process crash injection, every lifecycle race, full T18 coverage, deployed Compose wiring, retained-account SQL and live read-only S3 proof remain pending. Viewer frontend controls remain hidden by requirement and unimplemented in this backend slice. No push is authorized.
+
+Done: implementation and the recorded local synthetic checks.
+
+Pending: the unverified acceptance boundaries listed above.
+
+Blocker: none for committing the implemented slices; this is not a full production-readiness signoff.
+
+## Original gate plan (historical authorization; superseded above)
+
 Status: First paired whole-input/single-SELECT check implemented; stop for review before further policy. No HTTP endpoint is authorized.
 Branch/base: `feat/catalog-permissions`, `fde733b`; preserve concurrent catalog/API Docker work.
 Basis: approved [specification](spec.md), [design](design.md), [proposal](proposal.md), A16/A19.

@@ -1,4 +1,4 @@
-"""Create the local-auth API without importing live infrastructure state.
+"""Create the authenticated local API without importing live infrastructure state.
 
 Startup reads API configuration and opens a lazy database pool. Product requests
 fail closed if PostgreSQL is unavailable; health reports process liveness only.
@@ -15,6 +15,7 @@ from trinity.auth.service import AuthService
 from trinity.config import load_api_settings
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
+from trinity.queries.router import router as queries_router
 
 
 class HealthResponse(BaseModel):
@@ -22,7 +23,7 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
-def create_app(*, settings=None, service=None) -> FastAPI:
+def create_app(*, settings=None, service=None, query_service=None) -> FastAPI:
     """Create the API; explicit dependency injection is reserved for tests."""
     @asynccontextmanager
     async def lifespan(application):
@@ -37,6 +38,7 @@ def create_app(*, settings=None, service=None) -> FastAPI:
                 raise
         else:
             application.state.auth = service
+        application.state.query_service = query_service
         try:
             yield
         finally:
@@ -48,6 +50,7 @@ def create_app(*, settings=None, service=None) -> FastAPI:
     install_handlers(application)
     application.include_router(router)
     application.include_router(settings_router)
+    application.include_router(queries_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:

@@ -44,7 +44,7 @@ def install_handlers(app) -> None:
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
         # Error locations can contain attacker-supplied field names; allow known fields only.
-        fields = {"username", "password"}
+        fields = {"username", "password", "sql"}
         errors = [{"field": str(e["loc"][-1]) if e["loc"] and e["loc"][-1] in fields else "body",
                    "code": "invalid", "message": "Invalid field."} for e in exc.errors()[:20]]
         code = "invalid_json" if any(e["type"] == "json_invalid" for e in exc.errors()) else "invalid_request"

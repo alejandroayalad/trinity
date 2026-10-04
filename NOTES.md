@@ -323,3 +323,9 @@ AI inspected installed SQLGlot/DataFusion signatures and official documentation;
 [ME] Alayala clarified exactly one real SELECT, optionally followed by one terminal semicolon, then only whitespace/comments. A second semicolon or statement must fail.
 
 [YOU] Added whole-input token boundary checks and narrowly handled SQLGlot's terminal comment-only Semicolon node, preserving its comments on the returned Select. A24 now passes; the original B03, extra statements and malformed trailing comments fail. Fourteen focused tests and seven parser characterizations passed. [Evidence](ai/sessions/2026-10-04-sql-terminal-comment-pairing.md) records the correction to the earlier A24 limitation. Full policy, execution and HTTP remain pending; no unrelated files or dependencies changed.
+
+## SQL implementation commits — October 4, 2026
+
+[ME] Alayala supplied the first paired statement-validation flow, clarified the terminal-semicolon rule, later delegated T05–T20, and requested local commits for validator/DataFusion, isolation and HTTP delivery. No push was requested.
+
+[YOU] Kept paired history, committed the remaining qualifier correction, separated isolation and HTTP changes, and reused the API Docker prerequisites. Verified the SQL-only staged snapshot: 273 offline checks passed (41 skipped); 11 SQL PostgreSQL/HTTP/container checks, seven container checks and 43 auth/database checks passed separately. Catalog/preview work remains separate. See [delivery evidence](ai/sessions/2026-10-04-sql-delivery-commits.md) and [operator instructions](backend/SQL.md) for exact commands and unverified boundaries. Synthetic tests do not establish live S3, retained-account execution, complete crash-race coverage or frontend hiding.
