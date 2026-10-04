@@ -1,7 +1,7 @@
 """Extract all routes and store validated candidates through trusted adapters.
 
-These are separate library entry points. The preparation command that joins
-extraction, freezing, validation and storage belongs to the next slice.
+prepare_candidate joins the library stages. The prepare command supplies its
+exclusive version reservation, durable stage journal and process deadlines.
 """
 
 import asyncio
@@ -30,6 +30,7 @@ async def retrieve_all(
     *, start: date, end: date, page_size: int = 5000, max_pages: int = 1000,
     timeout_seconds: float = 300.0,
     on_result: Callable[[RetrievalResult], None] | None = None,
+    on_route_start: Callable[[str], None] | None = None,
     settings: EIASettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> list[RetrievalResult]:
@@ -59,6 +60,8 @@ async def retrieve_all(
 
     async with client:
         for index, dataset in enumerate(DATASETS):
+            if on_route_start is not None:
+                on_route_start(dataset)
             try:
                 collection = await getattr(client, f"fetch_{dataset}")(
                     start=start, end=end, page_size=page_size,
@@ -150,14 +153,19 @@ def _storage_snapshot(root: int) -> tuple[StoredArtifact, ...]:
     if "bundle.json" in files:
         raise StorageError("storage_already_attempted")
     return tuple(StoredArtifact.from_bytes(path, _read_storage_file(root, path))
-                 for path in sorted(files) if not path.startswith("evidence/storage-"))
+                 for path in sorted(files) if not _local_execution_file(path))
+
+
+def _local_execution_file(path: str) -> bool:
+    """Keep changing storage and supervisor journals out of frozen uploads."""
+    return path.startswith(("evidence/storage-", "evidence/preparation/"))
 
 
 def _same_local_files(root: int, artifacts: tuple[StoredArtifact, ...]) -> None:
     """Detect mutation since the storage snapshot without replacing identities."""
     expected = {artifact.storage_path for artifact in artifacts}
     actual = {path for path in parquet._inventory(root)
-              if not path.startswith("evidence/storage-") and path != "bundle.json"}
+              if not _local_execution_file(path) and path != "bundle.json"}
     if actual != expected:
         raise StorageError("local_inventory_changed")
     for artifact in artifacts:
@@ -399,3 +407,113 @@ def verify_stored_candidate(report: ValidationReport, receipt: StoredCandidate,
         raise
     except Exception:
         raise StorageError("stored_candidate_invalid") from None
+
+
+class PreparationError(RuntimeError):
+    """Identify the failed stage without copying source or SDK exception text."""
+
+    def __init__(self, stage: str, code: str) -> None:
+        self.stage, self.code = stage, code
+        super().__init__(f"Preparation failed: {stage}/{code}.")
+
+
+async def prepare_candidate(
+    *, root: Path, start: date, end: date, settings: EIASettings,
+    storage_factory: Callable[[], S3Storage],
+    stage_event: Callable[[str, str, str | None], None],
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> dict:
+    """Connect extraction, freezing, validation and storage for one new version.
+
+    The command supervisor exclusively reserves root and its data/evidence
+    directories. It supplies fixed dates and settings, then enforces hard
+    deadlines around this function in a trusted child process. This library
+    function alone provides no hard process timeout or command-success marker.
+
+    Persist each completed route before proceeding. Freeze original sanitized
+    responses into Parquet, validate those exact files and store the bundle.
+    Return a small receipt for the supervisor to verify after child exit.
+    Failed stages keep evidence and raise PreparationError. The supervisor
+    records failure or interruption; neither path grants publication.
+    """
+    from trinity.connector.validate import validate_candidate
+
+    stage = "extraction"
+    try:
+        with parquet._directory(root) as descriptor:
+            # This is an internal handoff from the supervisor's exclusive
+            # reservation, not a public option to resume or overwrite a version.
+            if parquet._inventory(descriptor) - {
+                "evidence/preparation/input.json", "evidence/preparation/journal.jsonl",
+            }:
+                raise PreparationError(stage, "version_not_empty")
+            with parquet._exclusive_file(descriptor, "evidence/retrieval.jsonl") as stream:
+                with parquet._parent(descriptor, "evidence/retrieval.jsonl") as (parent, _name):
+                    os.fsync(parent)
+
+                def route_start(dataset: str) -> None:
+                    # nonlocal updates this invocation's outer stage value.
+                    # A route failure then retains the correct stage identity.
+                    nonlocal stage
+                    stage = f"extract:{dataset}"
+                    stage_event("started", stage, None)
+
+                def save(result: RetrievalResult) -> None:
+                    # The existing connector removes credentials before making
+                    # this metadata. Preserve its original response strings.
+                    stream.write(canonical_json(result.metadata.to_dict()) + b"\n")
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                    stage_event("finished", f"extract:{result.metadata.dataset}",
+                                result.metadata.final_status)
+
+                results = await retrieve_all(
+                    start=start, end=end, settings=settings, transport=transport,
+                    page_size=5000, max_pages=1000, timeout_seconds=300,
+                    on_result=save, on_route_start=route_start,
+                )
+            if len(results) != 3 or any(item.metadata.final_status != "success" for item in results):
+                failed = next((item.metadata.dataset for item in results
+                               if item.metadata.final_status != "success"), "national")
+                raise PreparationError(f"extract:{failed}", "extraction_failed")
+
+            stage = "freeze"
+            stage_event("started", stage, None)
+            frozen = parquet._freeze_reserved(descriptor, root, root.name, start, end,
+                                               [item.metadata for item in results])
+            stage_event("finished", stage, "success")
+
+        stage = "validation"
+        stage_event("started", stage, None)
+        report = validate_candidate(root, frozen.manifest_sha256)
+        stage_event("finished", stage, report.status)
+        if report.status != "passed":
+            raise PreparationError(stage, "validation_failed")
+
+        stage = "storage"
+        stage_event("started", stage, None)
+        storage = storage_factory()
+        try:
+            receipt = store_candidate(report, storage)
+        finally:
+            # The injected test client may not own sockets. A real boto3 client
+            # has close(); release its pool after this command's storage stage.
+            close = getattr(storage.client, "close", None)
+            if close is not None:
+                close()
+        stage_event("finished", stage, "success")
+        return {
+            **_storage_binding(report), "status": "stored_unpublished",
+            "window_kind": "explicit", "bundle_sha256": receipt.bundle_sha256,
+            "storage_evidence_path": receipt.storage_evidence_path,
+            "artifact_count": len(receipt.artifacts),
+        }
+    except PreparationError:
+        raise
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        raise
+    except StorageError as error:
+        code = "configuration_error" if error.code == "storage_configuration" else "stage_failed"
+        raise PreparationError(stage, code) from None
+    except Exception:
+        raise PreparationError(stage, "stage_failed") from None

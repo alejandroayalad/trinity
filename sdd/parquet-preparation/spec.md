@@ -1,7 +1,7 @@
 # Specification: typed Parquet candidate preparation
 
 Date: 2026-10-03
-Status: Approved by alayala, with full-window coverage confirmed. No acceptance scenario has been executed for this specification.
+Status: Approved by alayala, with full-window coverage confirmed. Offline implementation checks are recorded in [tasks.md](tasks.md). Step 5 awaits human review; real storage protection and live preparation remain unverified.
 Branch: `feat/parquet-preparation`
 Basis: [approved proposal](proposal.md), [data contract v1](../../docs/schema.md), and [A15 backend boundaries](../../docs/backend.md).
 
@@ -164,7 +164,7 @@ Update backend instructions and placeholder configuration with exact implemented
 
 ### 3. Acceptance scenarios
 
-All scenarios below are **pending execution**. Unless a row says otherwise, Given a small valid synthetic fixture with the same fixed window, exact MW reconciliation and valid sanitized retrieval evidence. When applying the listed change, Then the stated outcome is required. Failures must retain evidence under R11. These examples are test inputs, not EIA anomaly findings.
+The rows below define acceptance requirements; [tasks.md](tasks.md) records which implementation checks ran and their limits. Unless a row says otherwise, Given a small valid synthetic fixture with the same fixed window, exact MW reconciliation and valid sanitized retrieval evidence. When applying the listed change, Then the stated outcome is required. Failures must retain evidence under R11. These examples are test inputs, not EIA anomaly findings.
 
 #### Schemas and values
 
@@ -249,4 +249,4 @@ Keep `design.md` minimal: resolve the mechanisms below without repeating the spe
 | Failure persistence and budgets | Retained sanitized evidence, detectable incompletion, finite stage/retry budgets and no false success after hard termination. |
 | S3 protocol and handoff | Write-time overwrite prevention, verified stored bytes, safe collision/retry behavior and canonical results consumable by later refresh persistence. |
 
-R01–R14 and S01–S38 remain the acceptance contract. Step 1 implements schemas/exact parsing only; later diagnostic, Parquet and readiness scenarios remain pending. [tasks.md](tasks.md) tracks actual checks and the required human diff review before Step 2. No cloud operations, commits or remote publication were performed for this slice.
+R01–R14 and S01–S38 remain the acceptance contract. [tasks.md](tasks.md) tracks each step's implementation, delivery and actual checks. Steps 1–4 are delivered; Step 5 is implemented for human diff review. Offline checks do not prove real S3 protection or live full-window preparation. No cloud operations or application publication were performed for these implementation slices.

@@ -16,7 +16,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import (
     ClientError, ConnectionClosedError, ConnectTimeoutError, EndpointConnectionError,
-    IncompleteReadError, ReadTimeoutError, ResponseStreamingError,
+    IncompleteReadError, NoCredentialsError, PartialCredentialsError, ReadTimeoutError, ResponseStreamingError,
 )
 
 from trinity.config import S3Settings
@@ -56,6 +56,8 @@ class StoredArtifact:
 
 def _error_kind(error: Exception) -> str:
     """Classify transport/status failures without copying external messages."""
+    if isinstance(error, (NoCredentialsError, PartialCredentialsError)):
+        return "configuration"
     if isinstance(error, _TEMPORARY):
         return "temporary"
     if isinstance(error, ClientError):
@@ -186,6 +188,8 @@ class StorageOperation:
                 raise
             except Exception as error:
                 kind = _error_kind(error)
+                if kind == "configuration":
+                    raise StorageError("storage_configuration") from None
                 if kind == "missing" and allow_missing:
                     return False
                 if kind != "temporary" or attempt == 3:
@@ -223,6 +227,8 @@ class StorageOperation:
                 raise
             except Exception as error:
                 kind = _error_kind(error)
+                if kind == "configuration":
+                    raise StorageError("storage_configuration") from None
                 if kind == "exists":
                     if reservation and not ambiguous:
                         raise StorageError("prefix_collision") from None

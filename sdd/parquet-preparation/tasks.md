@@ -45,9 +45,10 @@ Gate: successful exact-file validation; real writes require authorization and co
 
 ## Step 5 — Connect the preparation command
 
-- [ ] Connect existing extraction to the approved stages, durable journals, bounded execution and truthful exits/output.
-- [ ] Test S31–S38, failed-evidence retention and existing extraction regressions; warning-bearing storage success remains unpublished.
-- [ ] Run the relevant full offline suite and document verified setup/commands; record live EIA/S3 checks separately.
+- [x] Connect existing extraction to the approved stages, durable journals, bounded execution and truthful exits/output.
+- [x] Test offline S31–S38 boundaries, failed-evidence retention and existing extraction regressions; warning-bearing storage success remains unpublished.
+- [x] Run the relevant full offline suite and document implemented setup/commands; record live EIA/S3 checks separately.
+- [ ] Human reviews the Step 5 diff. Real storage protection and live preparation remain unverified.
 
 Gate: prior stages verified. Active publication, application-state integration and unrelated product features remain outside this slice.
 
@@ -134,3 +135,27 @@ Results: **32 focused storage tests passed; 167 full offline tests passed**, inc
 Diff reviewed; tracked and new-file whitespace checks passed. The existing Starlette/HTTPX deprecation warning remains. No formatter, linter or type checker is configured. Source/wheel builds were not run because packaging and dependencies are unchanged. No real storage protection claim: private access, conditional-write policy enforcement, denied delete/version-delete/policy changes and retained-prefix lifecycle settings need a separately authorized check against configured storage. An alternative endpoint must prove equivalent protection.
 
 Delivery update: the user authorized committing and pushing Step 4, then continuing with Step 5. All 167 offline tests passed again before delivery. Real storage verification remains a separate, unexecuted gate.
+
+## Step 5 verification and review handoff
+
+Step 4 was committed as `1d3c377` and pushed to `origin/feat/parquet-preparation`. Step 5 remains uncommitted above that revision. Existing work is preserved. No dependency/lockfile changes, live EIA/S3 calls, publication writes or session notes.
+
+`connector/prepare.py::main` validates canonical inclusive dates against the UTC date and loads trusted configuration. It exclusively reserves an owner-only version directory before extraction. `supervise` starts a fresh trusted child, durably records stage transitions before acknowledgment, and enforces the designed route/freeze/validation/storage and overall budgets. Timeout or cancellation terminates the child, escalates to kill after five seconds if needed and confirms exit. Missing/early receipts, nonzero exit and failed stages cannot establish success. The parent alone writes the final command result after checking child receipt, saved manifest, bundle and storage completion. Raw child output is suppressed; errors and command output use safe fields.
+
+`connector/pipeline.py::prepare_candidate` reuses `retrieve_all`, the existing reserved-directory freeze operation, `validate_candidate` and `store_candidate`. A new optional route-start callback preserves the extraction command's existing behavior while letting the preparation supervisor time each route. `evidence/retrieval.jsonl` syncs each completed route before normalization. Execution state stays under local `evidence/preparation/`; this changing directory is excluded from uploaded snapshots, alongside storage execution journals. Source, route and validation evidence remains included. Missing SDK credentials now retain a safe configuration code so the command returns `2`; denied access and other runtime failures remain stage failures.
+
+Backend instructions describe the exact module command, working directory, required settings, fixed-window meaning, output layout and exit codes `0/1/2/130`. `.gitignore` excludes the documented `backend/artifacts/` output directory. The command never grants approval or publication. Failed prefixes and existing versions remain untouched.
+
+From `backend/`, using the existing CPython 3.14.8 / PyArrow 25.0.1 / boto3-botocore 1.43.108 environment:
+
+```bash
+.venv/bin/python -m trinity.connector.prepare --help
+.venv/bin/python -m unittest discover -s tests -p test_prepare.py -v
+.venv/bin/python -m unittest discover -s tests -q
+```
+
+Results: help exited successfully; **18 focused command tests passed; 185 full offline tests passed**, including all 167 previous regressions. The final full run includes the stage-status gate, execution-journal readback, rejection of replaced intermediate directories and rejection of a valid receipt whose child exits after its deadline. Tests use the October 1–3, 2026 synthetic reconciled fixture with real saved Parquet and real spawned processes. Injected HTTP/storage establishes S31–S35 command behavior: sanitized source echoes, unknown-field retention, warning-free/warning-bearing success, ambiguous write resolution, collisions and storage/readback failures. S36 covers failed validation/diagnostics, route-sink and parent-journal persistence failures, cancellation between stages, actual SIGTERM, blocked validation/storage children that ignore terminate and require kill, a child killed before completion, missing/premature receipts and final-result persistence failure. S37 covers invalid/noncanonical/reversed/future dates, missing configuration/credentials and explicit-window labeling. S38's help, documented command surface and offline regression boundary are verified; live configured execution is not.
+
+Diff and whitespace reviewed, including new command/tests. The existing Starlette/HTTPX deprecation warning remains. No formatter, linter or type checker is configured. A fresh locked install and source/wheel builds were not rerun; package configuration and dependencies did not change. No live preparation, full-window EIA result or deployed S3 policy proof is claimed. Actual private/conditional/no-delete storage protection still requires a separately authorized configured-storage check.
+
+Next: [ME] review `main` and `supervise` in `backend/src/trinity/connector/prepare.py`.

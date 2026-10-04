@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. It also records route/attempt evidence and provides one extraction command. Standalone library functions parse exact values, freeze Parquet files, validate saved candidates and store verified artifacts through a trusted S3 adapter. Preparation is not yet connected to the extraction command. Real S3 protection is unverified. Product routes, authentication, PostgreSQL, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; real S3 protection and live preparation are unverified. Product routes, authentication, PostgreSQL, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -151,7 +151,7 @@ From `backend/`, run focused offline checks with `.venv/bin/python -m unittest d
 
 Each call reserves `evidence/<attempt UUID>/` with `journal.jsonl`, one detail file per check/scope, and final `validation.json` and `diagnostics.json` summaries. Each journal result is flushed and synced before the next check. Revalidation uses another attempt directory; previous results remain unchanged. Cooperative cancellation or persistence failure raises `ValidationError`; keyboard/async cancellation propagates. Both retain an incomplete summary where writable. A hard kill can leave only the journal. Neither partial evidence nor a summary file alone establishes success.
 
-`verify_validation(report)` rechecks a passing report, its completion journal, details and current file identities. Storage calls this guard before using the report. Changed files fail and retain a safe recheck record where writable. Preparation-command integration remains Step 5.
+`verify_validation(report)` rechecks a passing report, its completion journal, details and current file identities. Storage calls this guard before using the report. Changed files fail and retain a safe recheck record where writable. The preparation command below connects these stages.
 
 Run the focused offline checks from `backend/` with the existing environment:
 
@@ -172,7 +172,7 @@ Local `evidence/storage-<token>/` holds the upload plan, reservation body, synce
 
 `load_s3_settings()` reads `TRINITY_S3_BUCKET`, `TRINITY_S3_PREFIX` and `TRINITY_S3_REGION` explicitly. Optional `TRINITY_S3_ENDPOINT_URL` must use HTTPS without user-info, a non-root path, query or fragment. Omit it for AWS. The adapter ignores ambient SDK endpoint overrides and uses the SDK credential provider chain; credentials are never command arguments or recorded settings. Imports do not resolve credentials. `.env.example` contains placeholders only and is not loaded automatically.
 
-Each object is limited to 64 MiB, checked before upload. Storage uses a maximum 300-second budget, three attempts for temporary failures and one/three-second waits. SDK retries are disabled; connect/read timeouts are five/ten seconds. Deadline and cancellation checks run between operations and streamed chunks. A blocked SDK call can run until its socket timeout; hard process supervision remains Step 5. Failed validation, denied access and byte mismatches are not retried.
+Each object is limited to 64 MiB, checked before upload. Storage uses a maximum 300-second budget, three attempts for temporary failures and one/three-second waits. SDK retries are disabled; connect/read timeouts are five/ten seconds. Deadline and cancellation checks run between operations and streamed chunks. A blocked SDK call can run until its socket timeout when the library runs alone. The preparation command adds hard process supervision. Failed validation, denied access and byte mismatches are not retried.
 
 Run offline storage checks from `backend/`:
 
@@ -181,6 +181,48 @@ Run offline storage checks from `backend/`:
 ```
 
 Tests use an injected conditional storage double and the pinned SDK's `Stubber`, with real temporary Parquet files. They prove local behavior and request shape, not deployed immutability. Before real-storage acceptance, separately verify a private prefix, policy-enforced conditional writes, no candidate-writer delete/version-delete or policy-changing rights, and no lifecycle deletion of retained candidates. An alternative endpoint must prove equivalent behavior. No bucket or policy is created here. See [AWS conditional writes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes.html) and [policy enforcement](https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes-enforce.html). No live EIA/S3 check was run for this slice.
+
+## Prepare a stored candidate — Step 5
+
+Working directory: `backend/`. Use the locked environment from Setup, the EIA key loader described above, and an existing private S3 bucket with separately verified protection. Set `TRINITY_S3_BUCKET`, `TRINITY_S3_PREFIX` and `TRINITY_S3_REGION` in the process environment. Supply SDK credentials through your trusted local provider. Omit `TRINITY_S3_ENDPOINT_URL` for AWS; an alternative endpoint must meet the storage requirements above. `.env.example` is a reference, not an automatically loaded configuration file.
+
+After configuring and authorizing live access, the implemented command is:
+
+```bash
+mkdir -p artifacts
+uv run --locked python -m trinity.connector.prepare \
+  --start 2026-10-01 --end 2026-10-03 --output-root ./artifacts
+```
+
+With the already installed environment, `.venv/bin/python` can replace `uv run --locked python`. To inspect syntax without credentials or external calls:
+
+```bash
+.venv/bin/python -m trinity.connector.prepare --help
+```
+
+Both dates are inclusive and must use `YYYY-MM-DD`, with `start <= end <= current UTC date`. The command labels the result `window_kind="explicit"`. A three-day reproduction does not claim full-history coverage or discover `latest_national`. Each invocation exclusively reserves a new version UUID under an existing output root; it never resumes, repairs or overwrites a previous version. The example `backend/artifacts/` directory is ignored by Git.
+
+Input → extraction → exact files/manifest → validation/diagnostics → verified storage → parent-confirmed receipt. `connector/pipeline.py::prepare_candidate` reuses existing functions. `connector/prepare.py` runs it in a spawned trusted child. The parent syncs each stage event before allowing the child to proceed. Budgets are 300 seconds and 1,000 pages per extraction route, 120 seconds for freeze, 120 for validation, 300 for storage, and 1,440 seconds overall. On timeout or controlled cancellation, the parent terminates the child, escalates to kill after five seconds if needed, and confirms exit. These are command limits, not production-refresh service limits. [Python process controls](https://docs.python.org/3.14/library/multiprocessing.html#multiprocessing.Process.terminate) describe the underlying operations.
+
+Under `artifacts/<version UUID>/`, `data/` holds the three Parquet files. The root holds `source-evidence.json`, `manifest.json` and, after storage, `bundle.json`. `evidence/retrieval.jsonl` durably retains each completed route before normalization. `evidence/<validation attempt>/` holds check details and summaries; `evidence/storage-<token>/` holds upload progress. `evidence/preparation/` holds safe inputs, the parent stage journal, the child receipt and the final result or failure. Changing supervisor/storage journals remain local; completed route and validation evidence is included in the stored bundle.
+
+| Exit | Meaning |
+|---|---|
+| `0` | Child exited successfully; saved receipt and bundle agree. JSON output identifies version, manifest, validation attempt/check set, bundle, actual dates, warning count/digest and `published=false`. Warnings keep `approval_required=true`. |
+| `1` | Stage failure, failed validation, timeout, unresolved storage, lost child or failed evidence persistence. Safe JSON identifies the stage and retained evidence location where available. |
+| `2` | Invalid arguments, dates or configuration, including missing credentials. SDK credential failure can be discovered during storage; prior evidence remains. |
+| `130` | Controlled cancellation, including Ctrl-C or SIGTERM. Available evidence remains; the child is stopped before return. |
+
+Only the parent writes `evidence/preparation/result.json`, after confirmed child exit and receipt verification. A child receipt, partial prefix, bundle or missing final result is not command success. If validation fails, no upload starts. If storage fails, partial remote objects remain untouched and unpublished. Hard termination can lose the in-flight route; already synced route/check evidence remains where the filesystem permits. No command grants approval, writes application publication records or changes the active version.
+
+Offline verification, with no EIA/S3 calls:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p test_prepare.py -v
+.venv/bin/python -m unittest discover -s tests -q
+```
+
+Command tests use synthetic HTTP and injected storage inside real child processes, real temporary Parquet files and real termination signals. See [tasks.md](../sdd/parquet-preparation/tasks.md) for current counts and limits. The live command above has not been run; real storage-policy checks and full-window EIA preparation remain pending. The existing `python -m trinity.connector` extraction command remains available and unchanged.
 
 ## Start the API
 
@@ -203,4 +245,4 @@ Verified on CPython 3.14.8 with uv 0.12.23: 59 health, configuration, mocked EIA
 
 `src/trinity/main.py` creates the FastAPI application. `src/trinity/__init__.py` has no infrastructure initialization. `tests/` contains standard-library unittest tests, so no additional test framework is required.
 
-Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Steps 2–3 are committed and pushed. Step 4's storage code waits for human diff review and separate real-storage verification. Step 5 command integration is unstarted. The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
+Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Steps 2–4 are committed and pushed. Step 5 waits for human diff review; real storage protection and live preparation remain separate verification gates. The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
