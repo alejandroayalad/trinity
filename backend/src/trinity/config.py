@@ -109,3 +109,28 @@ def load_s3_settings() -> S3Settings:
         )
     except (KeyError, ConfigurationError):
         raise ConfigurationError("Set valid trusted TRINITY_S3 settings.") from None
+
+
+class ApiSettings(BaseSettings):
+    """Read API-only PostgreSQL configuration without loading connector secrets."""
+
+    model_config = SettingsConfigDict(
+        case_sensitive=True, env_file=None, hide_input_in_errors=True, frozen=True,
+    )
+    database_url: SecretStr = Field(validation_alias="TRINITY_DATABASE_URL", repr=False)
+
+    @field_validator("database_url")
+    @classmethod
+    def require_database_url(cls, value: SecretStr) -> SecretStr:
+        url = urlsplit(value.get_secret_value())
+        if url.scheme not in ("postgres", "postgresql") or not url.path.strip("/"):
+            raise ValueError("Invalid PostgreSQL URL")
+        return value
+
+
+def load_api_settings() -> ApiSettings:
+    """Load API settings and hide all invalid secret-bearing input."""
+    try:
+        return ApiSettings()
+    except (ValidationError, ValueError):
+        raise ConfigurationError("Set a valid TRINITY_DATABASE_URL in the process environment.") from None

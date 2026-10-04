@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
-from trinity.config import ConfigurationError, load_eia_settings
+from trinity.config import ApiSettings, ConfigurationError, load_eia_settings
 from trinity.main import create_app
 
 
@@ -37,7 +37,8 @@ class EIASettingsTests(unittest.TestCase):
 
     def test_health_does_not_require_eia_credentials(self) -> None:
         with patch.dict(os.environ, {}, clear=True):
-            with TestClient(create_app()) as client:
+            settings = ApiSettings(TRINITY_DATABASE_URL="postgresql://unused@/test?host=/tmp/trinity-no-such-socket")
+            with TestClient(create_app(settings=settings)) as client:
                 response = client.get("/health")
         self.assertEqual(response.status_code, 200)
 

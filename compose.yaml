@@ -1,0 +1,20 @@
+# Local database only. The API runs with the locked backend environment.
+services:
+  postgres:
+    image: postgres:17.11-bookworm
+    environment:
+      POSTGRES_DB: trinity
+      POSTGRES_USER: trinity
+      POSTGRES_PASSWORD: ${TRINITY_POSTGRES_PASSWORD:?Supply a local database password}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trinity -d trinity"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+volumes:
+  postgres_data:
