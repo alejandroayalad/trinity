@@ -1,7 +1,7 @@
 # Tasks: Catalog and permissions
 
 Date: 2026-10-04
-Status: Implemented and automated-tested October 4, 2026 after alayala authorized implementation. The [implementation evidence](../../ai/sessions/2026-10-04-catalog-permissions-implementation.md) separates offline, database/HTTP and operator evidence. Retained-account Docker operator verification passed in the no-publication state; see [operator evidence](../../ai/sessions/2026-10-04-catalog-docker-operator-check.md).
+Status: Catalog backend slice complete, confirmed by alayala. Implemented, verified, committed and pushed. The [implementation evidence](../../ai/sessions/2026-10-04-catalog-permissions-implementation.md) separates offline, database/HTTP and operator evidence. Retained-account Docker operator verification passed in the no-publication state; see [operator evidence](../../ai/sessions/2026-10-04-catalog-docker-operator-check.md).
 Branch: `feat/catalog-permissions`
 Basis: [proposal](proposal.md), approved [specification](spec.md), [design](design.md), A9/A15–A17/A19–A21.
 
@@ -11,7 +11,7 @@ Current focused delivery: [review and verification](../../ai/sessions/2026-10-04
 
 The specification is approved, including newest-attempt freshness. The implementation provides national-only Viewer metadata and all-three-dataset metadata for Analyst/Admin. Viewer remains dashboard-only in the later interface.
 
-The implementation has four bounded stages after the ongoing evidence duty: metadata/policy, the endpoint and state reads, runtime acceptance, then handoff. Each stage leaves a reviewable result. Checked items below have implementation or recorded test evidence; the retained-account operator check passed; the human behavior review remains open.
+The implementation has four bounded stages after the ongoing evidence duty: metadata/policy, the endpoint and state reads, runtime acceptance, then handoff. Each stage leaves a reviewable result. Checked items below have implementation or recorded test evidence; the retained-account operator check passed; alayala has confirmed completion.
 
 ## LLM
 
@@ -63,10 +63,10 @@ Scope: R13–R15; S22, S23; preserve S24 as later frontend work.
 - [x] [YOU] Extend the existing hidden-input persona checker with optional `--catalog`; preserve its auth-only default and logout behavior. Validate role-filtered catalog responses and post-logout denial without logging credentials, tokens or response bodies; cover both modes with tests.
 - [x] [YOU] Update backend/root README, SDD status, NOTES and a unique implementation session with exact commands, measured evidence and remaining limits. Review the final slice diff and documentation links; preserve unrelated work and follow CONTRIBUTING.
 - [x] [ME] Run the documented optional catalog persona check with retained local accounts once the API is ready. Passed for all three Docker personas on October 4; see [operator evidence](../../ai/sessions/2026-10-04-catalog-docker-operator-check.md). No command should require copying a token into the terminal or publishing test data.
-- [ ] [ME] Review the behavior and give a short explanation of why a failed newest refresh can coexist with `data_ready=true`. Record only the observed response, not inferred understanding.
+- [x] [ME] Confirmed the catalog slice is complete. This records acceptance, not an inferred explanation of the earlier walkthrough example.
 - [x] [YOU] Close only the supported acceptance claims and provide the handoff. Keep S24/navigation in later frontend work. Commit/push/PR only after an explicit request, using focused changes and retained history.
 
-Gate: implementation diff reviewed by AI; alayala's retained-account operator check passed; his behavior review remains pending. Ongoing data evidence and future UI/query security remain open.
+Gate: catalog backend delivery complete and accepted by alayala. Ongoing data evidence and later frontend acceptance remain separate.
 
 ### Scenario coverage
 
@@ -102,7 +102,7 @@ At the design stage these commands had not run. Implementation verification used
 ### Current checkpoint
 
 Done: catalog implementation, offline regression, disposable PostgreSQL/HTTP acceptance, and retained-account Docker operator check.
-Pending: alayala's behavior review; S24 belongs to later frontend work.
+Pending: no remaining catalog backend delivery tasks; S24 belongs to later frontend work.
 Blocker: none for the catalog operator check; all three personas passed on the running Docker API.
 
-Next: [ME] explain why a failed newest refresh can coexist with `data_ready=true` in the separate behavior review.
+Next: [ME] continue with preview tasks Step 2; preview implementation has not started.

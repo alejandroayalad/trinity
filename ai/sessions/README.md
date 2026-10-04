@@ -13,7 +13,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Architecture and contracts](#architecture-and-contracts) | 12 |
 | [SQL implementation](#sql-implementation) | 9 |
 | [Dataset previews](#dataset-previews) | 3 |
-| [Delivery and working practices](#delivery-and-working-practices) | 6 |
+| [Delivery and working practices](#delivery-and-working-practices) | 7 |
 
 ## Catalog and permissions
 
@@ -87,6 +87,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Delivery and working practices
 
+- [2026-10-04 — Catalog, SQL and preview task status correction](2026-10-04-slice-task-status-correction.md)
 - [2026-10-02 — Session log — Document baseline](2026-10-02-document-baseline.md)
 - [2026-10-02 — Session — Trinity repository import](2026-10-02-trinity-repository-import.md)
 - [2026-10-03 — Session — Contributing and comment rules](2026-10-03-contributing-comment-rules.md)

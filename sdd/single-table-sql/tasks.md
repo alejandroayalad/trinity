@@ -1,103 +1,81 @@
 # Tasks: One-table read-only SQL
 
 Date: 2026-10-04
-
-## Current delivery addendum
-
-Alayala subsequently authorized autonomous T05–T20, then requested local commits for isolation and HTTP delivery. This supersedes the pairing stops and lack of HTTP authorization in the original gate plan below. Validator/DataFusion, admission/staging, isolated execution/recovery and HTTP wiring are implemented. The original unchecked tasks remain the detailed acceptance checklist; they are not all proven by the current test coverage.
-
-See [delivery evidence](../../ai/sessions/2026-10-04-sql-delivery-commits.md) for exact tests and limitations and [SQL operator instructions](../../backend/SQL.md) for commands. Actual supervisor-process crash injection, every lifecycle race, full T18 coverage, deployed Compose wiring, retained-account SQL and live read-only S3 proof remain pending. Viewer frontend controls remain hidden by requirement and unimplemented in this backend slice. No push is authorized.
-
-Done: implementation and the recorded local synthetic checks.
-
-Pending: the unverified acceptance boundaries listed above.
-
-Blocker: none for committing the implemented slices; this is not a full production-readiness signoff.
-
-## Original gate plan (historical authorization; superseded above)
-
-Status: First paired whole-input/single-SELECT check implemented; stop for review before further policy. No HTTP endpoint is authorized.
-Branch/base: `feat/catalog-permissions`, `fde733b`; preserve concurrent catalog/API Docker work.
+Status: Backend implemented, committed and pushed. Completed implementation and measured checks are marked below; remaining verification is listed separately.
+Branch: `feat/catalog-permissions` (the synchronized delivery branch is a reference, not a separate workstream).
 Basis: approved [specification](spec.md), [design](design.md), [proposal](proposal.md), A16/A19.
-Evidence: [design/tasks session](../../ai/sessions/2026-10-04-single-table-sql-design-tasks.md).
+Evidence: [policy/engine implementation](../../ai/sessions/2026-10-04-sql-full-implementation.md), [isolation/HTTP delivery](../../ai/sessions/2026-10-04-sql-delivery-commits.md), and [combined-branch verification](../../ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md).
 
 ## Human
 
-**Current authorization:** after preparation, alayala supplied and authorized only the whole-input/single-statement validator flow. That function and fourteen focused tests are implemented; the full core validator remains incomplete. Alayala clarified the optional terminal-semicolon rule; A24 trailing comments now pass while extra semicolons/statements fail. The [pairing review](pairing-gate.md) supplies the proposed cases and observed AST concepts. Alayala will review cases and implement or pair-program the validator. AI may add repetitive DataFusion compatibility infrastructure only after the validator works; alayala reviews failures and the security-sensitive execution path. Incremental local commits are authorized; pushes are not. This overrides autonomous execution of Step 2 below.
+**SQL is implemented.** SQLGlot validates the complete request before published-file downloads. The service pins one published version, admits shared work, verifies files, and executes the query with DataFusion in a restricted container. `POST /api/v1/queries` is registered. Viewer is denied before SQL work; hiding frontend controls remains a later frontend responsibility.
 
-The next implementation stage is policy and engine compatibility. It must prove the agreed SQL forms, exact numbers and safe rejection before file downloads. The endpoint comes after storage, shared capacity and container termination are verified.
+Alayala supplied the initial paired single-statement flow, clarified the terminal-semicolon rule, then authorized autonomous T05–T20 and Git delivery. The earlier pairing-only stop is historical. See the [pairing evidence](../../ai/sessions/2026-10-04-sql-single-statement-pairing.md) and [semicolon correction](../../ai/sessions/2026-10-04-sql-terminal-comment-pairing.md). Original task wording remains in Git history; this checklist reports current state.
 
-Viewer has no SQL button/editor/Run action and no direct API permission. Backend tests prove denial before SQL work. A later frontend slice proves hidden controls and direct-screen rejection; neither evidence substitutes for the other.
-
-Stages below are bounded review gates. All unchecked implementation items are future work. A passing parser test or existing catalog suite does not complete this SQL slice. Maintain data evidence remains ongoing.
+A checked implementation item means its code or named verification exists. It does not close a separately unchecked acceptance item. T01–T20 identifiers are retained; suffixes distinguish unfinished portions of a task that previously combined implementation and verification.
 
 ## LLM
 
 ### Step 1 — Maintain data evidence — ongoing
 
-- [x] T01 [ME] Approved the proposal, clarified Viewer exclusion, then requested design/tasks. [YOU] Recorded specification approval and D01–D03 in A16/A19 without claiming implementation approval.
-- [x] T02 [YOU] Inspected current contracts, auth/DB/storage boundaries, installed library signatures and concurrent Docker files; drafted design/tasks and checked their documentation links/traceability.
-- [ ] T03 [YOU] Recheck status/instructions and preserve current changes before each implementation stage. Explain input → processing → result and one failure case before code edits. Record actual human/AI contributions, corrections and measured checks in a unique implementation session.
-- [ ] T04 [YOU] Maintain findings when real source evidence appears; synthetic fixtures do not create selected anomalies, prove completeness or authorize live publication. [ME] Own any EIA-key commands, builds/clicks and evaluator walkthrough.
+- [x] T01 [ME] Approved proposal/specification and Viewer exclusion. [YOU] Recorded the selected D01–D03 rules in A16/A19.
+- [x] T02 [YOU] Inspected canonical contracts, installed parser/engine interfaces and existing auth/storage boundaries; prepared the design and review matrix.
+- [x] T03 [YOU] Inspected and preserved existing work, explained the bounded implementation flows, recorded contributions/checks, and reconciled catalog/SQL histories without rewriting them. Evidence: the implementation, delivery and reconciliation records above.
+- [ ] T04 [YOU] Maintain findings whenever future work produces real source evidence. Synthetic fixtures do not prove live completeness or authorize publication. [ME] Own evaluator/live-data actions within their explicit authorization.
 
-Gate: design/tasks are reviewable. This ongoing duty stays open after implementation; current request authorizes only the bounded single-statement step described above.
+The ongoing data-evidence duty remains open across all slices.
 
 ### Step 2 — SQL policy and real engine compatibility
 
-Requirements: R01–R07, R15–R17, R21. Scenarios: S01–S09, S17–S20 as applicable without a product endpoint.
+Requirements: R01–R07, R15–R17, R21. Scenarios: S01–S09, S17–S20 at the policy/engine boundary.
 
-- [ ] T05 [ME] Review the proposed matrix and implement or pair-program the core whole-input SQLGlot validator. [YOU] AST/API inspection and seven parser-characterization tests are complete; the supplied single-statement function and fourteen tests are implemented, including the clarified A24 terminal-comment behavior. Stop before the table/token checks; closed query/policy messages remain pending. Cover every accepted D01 form and every populated AST argument; validate physical table/columns, typed dates, function arguments, comments and statement boundaries. Add bounded policy subprocess supervision, sanitized environment and timeout termination tests.
-- [ ] T06 [ME] After the core review, pair with [YOU] on trusted identifier/projection normalization and ordered public label/unit mapping. Prove duplicate labels, exact mixed-case names, ORDER BY alias resolution, NULLS LAST and round-trip agreement without expanding SQL authority.
-- [ ] T07 [YOU] Only after the validator works, add repetitive compatibility-test infrastructure. [ME] Review failures and the security-sensitive engine entrypoint. A later authorized implementation will provide a directly testable restricted DataFusion engine over temporary typed Parquet using selected options, one registered table and bounded output streaming. This is a test entrypoint, not a public route or an in-process production fallback.
-- [ ] T08 [YOU] After the paired validator and [ME]-reviewed execution path exist, run focused policy/engine tests and record exact decimal precision/scales, AVG/division/ROUND behavior, overflow/type failure and row/byte limits. Complete the installed-version AST/config/numeric matrix in the design evidence. Preserve dependency pins. If accepted grammar cannot meet the semantics, stop at this gate with a concrete fixture/result and recommended correction.
+- [x] T05 [YOU] Implement whole-input statement, token, physical-table, column, function/date spelling and closed-AST checks, plus bounded policy subprocess supervision. Evidence: `queries/runtime/sql_policy.py`, `queries/policy.py`, `test_sql_single_statement.py`, `test_sql_policy.py` and parser characterization tests. The review matrix contains 25 allowed and 52 rejected fixtures.
+- [x] T06 [YOU] Implement trusted quoting, projection/alias normalization, duplicate public labels, ordered unit mapping, explicit null ordering and policy-message round-trip checks. Canonical qualifiers with a table alias have a regression test (`1e3c072`).
+- [x] T07 [YOU] Implement a directly testable restricted DataFusion engine over temporary canonical Parquet, one registered table and bounded exact output. Evidence: `queries/runtime/engine.py`, `tests/sql_fixture.py` and `test_sql_engine.py`. Production uses the container supervisor.
+- [x] T08 [YOU] Execute every allowed review fixture and record decimal scales, AVG/division/ROUND, nulls, overflow/type failure and row/byte limits without changing dependency pins. Ten engine tests passed at delivery. Exact observations, including the measured ROUND scale range, are in the [policy/engine record](../../ai/sessions/2026-10-04-sql-full-implementation.md#t05t08-evidence).
 
-Gate: all allowed forms have real engine evidence; adversarial input fails before guarded I/O; numerical semantics and parser limits are documented. No SQL route is registered yet.
+Result: policy and real-engine compatibility are implemented and tested. No further paired-validator implementation gate remains.
 
 ### Step 3 — Trusted snapshots, shared accounting and file staging
 
 Requirements: R02, R08–R13, R18–R22. Scenarios: S03, S10–S13, S15, S22–S27 at the state/storage boundary.
 
-- [ ] T09 [YOU] Add the next reviewed Alembic revision for rolling user rate state, singleton admission and durable query reservations. Implement short service-owned transactions and conditional ownership; preserve existing auth deadlines/error behavior. Do not migrate a retained database.
-- [ ] T10 [YOU] Add the two current-identity checks, committed D02 rate admission and coherent publication/manifest pin. Test exact boundary/counting outcomes, both no-publication/invalid-SQL orderings and concurrent publication changes using real disposable PostgreSQL connections.
-- [ ] T11 [YOU] Implement a read-only published-manifest/staging operation using existing manifest/schema definitions and finite storage retry policy. Verify all selected files and local confinement; bound bytes/file counts and stage only generated request paths. Preserve preparation write behavior and its regression tests.
-- [ ] T12 [YOU] Run cross-process rate/slot tests and staging tests for multiple files, corruption, denial, retry/deadline, symlink/path and partial-file failures. Prove Viewer causes no analytical counters, reservations or downloads. Record which reads use storage doubles and which use actual local bytes.
+- [x] T09 [YOU] Add `0003_query_admission`, rolling rate state, singleton capacity admission and durable fenced reservations. Use short service-owned transactions. The migration and auth regressions ran against disposable PostgreSQL.
+- [x] T10 [YOU] Implement both current-identity checks, committed rate debits and publication/manifest pinning. Tests cover role change during policy, invalid SQL before no-publication, exact rolling boundaries/clock regression, retained capacity on expiry and publication-pointer changes.
+- [x] T11 [YOU] Implement GET-only pinned-manifest staging with existing contracts, bounded retry/bytes/file counts, checksums/schema/row counts, generated request paths and cleanup. Evidence: `queries/staging.py` and six staging tests using synthetic storage responses and actual local Parquet bytes.
+- [x] T12 [YOU] Verify independent-process rate/global capacity limits, selected multifile staging, corruption, retries/deadlines, symlinks and partial cleanup. Prove Viewer denial before policy/counters/configuration and downloads through the SQL service and HTTP tests.
 
-Gate: policy precedes all downloads; publication/artifact identity remains pinned; shared accounting holds across processes. All state/container uncertainty retains capacity. Still no route or claim of S3 credential isolation/live publication proof.
+Result: shared admission and verified staging are implemented. Live S3 credential restrictions and the full end-to-end scenario matrix remain under the verification list below.
 
 ### Step 4 — Query container, supervision and recovery
 
 Requirements: R07, R10–R15, R18–R23. Scenarios: S09, S13–S16, S20–S26.
 
-- [ ] T13 [YOU] Add the narrow local Docker adapter and runtime entrypoint; implement bounded management calls and attach framing without a generic proxy or new Python dependency. Prepare the separate locked query image and only the necessary trusted API/recovery Compose additions. Preserve existing user Docker work. [ME] Build the prepared image when the exact command/artifacts are reviewable.
-- [ ] T14 [YOU] Implement deadline-owned create/record/start, bounded message/result channels, fixed image/config inspection, request-only read-only volume subpath, no-network/no-secret restrictions and memory/process controls. Keep SQL off Docker argv/environment/labels/logs. No auto-pull or in-process fallback.
-- [ ] T15 [YOU] Implement ownership fencing, stop/kill/inspect/removal and conditional release. Add the query-only recovery process and startup/periodic reconciliation. Cover late create/start, duplicate recovery, lost DB/daemon connection and cleanup failure; retain capacity when execution cannot be excluded.
-- [ ] T16 [YOU] Run lifecycle doubles first. [ME] Start the prepared disposable container test environment. [YOU] Run real container acceptance only within that authorized environment: image identity/config, network/mount/secret denial, time/memory enforcement, output framing, API/supervisor crash recovery and no wrong-owner cleanup. Record platform/daemon/API/image IDs and actual stop evidence without credentials.
+- [x] T13 [YOU] Add the local Docker adapter, bounded attach framing, runtime entrypoint, locked query image and API/recovery Compose configuration. The query image was built from the staged source snapshot; Compose configuration passed validation.
+- [x] T14 [YOU] Implement durable create/start state, fixed image/config checks, request-only read-only volume subpath, network/credential isolation, memory/process limits and bounded messages/results. SQL stays out of Docker argv/environment/labels/logs.
+- [x] T15 [YOU] Implement ownership fencing, stop/kill/inspect/removal, conditional capacity release and query-only recovery. Lifecycle tests cover absent ambiguous create, removal-before-release, daemon/cleanup failures, wrong daemon and revoked owner. Real PostgreSQL/container recovery covers an expired running reservation, duplicate recovery and stale-owner denial.
+- [x] T16 [YOU] Run the seven standalone Docker/frame checks: real query results, fixed restriction inspection, network/mount/sibling/credential denial probes, kernel memory ceiling, timeout removal, wrong-owner rejection and bounded framing. Platform/image/API details and probe limitations are recorded in [delivery evidence](../../ai/sessions/2026-10-04-sql-delivery-commits.md).
+- [ ] T15-V [YOU] Complete the remaining late-create/start and lost-connection/interleaving acceptance cases. Existing failure tests do not establish every lifecycle race.
+- [ ] T16-V [YOU] Inject an actual API/supervisor-process crash and verify recovery/termination. The current real recovery test abandons a running reservation; it does not kill the supervisor process.
 
-Gate: real containers establish isolation and termination; cross-process reservations remain correct throughout failure/recovery. Missing Docker, unsupported subpath or failed hardening is a blocker, not a reason to weaken the boundary. Do not register the execution route before this passes.
+Result: isolated execution/recovery code and the listed real-container checks are complete; the remaining failure-injection cases are explicit.
 
 ### Step 5 — HTTP integration, regression and operator handoff
 
-Requirements: R01–R24. Scenarios: S01–S28, plus the API part of S29; S29 frontend remains pending separately.
+Requirements: R01–R24. Scenarios: S01–S28 and the API portion of S29; frontend S29 remains separate.
 
-- [ ] T17 [YOU] Wire `POST /api/v1/queries` and trusted lazy configuration/lifecycle. Use short auth/state transactions, validated policy and the supervisor; preserve health/auth/catalog/settings independence from unavailable query dependencies. Update the exact route inventory.
-- [ ] T18 [YOU] Run real PostgreSQL + loopback HTTP + container flows with synthetic immutable published fixtures. Verify all personas, role/session changes, no-publication, queries for all three tables, safe errors/headers, 1,000-row truncation, 128-column/5-MiB limits and publication races. Validate complete serialized output against OpenAPI and report [] diagnostics accurately.
-- [ ] T19 [YOU] Run focused suites then the full offline regression; separately run opt-in DB/container suites and report skips honestly. Review the focused diff and preservation hashes. Record commands, counts, timings, failures/corrections and all unverified boundaries; local incremental commits are authorized for this pairing gate; later commits, pushes and PRs need their own authorization.
-- [ ] T20 [YOU] Write runnable setup/operator instructions from verified commands. [ME] Run one small retained-account check at a time and explain the denied-Viewer/pinned-publication/termination behavior. Keep UI hiding, live read-only storage and live publication evidence pending until observed; do not invent a successful query by promoting a candidate.
+- [x] T17 [YOU] Register `POST /api/v1/queries`, bounded request/response models, lazy trusted configuration, disconnect cancellation and supervised execution. The route inventory retains both catalog and SQL.
+- [x] T18 [YOU] Run real PostgreSQL + loopback HTTP + Docker with synthetic immutable publication fixtures. Verify Viewer denial, Analyst/Admin exact results, pinned publication, safe errors/headers and confirmed cleanup. Record the test-only staging-volume bridge and synthetic GET client rather than claiming live storage/Compose proof.
+- [ ] T18-V [YOU] Complete the full original HTTP acceptance matrix: all three datasets, additional session/publication race cases, serialized OpenAPI conformance and row/column/byte boundary scenarios through the complete HTTP/container path. Existing engine/service tests prove only their own tested boundaries.
+- [x] T19 [YOU] Run focused and full regression suites, separate opt-in database/container evidence from skips, review diffs and preservation, and commit/push the reconciled histories. Latest combined run: 344 discovered, 292 passed and 52 opt-in skips; separately, 70 auth/catalog checks and all 11 SQL database/HTTP/container checks passed. Earlier standalone Docker evidence remains recorded; those five real probes were not rerun during reconciliation.
+- [x] T20 [YOU] Deliver [SQL operator instructions](../../backend/SQL.md) and record setup/configuration requirements, recovery behavior, tested commands and limits.
+- [ ] T20-V [ME] Verify the full deployed SQL Compose wiring, retained-account query and dedicated published-object read authority. Existing catalog operator evidence and connector S3 evidence do not establish SQL's live execution path. Preserve publication rules; do not promote a candidate merely to make the check run.
+- [ ] T20-UI [YOU] In the later frontend slice, verify hidden Viewer SQL controls and denied direct SQL-screen access. Backend Viewer denial is already tested.
 
-Gate: backend SQL acceptance complete only when its required evidence passes. The operator check and frontend SQL navigation remain separately visible. No local synthetic test is live EIA/S3 proof.
+## Current checkpoint
 
-### Evidence checklist and current status
+Done: SQL backend implementation, the recorded policy/engine/storage/admission/container/HTTP checks, operator documentation and Git delivery.
+Pending: T15-V, T16-V, T18-V, T20-V and later frontend T20-UI; T04 remains an ongoing duty.
+Blocker: none for acknowledging completed implementation or beginning preview groundwork. The unchecked items remain real verification work.
 
-| Evidence | Current status | Completion owner/boundary |
-|---|---|---|
-| Specification, design/tasks and document checks | Drafted/checked; specification approved | [YOU] Documentation only; design choices still need implementation verification. |
-| Policy, real engine and exact numbers | Fourteen single-statement tests and seven parser characterizations passed; full policy/engine acceptance not run | [YOU] Step 2 gate; no parser success treated as execution proof. |
-| Real shared state and storage staging | Not run | [YOU] Step 3; no retained DB or cloud mutation. |
-| Real query isolation, lifecycle and complete HTTP path | Not run | [ME] Builds/start; [YOU] authorized tests in Steps 4–5. |
-| Retained-account, frontend and live published storage | Pending and separate | [ME] Operator/evaluator; frontend implementation remains outside this backend slice. |
-
-Done: preparation and the first paired single-statement check; fourteen focused tests plus seven parser checks passed.
-Pending: paired physical-table and remaining token checks. DataFusion infrastructure follows only after the full validator works.
-Blocker: none for this boundary; later policy/engine/container acceptance remains unexecuted.
-
-Next: [ME] review A04 against B10/B11 in pairing-gate.md before implementing the physical-table check.
+Next: [ME] continue with [preview tasks Step 2](../dataset-preview/tasks.md#step-2--strict-request-cursor-and-response-groundwork); preview currently contains planning only.

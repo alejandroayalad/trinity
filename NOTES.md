@@ -394,3 +394,7 @@ The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implemen
 ## Catalog/SQL reconciliation and preview baseline — October 4, 2026
 
 [ME] Alayala requested one clean continuation branch with catalog delivery and SQL implementation preserved and pushed. [YOU] Merged both histories, retained newer main evidence, reconciled shared routes/test fixtures, and preserved accepted preview planning without implementing preview. The [reconciliation record](ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md) records conflict handling, checks, the canonical branch and unresolved preview provenance/runtime gates. No existing commit was rewritten and no main merge, retained migration or cloud operation was performed.
+
+## Slice task status correction — October 4, 2026
+
+[ME] Alayala confirmed catalog completion and identified SQL's stale unchecked tasks and preview's plan-only state. [YOU] Reconciled the three checklists with current source and recorded evidence, marking completed SQL work while separating unfinished acceptance checks. The [status correction](ai/sessions/2026-10-04-slice-task-status-correction.md) records verification and scope. Documentation checks passed; no runtime code changed or runtime tests reran.
