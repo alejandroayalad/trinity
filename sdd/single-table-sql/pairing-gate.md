@@ -1,10 +1,16 @@
 # Pairing gate: review SQL cases before writing the validator
 
 Date: 2026-10-04
-Status: Stop for alayala's case review. Core validator, SQL execution and HTTP endpoint are not implemented.
+Status: The paired whole-input/single-SELECT check is implemented. Full policy, SQL execution and HTTP endpoint remain unimplemented.
 Authority: alayala's explicit pair-programming instruction supersedes autonomous implementation of Step 2 in [tasks.md](tasks.md). The approved [specification](spec.md) and [design](design.md) remain the behavior targets.
 
 ## Human
+
+### Current paired step — whole input only
+
+Alayala supplied the `validate_single_statement` flow and authorized only this first check. [Implementation evidence](../../ai/sessions/2026-10-04-sql-single-statement-pairing.md) records ten passing focused tests and seven unchanged parser characterizations. A01 passes; B01/B02 and the original B03 (`;;`) fail. The latest single-`;` example passes. Table checks and comparisons 2–5 remain later paired steps.
+
+The strict length check currently rejects A24: SQLGlot emits an extra Semicolon node for a comment after the terminal semicolon. This is a known gap against the approved comment grammar, not a newly accepted restriction. Review its handling before completing the whole-input policy. A passing Select root does not authorize downloads or execution.
 
 ### Start with these five comparisons
 
@@ -32,7 +38,7 @@ From the repository root, run only the parser characterization checks:
 backend/.venv/bin/python -m unittest discover -s backend/tests -p 'test_sql_review_scaffold.py' -v
 ```
 
-The [fixture file](../../backend/tests/fixtures/sql_review_cases.json) contains 25 proposed allow cases, 52 proposed reject cases and four later engine-review cases. The [test scaffold](../../backend/tests/test_sql_review_scaffold.py) deliberately does not implement or import a validator. No production query module has been added. A passing scaffold is not a passing SQL security suite.
+The [fixture file](../../backend/tests/fixtures/sql_review_cases.json) contains 25 proposed allow cases, 52 proposed reject cases and four later engine-review cases. The [test scaffold](../../backend/tests/test_sql_review_scaffold.py) deliberately does not implement or import a validator. The separate single-statement check now exists; it is not the full policy. A passing scaffold is not a passing SQL security suite.
 
 ## LLM and pairing reference
 
@@ -204,8 +210,8 @@ One scope detail to resolve during review: A19 excludes URLs/external readers, w
 
 ### Stop point
 
-Done: pinned AST/API inspection, proposed matrix and seven parser-only characterizations.
-Pending: alayala's case review and human/AI implementation of the core validator. Its tests are not yet implemented or passing.
-Blocker: none for review; token-origin preservation and numeric compatibility are identified work, not validated solutions.
+Done: first paired single-statement check; ten focused tests and seven parser characterizations passed.
+Pending: A24 comment handling review, then paired table/token checks; full policy and engine acceptance remain unimplemented.
+Blocker: the strict count check rejects the approved A24 form.
 
-Next: [ME] review the five comparisons at the top and select the first validator check to pair on.
+Next: [ME] review the A24 parser result before expanding this check.

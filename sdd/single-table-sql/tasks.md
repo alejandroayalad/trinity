@@ -1,14 +1,14 @@
 # Tasks: One-table read-only SQL
 
 Date: 2026-10-04
-Status: Bounded pair-programming preparation authorized and completed; stop for human review before the core validator. No HTTP endpoint is authorized by the current request.
+Status: First paired whole-input/single-SELECT check implemented; stop for review before further policy. No HTTP endpoint is authorized.
 Branch/base: `feat/catalog-permissions`, `fde733b`; preserve concurrent catalog/API Docker work.
 Basis: approved [specification](spec.md), [design](design.md), [proposal](proposal.md), A16/A19.
 Evidence: [design/tasks session](../../ai/sessions/2026-10-04-single-table-sql-design-tasks.md).
 
 ## Human
 
-**Current authorization:** alayala requested AST/API inspection and minimum test preparation, then an explicit stop before core SQL validation. The [pairing review](pairing-gate.md) supplies the proposed cases and observed AST concepts. Alayala will review cases and implement or pair-program the validator. AI may add repetitive DataFusion compatibility infrastructure only after the validator works; alayala reviews failures and the security-sensitive execution path. Incremental local commits are authorized; pushes are not. This overrides autonomous execution of Step 2 below.
+**Current authorization:** after preparation, alayala supplied and authorized only the whole-input/single-statement validator flow. That function and ten focused tests are implemented; the full core validator remains incomplete. A24 trailing-comment handling needs review before completing this boundary. The [pairing review](pairing-gate.md) supplies the proposed cases and observed AST concepts. Alayala will review cases and implement or pair-program the validator. AI may add repetitive DataFusion compatibility infrastructure only after the validator works; alayala reviews failures and the security-sensitive execution path. Incremental local commits are authorized; pushes are not. This overrides autonomous execution of Step 2 below.
 
 The next implementation stage is policy and engine compatibility. It must prove the agreed SQL forms, exact numbers and safe rejection before file downloads. The endpoint comes after storage, shared capacity and container termination are verified.
 
@@ -25,13 +25,13 @@ Stages below are bounded review gates. All unchecked implementation items are fu
 - [ ] T03 [YOU] Recheck status/instructions and preserve current changes before each implementation stage. Explain input → processing → result and one failure case before code edits. Record actual human/AI contributions, corrections and measured checks in a unique implementation session.
 - [ ] T04 [YOU] Maintain findings when real source evidence appears; synthetic fixtures do not create selected anomalies, prove completeness or authorize live publication. [ME] Own any EIA-key commands, builds/clicks and evaluator walkthrough.
 
-Gate: design/tasks are reviewable. This ongoing duty stays open after implementation; current request authorizes only the bounded parser/API preparation described above.
+Gate: design/tasks are reviewable. This ongoing duty stays open after implementation; current request authorizes only the bounded single-statement step described above.
 
 ### Step 2 — SQL policy and real engine compatibility
 
 Requirements: R01–R07, R15–R17, R21. Scenarios: S01–S09, S17–S20 as applicable without a product endpoint.
 
-- [ ] T05 [ME] Review the proposed matrix and implement or pair-program the core whole-input SQLGlot validator. [YOU] AST/API inspection and seven parser-characterization tests are complete; do not implement closed query/policy messages or validation before this review. Cover every accepted D01 form and every populated AST argument; validate physical table/columns, typed dates, function arguments, comments and statement boundaries. Add bounded policy subprocess supervision, sanitized environment and timeout termination tests.
+- [ ] T05 [ME] Review the proposed matrix and implement or pair-program the core whole-input SQLGlot validator. [YOU] AST/API inspection and seven parser-characterization tests are complete; the supplied single-statement function and ten tests are now implemented, with A24 still a known gap. Stop before the table/token checks; closed query/policy messages remain pending. Cover every accepted D01 form and every populated AST argument; validate physical table/columns, typed dates, function arguments, comments and statement boundaries. Add bounded policy subprocess supervision, sanitized environment and timeout termination tests.
 - [ ] T06 [ME] After the core review, pair with [YOU] on trusted identifier/projection normalization and ordered public label/unit mapping. Prove duplicate labels, exact mixed-case names, ORDER BY alias resolution, NULLS LAST and round-trip agreement without expanding SQL authority.
 - [ ] T07 [YOU] Only after the validator works, add repetitive compatibility-test infrastructure. [ME] Review failures and the security-sensitive engine entrypoint. A later authorized implementation will provide a directly testable restricted DataFusion engine over temporary typed Parquet using selected options, one registered table and bounded output streaming. This is a test entrypoint, not a public route or an in-process production fallback.
 - [ ] T08 [YOU] After the paired validator and [ME]-reviewed execution path exist, run focused policy/engine tests and record exact decimal precision/scales, AVG/division/ROUND behavior, overflow/type failure and row/byte limits. Complete the installed-version AST/config/numeric matrix in the design evidence. Preserve dependency pins. If accepted grammar cannot meet the semantics, stop at this gate with a concrete fixture/result and recommended correction.
@@ -76,13 +76,13 @@ Gate: backend SQL acceptance complete only when its required evidence passes. Th
 | Evidence | Current status | Completion owner/boundary |
 |---|---|---|
 | Specification, design/tasks and document checks | Drafted/checked; specification approved | [YOU] Documentation only; design choices still need implementation verification. |
-| Policy, real engine and exact numbers | Seven parser characterizations passed; validator/engine acceptance not run | [YOU] Step 2 gate; no parser success treated as execution proof. |
+| Policy, real engine and exact numbers | Ten single-statement tests and seven parser characterizations passed; full policy/engine acceptance not run | [YOU] Step 2 gate; no parser success treated as execution proof. |
 | Real shared state and storage staging | Not run | [YOU] Step 3; no retained DB or cloud mutation. |
 | Real query isolation, lifecycle and complete HTTP path | Not run | [ME] Builds/start; [YOU] authorized tests in Steps 4–5. |
 | Retained-account, frontend and live published storage | Pending and separate | [ME] Operator/evaluator; frontend implementation remains outside this backend slice. |
 
-Done: approved design/tasks, AST/API inspection, proposed case matrix and seven parser-only checks.
-Pending: human case review and paired core-validator work under the current stop gate; DataFusion infrastructure follows only once the validator works.
-Blocker: none for planning completion; Docker was unavailable in the agent PATH and policy/engine/container acceptance has not been executed.
+Done: preparation and the first paired single-statement check; ten focused tests plus seven parser checks passed.
+Pending: A24 comment handling review, then paired physical-table and token checks. DataFusion infrastructure follows only after the full validator works.
+Blocker: A24 comment handling prevents full whole-input acceptance; later policy/engine/container acceptance remains unexecuted.
 
-Next: [ME] review the five comparisons in pairing-gate.md before writing the core validator.
+Next: [ME] review the A24 limitation in pairing-gate.md before expanding the check.

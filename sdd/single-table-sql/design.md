@@ -1,14 +1,14 @@
 # Design: One-table read-only SQL
 
 Date: 2026-10-04
-Status: Approved design with bounded pair-programming preparation completed. Stop before core validation; no HTTP implementation is authorized by the current request.
+Status: Approved design; only the paired whole-input/single-SELECT check is implemented. Full policy and HTTP implementation remain pending.
 Branch/base: `feat/catalog-permissions`, `fde733b`. Preserve existing catalog and API Docker work.
 Basis: approved [specification](spec.md), [proposal](proposal.md), [tasks](tasks.md), A16/A19 refinements in [DECISIONS.md](../../DECISIONS.md), and [A15 architecture](../../docs/backend.md).
 Evidence: [design/tasks session](../../ai/sessions/2026-10-04-single-table-sql-design-tasks.md).
 
 ## Human
 
-**Pairing boundary:** the latest user instruction reserves core-validator implementation for alayala or paired work after case review. Only AST/API inspection and minimum test preparation are complete; see [pairing-gate.md](pairing-gate.md). DataFusion compatibility infrastructure follows only after a working validator and human review of its security-sensitive execution path. The later stages below remain a design, not permission to execute them now.
+**Pairing boundary:** the latest user instruction reserves core-validator implementation for alayala or paired work after case review. The latest bounded step implements only the supplied single-statement flow; see [pairing-gate.md](pairing-gate.md). DataFusion compatibility infrastructure follows only after a working validator and human review of its security-sensitive execution path. The later stages below remain a design, not permission to execute them now.
 
 ### Input, work and result
 
