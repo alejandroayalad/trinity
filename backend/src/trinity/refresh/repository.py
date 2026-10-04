@@ -1,5 +1,13 @@
-"""Read Admin lifecycle state without executing any command."""
+"""Read safe refresh summaries and Admin lifecycle state without commands."""
 from trinity.errors import Problem
+
+
+def read_last_refresh(connection):
+    """Read only the public status and times of the greatest-sequence attempt."""
+    return connection.execute("""
+        SELECT status, requested_at, finished_at
+        FROM refresh_runs ORDER BY run_seq DESC LIMIT 1
+        """).fetchone()
 
 
 def read_context(connection):

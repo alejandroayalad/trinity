@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
 
 ## Setup
 
@@ -15,7 +15,7 @@ This installs the package and pinned backend dependencies from `uv.lock`. A chan
 
 ## Local API and three personas
 
-This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
+This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me`, `GET /api/v1/catalog` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
 
 Use PostgreSQL **17.11**. Root `compose.yaml` supplies PostgreSQL, pinned to `postgres:17.11-bookworm`, and the API built from `backend/Dockerfile`. Both use loopback ports; the database uses a persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization from a file. No existing database is migrated automatically. You can run the API in Docker (next section) or natively (steps 1–4 below). Both paths use the same Compose database.
 
@@ -105,7 +105,7 @@ An empty installation returns `waiting` for Viewer/Analyst and `setup` for Admin
 
 Sessions expire after eight hours and do not slide. Logout revokes only the current session. Every protected call re-reads the active user, session and current role. Shared PostgreSQL login limits are 5 attempts/username, 30/direct peer and 60 globally in each 60-second window; `429` includes `Retry-After`. Password work runs in bounded child processes and uses full-cost scrypt. Credentials, token digests, raw database errors and storage paths are absent from public responses.
 
-### Run authentication acceptance
+### Run authentication and catalog acceptance
 
 From `backend/`, with PostgreSQL 17.11 binaries installed:
 
@@ -115,9 +115,39 @@ uv run --locked python tests/run_local_auth_checks.py
 
 On macOS the default binary directory is `/opt/homebrew/opt/postgresql@17/bin`; elsewhere export `TRINITY_PG_BIN` to the directory containing `postgres`, `initdb`, `pg_ctl` and `createdb`. The runner verifies version 17.11, creates a temporary cluster with no TCP listener and a private owner-only Unix socket, seeds synthetic users, runs real PostgreSQL/HTTP checks and stops/removes only its own temporary cluster. It never connects to the configured application database. Tests require a non-root OS user, as PostgreSQL initdb does.
 
-The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables those tests. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
+The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables auth and catalog tests, including real loopback HTTP checks. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
 
 The implementation session records the exact runtime commands/results. Compose startup, the locked image install and a synthetic three-persona flow were verified on October 4, 2026 ([Docker session](../ai/sessions/2026-10-04-docker-local-setup.md)); an evaluator-owned walkthrough remains separate verification. Migration downgrade was tested only inside the disposable cluster; never use downgrade as recovery for retained application history.
+
+### Catalog metadata and operator check
+
+`GET /api/v1/catalog` accepts the existing bearer session, no parameters and no body. Viewer receives only `national_outages`; Analyst/Admin receive all three analytical definitions. The response contains columns, units, keys, filter names, the national metric definition and safe freshness. It reads no analytical files or live source data.
+
+Before publication it returns metadata with `data_ready=false` and `publication=null`. Once a publication exists, its dates remain distinct from `last_refresh`, which reports the greatest-sequence attempt even if it failed. Database failure returns an error rather than false empty state. Viewer keeps this metadata API access for dashboard support; Catalog and SQL navigation remain hidden in the future Viewer interface. This slice implements no frontend, preview rows or SQL execution.
+
+The three evidence categories remain separate:
+
+| Evidence | Current result |
+|---|---|
+| Offline tests | 236 regression checks passed, including 16 catalog checks; 36 opt-in database tests were skipped in that command and exercised separately below. |
+| Automated PostgreSQL/HTTP | The disposable runner passed 70 checks: 36 database-backed checks and 34 offline checks. Catalog's real HTTP test exercised all personas before and after synthetic publication. |
+| Your local operator check | Passed October 4 with retained Docker accounts and privately entered passwords for all three personas, with no active publication. See [operator evidence](../ai/sessions/2026-10-04-catalog-docker-operator-check.md). |
+
+For the operator check, keep your existing PostgreSQL setup and accounts. Start or restart the API from the updated checkout with `TRINITY_DATABASE_URL` set in that terminal. Using the existing virtual environment, from the repository root:
+
+```bash
+backend/.venv/bin/python -m uvicorn trinity.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
+```
+
+In a second terminal at the repository root:
+
+```bash
+backend/.venv/bin/python -m trinity.auth.check --catalog
+```
+
+The check prompts privately for each persona password and checks login, identity, settings permissions, permitted catalog metadata, logout and post-logout denial. It prints only a safe pass/fail summary for each persona. Empty publication state is a valid check outcome. It never publishes data or changes roles. Keep the default command without `--catalog` for the original auth-only check. The operator check does not replace the automated race, corrupted-state or outage tests.
+
+With uv available, the equivalent checker from `backend/` is `uv run --locked python -m trinity.auth.check --catalog`. This implementation used the existing CPython 3.14.8 virtual environment because uv was absent from the agent's PATH; every installed direct dependency matched its declared pin. That is not a fresh locked-install result. No new migration or dependency was added. See the [catalog implementation evidence](../ai/sessions/2026-10-04-catalog-permissions-implementation.md).
 
 ## EIA configuration
 

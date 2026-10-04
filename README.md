@@ -10,6 +10,8 @@ Current authentication handoff: [local login implementation](ai/sessions/2026-10
 
 Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines 22 HTTP operations (20 product operations plus local login/logout). [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine verification remains pending.
 
+**Catalog handoff — October 4, 2026:** `GET /api/v1/catalog` is implemented with national-only Viewer metadata, all three datasets for Analyst/Admin, and one consistent publication/freshness snapshot. The full regression run passed 236 offline tests; 36 opt-in database tests were skipped there and passed separately in the 70-check auth/catalog runner. Real loopback HTTP covered all personas with synthetic state. Your retained-account Docker operator check passed for all three personas with no active publication; see [operator evidence](ai/sessions/2026-10-04-catalog-docker-operator-check.md), [operator instructions](backend/README.md#catalog-metadata-and-operator-check) and [implementation evidence](ai/sessions/2026-10-04-catalog-permissions-implementation.md). Preview rows, SQL, frontend and query isolation remain later slices.
+
 ## Intended behavior
 
 | Role | Access |
@@ -92,10 +94,11 @@ Clerk is deferred production work behind `auth/service.py`; the challenge does n
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
 | [Parquet preparation proposal](sdd/parquet-preparation/proposal.md), [specification](sdd/parquet-preparation/spec.md), [design](sdd/parquet-preparation/design.md) and [tasks](sdd/parquet-preparation/tasks.md) | Steps 1–5 implemented, with 185 passing offline tests and authorized session closure. Real S3 protection and live preparation remain separate gates. |
 | [FastAPI/local login proposal](sdd/fastapi-local-auth/proposal.md), [specification](sdd/fastapi-local-auth/spec.md), [design](sdd/fastapi-local-auth/design.md) and [tasks](sdd/fastapi-local-auth/tasks.md) | Implemented A20 local-login slice; real PostgreSQL/HTTP evidence is in the linked tasks and session. Compose and evaluator walkthrough remain unverified. |
+| [Catalog and permissions proposal](sdd/catalog-permissions/proposal.md), [specification](sdd/catalog-permissions/spec.md), [design](sdd/catalog-permissions/design.md) and [tasks](sdd/catalog-permissions/tasks.md) | Step 5, slice 1 implemented and automated-tested; see the [implementation evidence](ai/sessions/2026-10-04-catalog-permissions-implementation.md). Retained-account operator check passed; frontend navigation remains pending. |
 | [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
 | [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |
 | [docs/security-contract.md](docs/security-contract.md) | Accepted A19 roles, SQL policy, container/S3 boundaries, admission, limits, retry rules and required verification. |
-| [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for 22 specified API operations; four are implemented by the local-login slice. |
+| [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for 22 specified API operations; five are implemented by the local-login and catalog slices. |
 | [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
 
