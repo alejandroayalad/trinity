@@ -65,8 +65,9 @@ The same final status inspection found a concurrent local change to
 AI read the revised working copy. It requires explanations of meaningful blocks,
 unfamiliar Python behavior, ownership, difficult rules, and unusual test inputs.
 Its reviewed Git blob hash is `326fa2a90aac0cf8cf5fc9e3084e81495ebf6e04`.
-AI preserved this local file and did not stage it. The code backfill follows these
-newer rules, while the user's rule changes remain uncommitted locally.
+AI initially preserved this local file without staging it. The code backfill
+follows these newer rules. Alayala subsequently authorized committing and pushing
+the rules too, as recorded below.
 
 The expanded pass adds explanations for environment loading, Pydantic validation,
 HTTP client ownership, regular-expression redaction, frozen dataclasses, per-call
@@ -87,6 +88,13 @@ The first two commits separate source documentation from test/evaluator evidence
 A third focused commit carries the expanded teaching explanations and updated
 verification notes. Existing commits remain intact. Commit and push are explicitly
 authorized; no PR or merge was requested.
+
+The expanded backfill was committed as `75de34b` and pushed. [ME] Alayala then
+explicitly requested committing and pushing both `CONTRIBUTING.md` and the backfill.
+[YOU] AI reviewed the rules diff and confirmed the same blob hash recorded above.
+A fourth documentation commit includes the user's unchanged rule text and updates
+these delivery notes. No Python changed after the last 59-test pass, so tests were
+not rerun for this documentation-only commit.
 
 Human review of the new wording remains open. A useful reading check is to explain
 why a short page does not finish collection: the client advances by the returned

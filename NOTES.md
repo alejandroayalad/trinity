@@ -232,8 +232,10 @@ Parquet work remains outside this scope.
 
 [YOU] After the first two commits were pushed, final status inspection found a
 concurrent local update to `CONTRIBUTING.md`. AI read the expanded teaching rules
-and extended the backfill to follow them. The local rules edit was preserved and
-excluded from AI's commits.
+and extended the backfill to follow them. AI initially preserved the local rules
+edit outside its commits. [ME] Alayala then explicitly requested committing and
+pushing both the rules and the backfill. [YOU] AI includes the unchanged rules
+text in a separate documentation commit under that authorization.
 
 [YOU] All 59 offline tests passed again on Python 3.14.8 using the existing environment
 and this worktree's source. An AST comparison confirmed unchanged executable code
