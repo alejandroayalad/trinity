@@ -14,6 +14,8 @@ Authorize before protected data reads, file downloads or query execution. Apply 
 
 ## Authentication and trusted roles
 
+Implementation update, October 4: [A21](../DECISIONS.md#a21--local-auth-implementation-settings) selects and records the tested local hash/session/throttle/database settings. [The implementation session](../ai/sessions/2026-10-04-fastapi-local-auth-implementation.md) distinguishes native PostgreSQL/HTTP evidence from still-unverified Compose, frontend and later feature routes. Earlier pending-detail statements below retain their original contract context; A21 closes only the listed local-auth defaults.
+
 A20 replaces Clerk with seeded local authentication for the challenge. Use accounts named `viewer`, `analyst`, and `admin`, one per persona. `auth/service.py` verifies credentials and issues opaque, unpredictable bearer session tokens. Store salted password hashes and session-token digests, never plaintext passwords or reusable tokens. The evaluator supplies seed passwords locally; no real credentials belong in Git, examples or logs. Exact hash library/parameters remain implementation details.
 
 Keep accounts and sessions in PostgreSQL as application state, unavailable to user SQL. Read the active account, unexpired/unrevoked session and current role on every authenticated product request, including polling. Do not cache session-status or role authority in v1. Roles are `viewer`, `analyst` and `admin`, assigned only by trusted seed/administrative code. Clients cannot supply authoritative roles or actor IDs. Derive action actors from the verified local identity; workers retain internal service authority.

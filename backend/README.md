@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; real S3 protection and live preparation are unverified. Product routes, authentication, PostgreSQL, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; real S3 protection and live preparation are unverified. Local login/logout, `/me`, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
 
 ## Setup
 
@@ -11,7 +11,68 @@ cd backend
 uv sync --locked
 ```
 
-This installs the package and pinned backend dependencies from `uv.lock`. A changed dependency definition without an updated lockfile must fail the locked installation. Installation and the health endpoint require no secrets or external services.
+This installs the package and pinned backend dependencies from `uv.lock`. A changed dependency definition without an updated lockfile must fail the locked installation. Installation and imports require no secrets or external services. API startup requires `TRINITY_DATABASE_URL`; health does not require a working database or EIA/S3/Redis credentials.
+
+## Local API and three personas
+
+This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
+
+Use PostgreSQL **17.11**. Root `compose.yaml` supplies the database only, pinned to `postgres:17.11-bookworm`, with a loopback port and persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization. Docker/Compose execution has not been tested on the implementation machine; real native PostgreSQL 17.11 was used for acceptance. No existing database is migrated automatically.
+
+1. From the repository root, supply a local database password and start PostgreSQL. In **zsh**, the hidden prompt keeps the value out of shell history:
+
+   ```zsh
+   read -rs 'TRINITY_POSTGRES_PASSWORD?Local PostgreSQL password: '
+   export TRINITY_POSTGRES_PASSWORD
+   docker compose up -d --wait postgres
+   ```
+
+2. Export `TRINITY_DATABASE_URL` locally. For Compose use the shape `postgresql://trinity:<URL-encoded-password>@127.0.0.1:15432/trinity`. Enter the complete real URL through a hidden prompt; `.env.example` contains only a placeholder. No `.env` file is loaded automatically.
+
+   ```zsh
+   read -rs 'TRINITY_DATABASE_URL?Local PostgreSQL URL: '
+   export TRINITY_DATABASE_URL
+   cd backend
+   uv run --locked alembic upgrade head
+   uv run --locked python -m trinity.auth.seed
+   ```
+
+   The seed command prompts only for missing `viewer`, `analyst` and `admin` passwords, 15–1024 characters. It stores salted hashes. Reruns preserve IDs, passwords, roles, account status and history. An existing persona with a different role or inactive status produces a safe failure; there is no automatic reset. Seed and migration commands must finish before product requests can succeed.
+
+3. Start one API process from `backend/`:
+
+   ```bash
+   uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
+   ```
+
+   Each API process permits two simultaneous password verifications and four database connections. The local acceptance target is one API process. Use HTTPS outside localhost; this slice configures no public ingress, proxy trust or browser token storage. Disabling access logs avoids recording attacker-supplied URL values.
+
+4. In a second terminal with the locked environment, run the safe HTTP check:
+
+   ```bash
+   cd backend
+   uv run --locked python -m trinity.auth.check
+   ```
+
+   It prompts for the three passwords, checks login → `/me` → settings permission → logout → denial, and prints only role/check/landing summaries. It never prints tokens or passwords. Do not paste login responses into logs or commit local secret files.
+
+An empty installation returns `waiting` for Viewer/Analyst and `setup` for Admin. Once shared setup exists, Admin gets `refresh_runs` until publication. Setup writes and refresh execution are later slices. A stored candidate does not become published merely because it exists. Unavailable authentication storage returns `503 auth_unavailable`; app-state read failure returns `503 dependency_unavailable`, not an empty-data response.
+
+Sessions expire after eight hours and do not slide. Logout revokes only the current session. Every protected call re-reads the active user, session and current role. Shared PostgreSQL login limits are 5 attempts/username, 30/direct peer and 60 globally in each 60-second window; `429` includes `Retry-After`. Password work runs in bounded child processes and uses full-cost scrypt. Credentials, token digests, raw database errors and storage paths are absent from public responses.
+
+### Run authentication acceptance
+
+From `backend/`, with PostgreSQL 17.11 binaries installed:
+
+```bash
+uv run --locked python tests/run_local_auth_checks.py
+```
+
+On macOS the default binary directory is `/opt/homebrew/opt/postgresql@17/bin`; elsewhere export `TRINITY_PG_BIN` to the directory containing `postgres`, `initdb`, `pg_ctl` and `createdb`. The runner verifies version 17.11, creates a temporary cluster with no TCP listener and a private owner-only Unix socket, seeds synthetic users, runs real PostgreSQL/HTTP checks and stops/removes only its own temporary cluster. It never connects to the configured application database. Tests require a non-root OS user, as PostgreSQL initdb does.
+
+The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables those tests. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
+
+The implementation session records the exact runtime commands/results. Compose startup, a clean locked installation and an evaluator-owned walkthrough remain separate verification. Migration downgrade was tested only inside the disposable cluster; never use downgrade as recovery for retained application history.
 
 ## EIA configuration
 
@@ -227,10 +288,10 @@ Command tests use synthetic HTTP and injected storage inside real child processe
 ## Start the API
 
 ```bash
-uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000
+uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
 ```
 
-Open http://127.0.0.1:8000/health for liveness or http://127.0.0.1:8000/docs for the scaffold's generated API documentation. Liveness does not establish data readiness or healthy external services. The root `docs/openapi.json` remains the planned product contract; it is not the running scaffold's schema.
+Open http://127.0.0.1:8000/health for liveness or http://127.0.0.1:8000/docs for the implemented API documentation. Liveness does not establish data readiness or healthy external services. The root `docs/openapi.json` remains the planned product contract; it includes operations beyond the running API.
 
 ## Check and build
 

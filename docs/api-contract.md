@@ -2,6 +2,8 @@
 
 Status: the supplied high-level API flow is approved by alayala on October 3, 2026, under [A16](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). Exact schemas below are AI-authored completion work requested by alayala. This is documentation, not a running application. [A17](../DECISIONS.md#a17--dependency-versions-and-update-policy-closed) records approved dependency versions. A18 accepts staged SQL scope; [A19 security contract](security-contract.md) records the agreed security design. Implementation and runtime verification remain pending.
 
+Implementation update, October 4: login/logout, `/me` and read-only `/settings` are implemented in the [local-auth slice](../ai/sessions/2026-10-04-fastapi-local-auth-implementation.md). The full 22-operation contract remains broader than the running app; later routes are not registered.
+
 ## Human overview
 
 The approved source is `trinity-api-contract-final.md`. Its six-part design is retained here, followed by exact requests, responses, errors, and recovery rules. Publication is fixed by validation and warnings; no Admin chooses a publication mode. A failed lifecycle holds new refreshes until recovery or abandonment. Your downloaded source file is unchanged.
