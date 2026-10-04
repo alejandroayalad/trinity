@@ -129,7 +129,7 @@ The three evidence categories remain separate:
 
 | Evidence | Current result |
 |---|---|
-| Offline tests | 236 regression checks passed, including 16 catalog checks; 36 opt-in database tests were skipped in that command and exercised separately below. |
+| Offline tests | 239 delivery regression checks passed, including 16 catalog checks; 36 opt-in database tests were skipped in that command and exercised separately below. |
 | Automated PostgreSQL/HTTP | The disposable runner passed 70 checks: 36 database-backed checks and 34 offline checks. Catalog's real HTTP test exercised all personas before and after synthetic publication. |
 | Your local operator check | Passed October 4 with retained Docker accounts and privately entered passwords for all three personas, with no active publication. See [operator evidence](../ai/sessions/2026-10-04-catalog-docker-operator-check.md). |
 
@@ -382,3 +382,5 @@ At October 4 closure, the existing CPython 3.14.8 environment passed 185 offline
 `src/trinity/main.py` creates the FastAPI application. `src/trinity/__init__.py` has no infrastructure initialization. `tests/` contains standard-library unittest tests, so no additional test framework is required.
 
 Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Steps 1–5 are implemented. Alayala authorized Step 5 delivery and session closure; real storage protection and live preparation remain separate verification gates. See the [session close and S3 handoff](../ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
+
+Current catalog delivery: [review and test evidence](../ai/sessions/2026-10-04-catalog-review-and-delivery.md), [SDD reading order](../sdd/catalog-permissions/README.md). Earlier test counts above retain their original session context.

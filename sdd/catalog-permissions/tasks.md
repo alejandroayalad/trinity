@@ -5,6 +5,8 @@ Status: Implemented and automated-tested October 4, 2026 after alayala authorize
 Branch: `feat/catalog-permissions`
 Basis: [proposal](proposal.md), approved [specification](spec.md), [design](design.md), A9/A15–A17/A19–A21.
 
+Current focused delivery: [review and verification](../../ai/sessions/2026-10-04-catalog-review-and-delivery.md). On the delivery branch, 239 offline tests passed (36 database skips); all 70 auth/catalog acceptance checks passed separately. Earlier counts below describe the initial implementation run.
+
 ## Human
 
 The specification is approved, including newest-attempt freshness. The implementation provides national-only Viewer metadata and all-three-dataset metadata for Analyst/Admin. Viewer remains dashboard-only in the later interface.
