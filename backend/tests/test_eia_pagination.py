@@ -17,6 +17,7 @@ _END = date(2026, 10, 5)
 
 
 def rows_for(dataset, count):
+    """Build synthetic rows with distinct natural keys for the requested route."""
     rows = []
     for index in range(count):
         row = {
@@ -36,6 +37,7 @@ def rows_for(dataset, count):
 
 
 def response(rows, total=None):
+    """Wrap synthetic rows in an EIA response with an optional advertised total."""
     body = {"response": {"frequency": "daily", "data": rows}, "apiVersion": "2.1.14"}
     if total is not None:
         body["response"]["total"] = str(total)

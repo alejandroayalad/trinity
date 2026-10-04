@@ -220,3 +220,17 @@ Status: implementation and human review complete; session closed. Local/live ext
 ## Contributing and comment rules — October 3, 2026
 
 [ME] Alayala paused the Parquet slice and wrote rules for comments, docstrings and slice entry points, so that AI-generated code is readable for human review. [YOU] AI stashed the unfinished normalization files, added his text as `CONTRIBUTING.md` without changes, and linked it from `AGENTS.md` and `README.md`. No code or tests ran. Existing code has not been checked against the new rules. See the [session](ai/sessions/2026-10-03-contributing-comment-rules.md).
+
+## Python comment backfill — October 3, 2026
+
+[ME] Alayala requested a branch from main, comments and docstrings under
+`CONTRIBUTING.md`, commits, and a push. [YOU] AI reviewed all 15 tracked Python
+files and changed nine, adding public API summaries, slice overviews, and brief
+reasons for non-obvious rules. The six remaining files already had sufficient
+explanations. Separate unfinished Parquet work remains outside this scope.
+
+[YOU] All 59 offline tests passed on Python 3.14.8 using the existing environment
+and this worktree's source. An AST comparison confirmed unchanged executable code
+across all 15 files. The health docstring adds a generated OpenAPI description.
+No build or live EIA check ran. The [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md)
+records scope, command/environment details, corrections, and remaining human review.

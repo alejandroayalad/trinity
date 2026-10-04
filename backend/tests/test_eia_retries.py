@@ -16,6 +16,7 @@ _KEY = "synthetic-retry-key"
 
 
 def success():
+    """Return an empty synthetic page that passes response validation."""
     return httpx.Response(
         200, json={"response": {"frequency": "daily", "total": "0", "data": []}}
     )
