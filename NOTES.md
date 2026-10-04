@@ -188,3 +188,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## EIA pagination — October 3, 2026
 
 [ME] Alayala requested complete page collection, combined route records and page/record count checks against available metadata. [YOU] AI added bounded pagination, empty-page confirmation, duplicate and total checks, result counters and 14 regression tests. All 32 offline tests passed. The live gate now includes pagination but remains unrun without an environment key. Facility total mismatches remain evidence under A5/A9. No new data finding is claimed. See the [pagination session](ai/sessions/2026-10-03-eia-pagination.md).
+
+## Bounded EIA retries — October 3, 2026
+
+[ME] Alayala requested temporary-failure retries, a three-attempt limit, short backoff and no retries for permanent errors. [YOU] AI added the A19 three-total-attempt policy with one-/three-second waits, an HTTP status allowlist, selected temporary transport failures and a total page deadline inside the existing route deadline. Eleven new tests plus the updated prior checks pass: 43 offline tests total. No live EIA request was made. See the [retry session](ai/sessions/2026-10-03-eia-bounded-retries.md).

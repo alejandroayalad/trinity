@@ -8,7 +8,7 @@ import json
 import logging
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from urllib.parse import quote_plus
 
 import httpx
@@ -130,8 +130,8 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
                     await client.fetch_national_page(**{"start": _DAY, "end": _DAY, **change})
         self.assertEqual(calls, [])
 
-    async def test_http_failures_do_not_retry_or_follow_redirects(self) -> None:
-        for status in (301, 401, 403, 429, 500):
+    async def test_permanent_http_failures_do_not_retry_or_follow_redirects(self) -> None:
+        for status in (301, 400, 401, 403, 404, 501):
             calls = []
 
             def handler(request):
@@ -154,9 +154,10 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
             def handler(request):
                 raise error_type(f"unsafe URL {request.url}", request=request)
 
-            async with EIAClient(transport=httpx.MockTransport(handler)) as client:
-                with self.assertRaises(EIAClientError) as caught:
-                    await client.fetch_national_page(start=_DAY, end=_DAY)
+            with patch("trinity.connector.client.sleep", new_callable=AsyncMock):
+                async with EIAClient(transport=httpx.MockTransport(handler)) as client:
+                    with self.assertRaises(EIAClientError) as caught:
+                        await client.fetch_national_page(start=_DAY, end=_DAY)
             self.assertEqual(caught.exception.code, code)
             self.assertNotIn(_KEY, str(caught.exception))
             self.assertNotIn(quote_plus(_KEY), str(caught.exception))

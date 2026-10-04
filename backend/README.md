@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health` and a shared EIA client with one-page and paginated methods for all three routes. Product routes, authentication, retries/retrieval records, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. Product routes, authentication, retrieval records, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -45,7 +45,15 @@ async def fetch_pages():
     return national, facility, generator
 ```
 
-All methods accept `start` and `end` as dates, a nonnegative `offset` (default 0), and `length` from 1 to 5,000 (default 5,000). Each method makes exactly one request with daily frequency, all three measurements and ascending sorting by the route's daily key. The client uses HTTPS, rejects redirects, and applies HTTPX I/O timeouts of 30 seconds (10 seconds for connection setup). These are not a total extraction deadline.
+The one-page methods accept `start` and `end` as dates, a nonnegative `offset` (default 0), and `length` from 1 to 5,000 (default 5,000). Each returns one validated response page, with at most three identical request attempts for temporary failures. Requests use daily frequency, all three measurements and ascending sorting by the route's daily key. The client uses HTTPS and rejects redirects. HTTPX I/O timeouts remain 30 seconds (10 seconds for connection setup); a separate 30-second total page deadline now covers all attempts, waits and response processing.
+
+### Retry policy
+
+Retry HTTP 429, 500, 502, 503 and 504 with at most **three total attempts**. Wait **one second** before attempt two and **three seconds** before attempt three. Do not wait after the final failure or a success. Connection/read/write timeouts, interrupted reads/writes and remote protocol errors use the same bounded policy.
+
+HTTP statuses outside that allowlist, including 400/401, fail immediately. Arbitrary connection errors (which may indicate TLS/configuration problems), pool timeouts, local protocol errors, invalid JSON, HTTP-200 API error bodies and failed response validation are not retried.
+
+Retries preserve route, date bounds, offset, page size and all other request parameters. A retry never resets either the page deadline or the enclosing route deadline. Expiry during a request or backoff stops further attempts. Caller cancellation propagates without retry. Page expiry reports `request_deadline`; route expiry reports `pagination_deadline`.
 
 `EIAResponsePage.data` contains source rows with strings and unit metadata preserved. `response` retains sanitized source metadata; `total` is the parsed advertised count, `api_version` identifies the API release, and `warnings` preserves sanitized top-level warnings. Empty pages are valid. The facility advertised total is not used to infer completeness.
 
@@ -57,7 +65,7 @@ After exporting `EIA_API_KEY`, run this explicit live gate from `backend/`:
 uv run --locked python tests/live_eia.py -v
 ```
 
-It checks one page and then paginated extraction for each route on October 1, 2026. The paginated check uses a page size of 50, at most 25 responses and a 120-second deadline per route. It compares local page/row counts and supplied totals under the route-specific rules below. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
+It checks one page and then paginated extraction for each route on October 1, 2026. The paginated check uses a page size of 50, at most 25 page fetches and a 120-second deadline per route. Each page fetch can make up to three attempts. It compares local page/row counts and supplied totals under the route-specific rules below. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
 
 ### Fetch all pages for a route
 
@@ -85,7 +93,7 @@ Each collection starts at offset zero and advances by the actual number of retur
 
 EIA supplies a record total, not a separate page count. `minimum_data_pages` is a derived lower bound: short nonterminal pages can increase the actual count. No expected count is invented when metadata is missing.
 
-The implementation defaults to `max_pages=1000` (including the empty probe) and `timeout_seconds=300` for the entire route collection. Both are configurable positive bounds, not EIA guarantees or measured performance targets. Exhausting either limit raises `page_limit` or `pagination_deadline`; partial rows are never returned as success. These route-extraction bounds are separate from analytical query limits. Retries, persistent retrieval records, numeric normalization, full-window/cross-route validation and Parquet remain pending. Successful pagination is not proof that a candidate is ready for publication.
+The implementation defaults to `max_pages=1000` (including the empty probe) and `timeout_seconds=300` for the entire route collection. Each page fetch permits at most three attempts, so network attempts are bounded by 3 × max_pages as well as the deadline. Result page counts count successful validated responses, not failed attempts. Both pagination bounds are configurable, not EIA guarantees or measured performance targets. Exhausting either limit raises `page_limit` or `pagination_deadline`; partial rows are never returned as success. These route-extraction bounds are separate from analytical query limits. Persistent retrieval records, numeric normalization, full-window/cross-route validation and Parquet remain pending. Successful pagination is not proof that a candidate is ready for publication.
 
 ### Start the API
 
@@ -102,7 +110,7 @@ uv run --locked python -m unittest discover -s tests -v
 uv build
 ```
 
-Verified on CPython 3.14.8 with uv 0.12.23: 32 health, configuration and mocked EIA client/pagination tests pass. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
+Verified on CPython 3.14.8 with uv 0.12.23: 43 health, configuration and mocked EIA client/pagination/retry tests pass. Retry tests assert three-attempt exhaustion, exact backoff calls, permanent-error rejection, unchanged parameters, deadline handling and cancellation. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
 
 ## Layout and next slice
 

@@ -1,6 +1,7 @@
-"""Shared EIA requests and bounded pagination. Retry orchestration is still pending."""
+"""Shared EIA requests with bounded pagination and temporary-failure retries."""
 
 import asyncio
+from asyncio import sleep
 from dataclasses import dataclass
 from datetime import date
 import logging
@@ -22,6 +23,13 @@ _ROUTES = {
 }
 _KEY_IN_URL = re.compile(r"(api_key=)[^&\s\"']+", re.IGNORECASE)
 _PRIVATE_FIELDS = {"request", "api_key", "apikey", "authorization", "cookie", "set-cookie"}
+_RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
+_RETRY_DELAYS = (1.0, 3.0)
+_PAGE_TIMEOUT_SECONDS = 30.0
+_RETRYABLE_TRANSPORT_ERRORS = (
+    httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
+    httpx.ReadError, httpx.WriteError, httpx.RemoteProtocolError,
+)
 
 
 class _RedactAPIKey(logging.Filter):
@@ -333,17 +341,46 @@ class EIAClient:
             params[f"sort[{index}][column]"] = field
             params[f"sort[{index}][direction]"] = "asc"
 
+        deadline = asyncio.get_running_loop().time() + _PAGE_TIMEOUT_SECONDS
         try:
-            reply = await self._http.get(route, params=params)
-        except httpx.TimeoutException:
-            raise EIAClientError("timeout") from None
-        except httpx.HTTPError:
-            raise EIAClientError("transport_error") from None
-        if reply.status_code != 200:
-            raise EIAClientError("http_error", status_code=reply.status_code)
-        try:
-            payload = reply.json()
-        except (ValueError, UnicodeError):
-            raise EIAClientError("invalid_json") from None
-        sanitized = _sanitize(payload, secret)
-        return _validate_page(sanitized, key_fields, start, end, length)
+            async with asyncio.timeout_at(deadline):
+                reply = await self._request_with_retries(route, params)
+                try:
+                    payload = reply.json()
+                except (ValueError, UnicodeError):
+                    raise EIAClientError("invalid_json") from None
+                sanitized = _sanitize(payload, secret)
+                page = _validate_page(sanitized, key_fields, start, end, length)
+                if asyncio.get_running_loop().time() >= deadline:
+                    raise EIAClientError("request_deadline")
+                return page
+        except TimeoutError:
+            raise EIAClientError("request_deadline") from None
+
+    async def _request_with_retries(
+        self, route: str, params: dict[str, str]
+    ) -> httpx.Response:
+        """At most three identical GET attempts; validation is never retried."""
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                reply = await self._http.get(route, params=params)
+            except _RETRYABLE_TRANSPORT_ERRORS as error:
+                code = "timeout" if isinstance(error, httpx.TimeoutException) else "transport_error"
+                failure = EIAClientError(code)
+            except httpx.TimeoutException:
+                # Pool acquisition failure is local, not a temporary EIA response.
+                raise EIAClientError("timeout") from None
+            except httpx.HTTPError:
+                # Do not retry arbitrary configuration, TLS, or protocol failures.
+                raise EIAClientError("transport_error") from None
+            else:
+                if reply.status_code == 200:
+                    return reply
+                failure = EIAClientError("http_error", status_code=reply.status_code)
+                if reply.status_code not in _RETRYABLE_STATUSES:
+                    raise failure
+            if attempt == 3:
+                raise failure from None
+            await sleep(_RETRY_DELAYS[attempt - 1])

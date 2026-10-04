@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import date, timedelta
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 
@@ -219,10 +219,11 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
                 calls.append(request)
                 return response(rows_for("national", 1)) if len(calls) == 1 else failure
 
-            async with EIAClient(transport=httpx.MockTransport(handler)) as client:
-                with self.assertRaises(EIAClientError):
-                    await client.fetch_national(start=_START, end=_END)
-            self.assertEqual(len(calls), 2)
+            with patch("trinity.connector.client.sleep", new_callable=AsyncMock):
+                async with EIAClient(transport=httpx.MockTransport(handler)) as client:
+                    with self.assertRaises(EIAClientError):
+                        await client.fetch_national(start=_START, end=_END)
+            self.assertEqual(len(calls), 4 if failure.status_code == 503 else 2)
 
     async def test_page_budget_fails_instead_of_truncating(self):
         rows = rows_for("national", 2)
