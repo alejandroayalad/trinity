@@ -2,7 +2,7 @@
 
 Date: 2026-10-03
 Basis: [specification](spec.md) and the five steps in [design](design.md).
-Current authorization: the user requested committing and pushing Steps 2–3, then starting Step 4 on `feat/parquet-preparation`. Step 4 covers the trusted storage adapter and offline verification. Command integration and publication remain outside this change. No live EIA/S3 calls or session notes.
+Current authorization: the user requested committing and pushing Step 4, then continuing with Step 5 on `feat/parquet-preparation`. Step 5 covers command integration and offline verification. Publication remains outside this change. No live EIA/S3 calls or session notes.
 
 Maintain data evidence — ongoing. Preserve actual source evidence; synthetic tests are not new anomaly findings.
 
@@ -36,9 +36,10 @@ Gate passed by the user's request to commit, push and start Step 4. No publicati
 
 ## Step 4 — Store immutable artifacts
 
-- [ ] Implement conditional writes, collision handling, readback SHA-256 and final bundle verification through the trusted adapter.
-- [ ] Test S25/S34–S35 with injected storage behavior, including ambiguous writes and incomplete prefixes.
+- [x] Implement conditional writes, collision handling, readback SHA-256 and final bundle verification through the trusted adapter.
+- [x] Test S25/S34–S35 with injected storage behavior, including ambiguous writes and incomplete prefixes.
 - [ ] Verify actual configured storage protection separately before claiming real immutability.
+- [x] User authorizes committing and pushing Step 4, and continuing with Step 5.
 
 Gate: successful exact-file validation; real writes require authorization and configured storage.
 
@@ -110,3 +111,26 @@ Results: **34 focused tests passed; 135 full offline tests passed**, including t
 Diff reviewed; whitespace checks passed for tracked changes and both new Step 3 files. The existing Starlette/HTTPX deprecation warning remains. Source/wheel builds and real EIA/S3 checks were not run; no packaging or dependency files changed, and live calls remain excluded. No PostgreSQL/publication changes, commits or pushes. Step 4 remains unstarted.
 
 Delivery update: the user authorized two focused implementation commits and a push, followed by Step 4. The historical uncommitted/no-push statements above describe the original review handoffs. Before delivery, all 135 offline tests passed again.
+
+## Step 4 verification and review handoff
+
+Steps 2–3 were committed as `3330093` (frozen files) and `ba4dd9e` (validation) and pushed to `origin/feat/parquet-preparation`. HEAD and the remote-tracking branch both identify `ba4dd9e`. Step 4 remains local and uncommitted above that revision. No dependency/lockfile changes, live EIA/S3 calls, application-state writes or session notes.
+
+`adapters/s3.py::S3Storage` creates objects with `IfNoneMatch="*"`, streams GET bytes for SHA-256/size verification and closes response bodies on success/failure. Prefix reservation uses a random preparation token. A first reservation conflict stops before data uploads. Ambiguous writes require identical readback; missing bytes permit only bounded conditional retries. Different bytes, permanent errors and unresolved writes fail without replacement. SDK retries are disabled; temporary operations allow three attempts with one/three-second waits inside the 300-second stage budget. Connect/read timeouts are five/ten seconds. Each object is capped at 64 MiB before upload. Checks between operations/chunks do not replace Step 5's hard process supervisor.
+
+`connector/pipeline.py::store_candidate` reuses `verify_validation`, binds the upload snapshot to original validated hashes, and stores all data/manifest/source/validation/detail artifacts. Local `evidence/storage-<token>/` retains the plan, reservation, synced progress and result/failure. Storage execution journals stay local; completed validation journals are uploaded unchanged. It freezes and uploads `bundle.json` last, rechecks every remote member, then verifies saved local evidence before returning a receipt with `published=False`. A warning-bearing candidate retains its review requirement. `verify_stored_candidate` checks the receipt, complete journal, bundle and every remote member; no prefix listing or standalone result marker establishes success.
+
+`config.py::S3Settings` and `load_s3_settings` validate trusted bucket/prefix/region and an optional HTTPS endpoint. Credentials use the existing SDK provider chain; no key is recorded in settings or errors. `.env.example` and backend instructions describe the implemented library boundary. Preparation-command integration, publication and storage provisioning remain excluded.
+
+From `backend/`, using CPython 3.14.8, PyArrow 25.0.1 and boto3/botocore 1.43.108:
+
+```bash
+.venv/bin/python -m unittest discover -s tests -p test_s3.py -q
+.venv/bin/python -m unittest discover -s tests -q
+```
+
+Results: **32 focused storage tests passed; 167 full offline tests passed**, including all 135 prior regressions. Tests use synthetic three-day reconciled Parquet candidates, a conditional in-memory storage double and pinned-SDK `Stubber`. S25/S34–S35 cover changed local files, partial uploads, readback failures/corruption, ambiguous writes including the final bundle, exact byte collisions, concurrent reservations and concurrent complete stores. Additional storage-boundary checks cover warning retention, safe configuration/errors, cancellation, interrupted streams, finite retry/deadline behavior, persistence/sync failure, local evidence corruption and later receipt verification. These do not assert command exits or hard storage-process termination; those remain Step 5.
+
+Diff reviewed; tracked and new-file whitespace checks passed. The existing Starlette/HTTPX deprecation warning remains. No formatter, linter or type checker is configured. Source/wheel builds were not run because packaging and dependencies are unchanged. No real storage protection claim: private access, conditional-write policy enforcement, denied delete/version-delete/policy changes and retained-prefix lifecycle settings need a separately authorized check against configured storage. An alternative endpoint must prove equivalent protection.
+
+Delivery update: the user authorized committing and pushing Step 4, then continuing with Step 5. All 167 offline tests passed again before delivery. Real storage verification remains a separate, unexecuted gate.

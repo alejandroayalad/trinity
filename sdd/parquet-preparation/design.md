@@ -1,7 +1,7 @@
 # Design: typed Parquet candidate preparation
 
 Date: 2026-10-03
-Status: Step 1 authorized with the clarifications below. Schemas/parsing implemented; human diff review required before Step 2. Later steps remain unimplemented.
+Status: Steps 1–3 delivered. Step 4 storage implementation is authorized; actual checks and remaining gates are recorded in [tasks.md](tasks.md). Step 5 is unstarted. The mechanisms below retain the original staged design.
 Basis: [proposal](proposal.md), [specification](spec.md), [canonical contract](../../docs/schema.md) and [A15 module boundaries](../../docs/backend.md).
 
 ## Human
@@ -73,7 +73,7 @@ Return `0` only for the complete verified stored candidate, including completed 
 
 ### 5. Small implementation steps
 
-Maintain data evidence — ongoing. Record actual new source observations through the existing findings workflow; synthetic fixtures are not anomalies. [tasks.md](tasks.md) derives from these five steps; only Step 1 is authorized now:
+Maintain data evidence — ongoing. Record actual new source observations through the existing findings workflow; synthetic fixtures are not anomalies. [tasks.md](tasks.md) derives from these five steps and records current authorization:
 
 | Step | Change and independently runnable check |
 |---|---|
@@ -85,4 +85,4 @@ Maintain data evidence — ongoing. Record actual new source observations throug
 
 Each step first runs its focused unittest module, then relevant existing tests. The completed slice runs `uv run --locked python -m unittest discover -s tests -v`. Step 1's actual commands/results are in [tasks.md](tasks.md); its in-memory Arrow checks do not prove saved-Parquet behavior. S3 policy checks and new live extraction remain pending.
 
-Current gate: human diff review of Step 1. Do not start Step 2 until authorized. D06 evaluation and durable failed-validation evidence are later-step requirements, not Step 1 runtime behavior.
+Current gate: human diff review of Step 4 and separate configured-storage verification. Step 5 requires authorization. Historical Step 1 checks alone did not prove the later validation or storage behavior; see [tasks.md](tasks.md) for each step's evidence.
