@@ -23,7 +23,14 @@ class HealthResponse(BaseModel):
 
 
 def create_app(*, settings=None, service=None) -> FastAPI:
-    """Create the API; explicit dependency injection is reserved for tests."""
+    """Return the API with local authentication, settings, and liveness routes.
+
+    Register startup and shutdown hooks without opening a database here.
+    Startup loads the supplied or environment settings and opens the database pool.
+    Tests can supply an authentication service to skip database initialization.
+    Close the pool on shutdown or if authentication service creation fails.
+    Health reports process liveness only; it does not prove data readiness.
+    """
     @asynccontextmanager
     async def lifespan(application):
         database = None
@@ -49,11 +56,14 @@ def create_app(*, settings=None, service=None) -> FastAPI:
     application.include_router(router)
     application.include_router(settings_router)
 
+    # The decorator registers this handler; the response model fixes the JSON shape.
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:
+        """Report process liveness without checking data or external services."""
         return HealthResponse()
 
     return application
 
 
+# Uvicorn imports this object through "trinity.main:app"; startup needs no EIA key.
 app = create_app()

@@ -23,6 +23,7 @@ _KEY = "synthetic+key/for-tests"
 
 def page_payload(dataset: str = "national") -> dict:
     """Synthetic values, not evidence of an EIA observation."""
+    # Keep decimal text and leading-zero IDs so accidental numeric conversion is visible.
     row = {
         "period": _DAY.isoformat(),
         "capacity": "100.000000",
@@ -50,6 +51,8 @@ def page_payload(dataset: str = "national") -> dict:
 
 class EIAClientTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self) -> None:
+        # Each async test gets its own event loop and a synthetic environment key.
+        # Register cleanup now so a failed test cannot leave that environment installed.
         self.environment = patch.dict(os.environ, {"EIA_API_KEY": _KEY}, clear=True)
         self.environment.start()
         self.addCleanup(self.environment.stop)
@@ -86,6 +89,8 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
             seen.append(dataset)
             return httpx.Response(200, json=page_payload(dataset))
 
+        # MockTransport runs the handler instead of making network requests. The
+        # client still builds real HTTPX requests, so parameter and redaction checks apply.
         async with EIAClient(transport=httpx.MockTransport(handler)) as client:
             for dataset in ("national", "facility", "generator"):
                 with self.subTest(dataset=dataset):
@@ -131,6 +136,7 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls, [])
 
     async def test_permanent_http_failures_do_not_retry_or_follow_redirects(self) -> None:
+        # A redirect includes another host to expose accidental credential forwarding.
         for status in (301, 400, 401, 403, 404, 501):
             calls = []
 
@@ -163,6 +169,8 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(quote_plus(_KEY), str(caught.exception))
 
     async def test_api_body_errors_and_malformed_pages_are_rejected(self) -> None:
+        # HTTP success can contain API errors or invalid data. Change one shape
+        # or value at a time to exercise each validation group with synthetic payloads.
         bad = [
             ({"error": _KEY, "code": 400}, "api_error"),
             ({"response": {"error": _KEY}}, "api_error"),
@@ -216,6 +224,8 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(caught.exception.code, "invalid_json")
 
     async def test_optional_percent_is_preserved_and_secret_echoes_are_removed(self) -> None:
+        # Echo both plain and URL-encoded forms. Removing only the request field
+        # would still leak credentials from warnings and nested values.
         payload = deepcopy(page_payload())
         del payload["response"]["data"][0]["percentOutage"]
         payload["warning"] = "synthetic warning"
@@ -233,6 +243,8 @@ class EIAClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.warnings["warning"], "synthetic warning")
 
     async def test_httpx_logging_masks_the_encoded_key(self) -> None:
+        # Capture HTTPX's normal INFO output, where request URLs can expose keys.
+        # Restore the logger in finally because it is shared across test cases.
         output = io.StringIO()
         handler = logging.StreamHandler(output)
         logger = logging.getLogger("httpx")

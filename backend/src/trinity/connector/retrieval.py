@@ -8,6 +8,8 @@ import json
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
+    # Type checkers need the collection name. Runtime avoids a circular import
+    # because client.py imports these evidence types too.
     from trinity.connector.client import EIACollection
 
 
@@ -15,9 +17,11 @@ RetrievalStatus = Literal["success", "failed", "cancelled", "skipped"]
 
 
 def utc_now() -> datetime:
+    """Return the current time with an explicit UTC timezone."""
     return datetime.now(UTC)
 
 
+# frozen=True prevents field replacement; evidence values are set at construction.
 @dataclass(frozen=True)
 class RetrievalAttempt:
     """One actual HTTP attempt, including failures; never contains request secrets."""
@@ -58,11 +62,13 @@ class RetrievalMetadata:
     attempts: tuple[RetrievalAttempt, ...]
 
     def to_dict(self, *, include_attempts: bool = True) -> dict:
-        # JSON dates are UTC ISO 8601; sanitized_response is the exact UTF-8
-        # string whose bytes were hashed, not a reserialized source object.
+        """Return JSON-ready evidence; omit attempts for a compact route summary."""
+        # Keep sanitized_response unchanged so its UTF-8 bytes still match the hash.
+        # asdict copies nested dataclasses; removing attempts does not change this record.
         result = asdict(self)
         if not include_attempts:
             result.pop("attempts")
+        # Encode dates/times as ISO text and tuples as JSON arrays, then return a dict.
         return json.loads(json.dumps(result, default=lambda value: value.isoformat()))
 
 
@@ -75,6 +81,7 @@ class RetrievalTracker:
     start: date | None
     end: date | None
     sort_fields: tuple[str, ...]
+    # Factories run for each tracker, so calls share neither timestamps nor attempt lists.
     started_at: datetime = field(default_factory=utc_now)
     pages_fetched: int = 0
     records_fetched: int = 0
@@ -85,6 +92,9 @@ class RetrievalTracker:
         self, status: RetrievalStatus, *, error_code: str | None = None,
         error_message: str | None = None,
     ) -> RetrievalMetadata:
+        """Snapshot this call's evidence with a final status and completion time."""
+        # Copy attempts into a tuple so later list appends cannot change the snapshot.
+        # Counts on failure describe fetched evidence, not a usable partial dataset.
         return RetrievalMetadata(
             dataset=self.dataset, route=self.route, started_at=self.started_at,
             completed_at=utc_now(), pages_fetched=self.pages_fetched,

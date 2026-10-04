@@ -295,3 +295,33 @@ Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the
 ## October 1–2 live preparation passed — October 4, 2026
 
 [ME] Alayala authorized a new two-day version, all validation checks, S3 upload/readback, preservation of both previous failures and exact uncommitted-code evidence, keeping the candidate unpublished. [YOU] AI ran the existing command to exit 0: version `9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae`, all 16 required checks passed, all 23 diagnostics completed, zero review warnings. The known facility total mismatch remains informational. A fresh process invoked the existing verifier and checked all 50 S3 objects with exact sizes/SHA-256, no EIA requests and no S3 writes. Both prior runs (7 and 51 files) and the tested code remained unchanged. The candidate is `stored_unpublished`; no publication or Git delivery occurred. The [evidence package](evidence/live-preparation/2026-10-04-october-1-2/README.md) preserves the exact patch, file hashes, local CRT environment limitation, parent receipt and independent result; the [session](ai/sessions/2026-10-04-october-1-2-live-preparation.md) records scope and contributions. October 3/full-history readiness and fresh locked setup remain separate.
+
+## Python comment backfill — October 3, 2026
+
+[ME] Alayala requested a branch from main, comments and docstrings under
+`CONTRIBUTING.md`, commits, and a push. [YOU] AI reviewed all 15 tracked Python
+files and changed 13, adding public API summaries, slice overviews, and explanations
+of processing steps, Python behavior, validation examples, and test mocks. The two
+package initializers already explain their import behavior. Separate unfinished
+Parquet work remains outside this scope.
+
+[YOU] After the first two commits were pushed, final status inspection found a
+concurrent local update to `CONTRIBUTING.md`. AI read the expanded teaching rules
+and extended the backfill to follow them. AI initially preserved the local rules
+edit outside its commits. [ME] Alayala then explicitly requested committing and
+pushing both the rules and the backfill. [YOU] AI includes the unchanged rules
+text in a separate documentation commit under that authorization.
+
+[YOU] All 59 offline tests passed again on Python 3.14.8 using the existing environment
+and this worktree's source. An AST comparison confirmed unchanged executable code
+across all 15 files. The health docstring adds a generated OpenAPI description.
+No build or live EIA check ran. The [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md)
+records scope, command/environment details, corrections, and remaining human review.
+
+
+[ME] On October 4, alayala authorized merging and pushing the four comment-backfill
+commits to main. [YOU] AI reconciled older comments with current authentication and
+preparation code without changing executable statements. All 60 Python ASTs match
+pre-merge main after removing docstrings; 223 offline tests passed and 25 opt-in
+PostgreSQL tests were skipped. See the main-integration section in the
+[backfill session](ai/sessions/2026-10-03-python-comment-backfill.md).

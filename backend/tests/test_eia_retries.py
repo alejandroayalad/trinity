@@ -16,6 +16,7 @@ _KEY = "synthetic-retry-key"
 
 
 def success():
+    """Return an empty synthetic page that passes response validation."""
     return httpx.Response(
         200, json={"response": {"frequency": "daily", "total": "0", "data": []}}
     )
@@ -23,11 +24,14 @@ def success():
 
 class RetryTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        # Use an isolated synthetic key; every HTTP request uses a local mock transport.
         environment = patch.dict(os.environ, {"EIA_API_KEY": _KEY}, clear=True)
         environment.start()
         self.addCleanup(environment.stop)
 
     async def test_each_retryable_status_stops_after_three_attempts(self):
+        # AsyncMock replaces retry sleeps, so tests can assert exact delays without
+        # waiting four seconds for each status. Request attempts still execute.
         for status in (429, 500, 502, 503, 504):
             with self.subTest(status=status):
                 requests = []
@@ -95,6 +99,8 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(backoff.await_args_list, [call(1.0)] if first_status else [])
 
     async def test_http_200_body_errors_and_bad_json_are_never_retried(self):
+        # Retry decisions use transport/HTTP failures. Malformed successful bodies
+        # reach validation once; retrying them would hide permanent source problems.
         for reply in (
             httpx.Response(200, json={"error": "upstream error", "code": 500}),
             httpx.Response(200, text="not JSON"),
@@ -181,6 +187,8 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         backoff.assert_awaited_once_with(1.0)
 
     async def test_page_deadline_interrupts_backoff_without_another_attempt(self):
+        # An unset Event keeps backoff pending until the page deadline cancels it.
+        # This exposes an incorrect retry that starts after the deadline expires.
         requests = []
 
         def handler(request):
@@ -199,6 +207,8 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(requests), 1)
 
     async def test_collection_deadline_interrupts_backoff_without_resetting(self):
+        # Keep the normal page limit, but shorten the whole-route limit. This
+        # proves retry waits stay inside the route budget as well as the page budget.
         requests = []
 
         def handler(request):
@@ -216,6 +226,8 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(requests), 1)
 
     async def test_caller_cancellation_is_not_retried(self):
+        # Wait for the backoff signal before cancelling, so the test does not depend
+        # on task scheduling speed. Cancellation must propagate without another GET.
         requests = []
         sleeping = asyncio.Event()
 
