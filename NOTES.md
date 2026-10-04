@@ -197,3 +197,10 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Retrieval records and orchestration — October 3, 2026
 
 [ME] Alayala requested metadata for successful and failed retrievals and one command for all routes. [YOU] AI added per-call route metadata, sanitized attempt evidence/checksums, one shared-client orchestration function and a JSONL command. It continues after route failure, reports missing-key failures for all routes, preserves cancellation, refuses output overwrite and returns meaningful exit codes. All 59 offline tests passed on CPython 3.14.8, including 16 new retrieval/command tests. The existing retry-pagination test now checks metadata counts. Locked installation and module help passed. No live EIA call or new data finding is claimed. The [same continuous session, stage 6](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-6--retrieval-metadata-and-orchestration-command) records semantics, command-check corrections and persistence limits. Human review, the live gate, normalization and Parquet remain pending.
+
+## Connector session closed after review — October 3, 2026
+
+[ME] Alayala confirmed that the final diff was reviewed and correct, requested closing the implementation session/slice with the local fetch still pending, and explicitly authorized merging PR #4. The reviewed implementation head is `edbde7cb9f1160a9bfc0e1de80323fee8b409c3b`.
+[YOU] AI recorded this acceptance in the [same session](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#session-close--reviewed-implementation-local-fetch-pending) and prepared a merge commit preserving the existing history. This close is documentation-only. The latest executed suite passed 59 offline tests; no tests were rerun and no live EIA request was made during closure.
+
+Status: implementation and human review complete; session closed. Local/live extraction remains pending and the live/full-challenge gates remain unpassed. Next: execute the documented fixed-window command locally with EIA_API_KEY and inspect all three outcomes.
