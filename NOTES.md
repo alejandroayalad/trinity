@@ -411,3 +411,33 @@ The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implemen
 ## Dataset preview Step 2 — October 4, 2026
 
 [ME] Alayala authorized pure input validation, signed cursors and response models without an active publication; the candidate must stay unpublished until publication linkage is implemented and verified. [YOU] Added three separate preview modules and 28 offline tests, preserving existing SQL implementation and frozen evidence. Focused checks passed 28/28; the full offline suite passed 320 tests with 52 runtime checks skipped (372 total). The [Step 2 evidence](ai/sessions/2026-10-04-dataset-preview-step-2.md) records the initial test-guard correction, exact commands, model-location refinement and remaining gates. No preview route, actual shared debit, publication mutation, database/cloud operation or retained-account operator check occurred. Human continuation review and later-stage authorization remain pending.
+
+## Python comment backfill — October 3, 2026
+
+[ME] Alayala requested a branch from main, comments and docstrings under
+`CONTRIBUTING.md`, commits, and a push. [YOU] AI reviewed all 15 tracked Python
+files and changed 13, adding public API summaries, slice overviews, and explanations
+of processing steps, Python behavior, validation examples, and test mocks. The two
+package initializers already explain their import behavior. Separate unfinished
+Parquet work remains outside this scope.
+
+[YOU] After the first two commits were pushed, final status inspection found a
+concurrent local update to `CONTRIBUTING.md`. AI read the expanded teaching rules
+and extended the backfill to follow them. AI initially preserved the local rules
+edit outside its commits. [ME] Alayala then explicitly requested committing and
+pushing both the rules and the backfill. [YOU] AI includes the unchanged rules
+text in a separate documentation commit under that authorization.
+
+[YOU] All 59 offline tests passed again on Python 3.14.8 using the existing environment
+and this worktree's source. An AST comparison confirmed unchanged executable code
+across all 15 files. The health docstring adds a generated OpenAPI description.
+No build or live EIA check ran. The [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md)
+records scope, command/environment details, corrections, and remaining human review.
+
+
+[ME] On October 4, alayala authorized merging and pushing the four comment-backfill
+commits to main. [YOU] AI reconciled older comments with current authentication and
+preparation code without changing executable statements. All 60 Python ASTs match
+pre-merge main after removing docstrings; 223 offline tests passed and 25 opt-in
+PostgreSQL tests were skipped. See the main-integration section in the
+[backfill session](ai/sessions/2026-10-03-python-comment-backfill.md).

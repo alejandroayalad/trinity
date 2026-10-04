@@ -23,6 +23,7 @@ KEY = "synthetic-retrieval-secret"
 
 class RetrievalTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        # Isolate credentials for each test. Local mock handlers supply all HTTP data.
         env = patch.dict(os.environ, {"EIA_API_KEY": KEY}, clear=True)
         env.start()
         self.addCleanup(env.stop)
@@ -46,6 +47,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(meta.requested_start, DAY)
 
     async def test_each_route_failure_keeps_counts_and_exhausted_retries(self):
+        # Fetch one valid page, then fail every retry. Evidence must retain the
+        # fetched row and failed attempts without exposing a partial collection.
         for dataset in DATASETS:
             def handler(request):
                 if request.url.params["offset"] == "0":
@@ -64,6 +67,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn(KEY, json.dumps(meta.to_dict()))
 
     async def test_saved_response_checksum_and_redaction(self):
+        # Recompute the hash from the saved text. Hashing the unsanitized response
+        # would give a different identity and could not verify the stored evidence.
         payload = {"apiVersion": "2.1", "request": {"api_key": KEY}, KEY: "echoed field name",
                    "warning": f"echo {KEY}", "authorization": "private", "cookie": "private",
                    "response": {"frequency": "daily", "total": "0", "data": []}}
@@ -84,6 +89,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(meta["sort_fields"], ["period"])
 
     async def test_http_api_json_and_shape_failures_have_safe_metadata(self):
+        # Separate the route's validation error from what the HTTP attempt saw.
+        # Missing an API error field does not make a malformed response valid.
         cases = [(httpx.Response(401, text=KEY), "http_error", "invalid_json"),
                  (httpx.Response(200, text=KEY), "invalid_json", "invalid_json"),
                  (httpx.Response(200, json={"error": KEY}), "api_error", "error"),
@@ -129,6 +136,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(meta.attempts), 1)
 
     async def test_deadline_during_request_records_interruption(self):
+        # The attempt sees cancellation; the route owns the deadline that caused it.
+        # Keeping both codes distinguishes an interrupted request from caller cancellation.
         async def handler(request):
             await asyncio.Event().wait()
         async with EIAClient(transport=httpx.MockTransport(handler)) as client:
@@ -154,6 +163,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(KEY, json.dumps(caught.exception.metadata.to_dict()))
 
     async def test_concurrent_calls_keep_counters_separate(self):
+        # gather runs both routes on one client. return_exceptions keeps the failed
+        # route available for inspection alongside the successful route's counters.
         def handler(request):
             return httpx.Response(401) if "facility-nuclear" in request.url.path else response([], 0)
         async with EIAClient(transport=httpx.MockTransport(handler)) as client:
@@ -194,6 +205,8 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result.metadata.attempts, ())
 
     async def test_cancellation_records_interrupted_and_skipped_routes(self):
+        # Signal the first request before cancelling. The remaining routes have
+        # not started, so their records must contain no HTTP attempts.
         started = asyncio.Event()
         async def handler(request):
             started.set()
@@ -215,6 +228,7 @@ class CommandTests(unittest.TestCase):
         return ["--start", "2026-10-01", "--end", "2026-10-01", "--output", str(path)]
 
     def test_configuration_failure_saves_three_results(self):
+        # Use a temporary output directory so command tests never overwrite user evidence.
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "retrieval.jsonl"
             output = io.StringIO()
@@ -227,6 +241,8 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(len(output.getvalue().splitlines()), 3)
 
     def test_success_and_failure_exit_codes_with_saved_attempts(self):
+        # Replace only client construction to inject MockTransport. The real
+        # command still creates, writes, flushes, and syncs its temporary evidence file.
         for fail in (False, True):
             def handler(request):
                 return httpx.Response(401) if fail and "facility-nuclear" in request.url.path else response([], 0)
@@ -256,6 +272,8 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(path.read_text(), "keep this")
 
     def test_write_failure_is_nonzero_and_safe(self):
+        # Make fsync fail after the write. A file can exist without confirmed
+        # persistence; the command must fail and hide the exception's private text.
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "retrieval.jsonl"
             error = io.StringIO()

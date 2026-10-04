@@ -1,4 +1,10 @@
-"""Opt-in live check: export EIA_API_KEY, then run this file explicitly."""
+"""Check all three live EIA routes for one fixed date using EIA_API_KEY.
+
+Run this file explicitly; default test discovery excludes it.
+Require a nonempty page and bounded pagination for each route.
+These checks do not establish full-window coverage or publication readiness.
+Missing credentials, request failures, and failed assertions fail the run.
+"""
 
 from datetime import date
 import unittest
@@ -8,7 +14,7 @@ from trinity.connector.client import EIAClient
 
 class LiveEIATests(unittest.IsolatedAsyncioTestCase):
     async def test_one_nonempty_page_from_each_route(self) -> None:
-        # A fixed date within A9's supported history makes this check reproducible.
+        # A fixed date keeps repeated checks on the same source window.
         day = date(2026, 10, 1)
         async with EIAClient() as client:
             for fetch in (
@@ -22,6 +28,8 @@ class LiveEIATests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(page.data[0]["period"], day.isoformat())
 
     async def test_paginated_counts_for_each_route(self) -> None:
+        # Unlike offline mocks, this uses the real service. An empty final page
+        # proves route exhaustion for this date, not complete source coverage.
         day = date(2026, 10, 1)
         async with EIAClient() as client:
             for fetch in (client.fetch_national, client.fetch_facility, client.fetch_generator):
@@ -36,6 +44,8 @@ class LiveEIATests(unittest.IsolatedAsyncioTestCase):
                         sum(len(page.data) for page in result.pages), result.record_count
                     )
                     if result.dataset != "facility" and result.advertised_total is not None:
+                        # Preserve the known facility total disagreement as evidence.
+                        # Other routes must agree with any supplied total.
                         self.assertTrue(result.total_matches)
                         self.assertGreaterEqual(result.data_page_count, result.minimum_data_pages)
 
