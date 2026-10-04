@@ -17,7 +17,52 @@ This installs the package and pinned backend dependencies from `uv.lock`. A chan
 
 This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
 
-Use PostgreSQL **17.11**. Root `compose.yaml` supplies the database only, pinned to `postgres:17.11-bookworm`, with a loopback port and persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization. Docker/Compose execution has not been tested on the implementation machine; real native PostgreSQL 17.11 was used for acceptance. No existing database is migrated automatically.
+Use PostgreSQL **17.11**. Root `compose.yaml` supplies PostgreSQL, pinned to `postgres:17.11-bookworm`, and the API built from `backend/Dockerfile`. Both use loopback ports; the database uses a persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization from a file. No existing database is migrated automatically. You can run the API in Docker (next section) or natively (steps 1–4 below). Both paths use the same Compose database.
+
+### Run with Docker Compose
+
+Requires Docker Compose with support for environment-sourced secrets. Verified with Docker 29.8.1 and Compose v5.5.1 on macOS arm64.
+
+| Setting | Where it comes from |
+|---|---|
+| `TRINITY_POSTGRES_PASSWORD` | Your shell only. Compose passes it as the secret `/run/secrets/postgres_password` to both containers. It is not in the image, the database URL, `docker inspect` or `docker compose config`. |
+| `TRINITY_DATABASE_URL` | Set in `compose.yaml` without a password: `postgresql://trinity@postgres:5432/trinity`. `backend/docker-entrypoint.sh` reads the secret into libpq `PGPASSWORD`. |
+| Ports | API `127.0.0.1:8000`, PostgreSQL `127.0.0.1:15432`. Nothing is published on other interfaces. |
+| Data | Named volume `trinity_postgres_data`. It survives `docker compose down` and image rebuilds. `docker compose down -v` deletes it. |
+
+The image uses CPython 3.14.8 and uv 0.12.23, installs only from `uv.lock` (`uv sync --locked --no-dev`) and runs as a non-root user. `backend/.dockerignore` keeps `.env` files, `.venv`, `artifacts/` and tests out of the build context.
+
+1. From the repository root, supply the password and start both services. The API waits until PostgreSQL is healthy:
+
+   ```zsh
+   read -rs 'TRINITY_POSTGRES_PASSWORD?Local PostgreSQL password: '
+   export TRINITY_POSTGRES_PASSWORD
+   docker compose up -d --build --wait
+   ```
+
+   An unset password stops `up` with an error. An empty password stops PostgreSQL before it creates the database. PostgreSQL uses the password only when it first creates the volume; a later different value does not change it and logins fail.
+
+2. Apply migrations and create the three personas. Use `docker compose run`, not `docker compose exec`: `exec` skips the entrypoint, so the database password is not available. `run` gives the seed command the terminal it needs for hidden password input.
+
+   ```zsh
+   docker compose run --rm api alembic upgrade head
+   docker compose run --rm api python -m trinity.auth.seed
+   ```
+
+   Before migration, `/health` returns `200` but login returns `503 auth_unavailable`.
+
+3. Check the API. `/health` reports process liveness only. The persona check does not use the database password, so `exec` is correct here:
+
+   ```zsh
+   curl -s http://127.0.0.1:8000/health
+   docker compose exec api python -m trinity.auth.check
+   ```
+
+4. Stop the services and keep the data with `docker compose down`. Rebuild after code changes with `docker compose up -d --build --wait`. New migrations need step 2 again.
+
+All host clients reach the containerized API through one Docker gateway address. The per-peer login limit (30 per 60 seconds) therefore applies to all local clients together. The EIA connector, S3 preparation, Redis/BullMQ workers and query containers are not part of this Compose setup yet.
+
+### Run the API natively
 
 1. From the repository root, supply a local database password and start PostgreSQL. In **zsh**, the hidden prompt keeps the value out of shell history:
 
@@ -72,7 +117,7 @@ On macOS the default binary directory is `/opt/homebrew/opt/postgresql@17/bin`; 
 
 The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables those tests. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
 
-The implementation session records the exact runtime commands/results. Compose startup, a clean locked installation and an evaluator-owned walkthrough remain separate verification. Migration downgrade was tested only inside the disposable cluster; never use downgrade as recovery for retained application history.
+The implementation session records the exact runtime commands/results. Compose startup, the locked image install and a synthetic three-persona flow were verified on October 4, 2026 ([Docker session](../ai/sessions/2026-10-04-docker-local-setup.md)); an evaluator-owned walkthrough remains separate verification. Migration downgrade was tested only inside the disposable cluster; never use downgrade as recovery for retained application history.
 
 ## EIA configuration
 
