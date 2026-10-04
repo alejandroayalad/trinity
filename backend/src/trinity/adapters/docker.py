@@ -100,11 +100,17 @@ class Docker:
 
     def verify(self,info,reservation):
         """Refuse launch if the daemon did not retain every required restriction."""
+        if info['Config']['Cmd'] != ['-m', 'trinity.queries.runtime']:
+            raise Problem(503, 'dependency_unavailable')
+        self._verify_isolation(info, reservation)
+
+    def _verify_isolation(self, info, reservation):
+        """Check the image, owner, mounts and resource restrictions on the actual container."""
         host,config=info['HostConfig'],info['Config']
         expected={'trinity.query':str(reservation['request_id']),'trinity.deployment':str(reservation['deployment_id'])}
         mounts=host.get('Mounts',[])
         if (info['Image']!=self.image or config['User']!='10001:10001' or config['Tty']
-                or config['Entrypoint']!=['/opt/venv/bin/python'] or config['Cmd']!=['-m','trinity.queries.runtime']
+                or config['Entrypoint']!=['/opt/venv/bin/python']
                 or any(config.get('Labels',{}).get(k)!=v for k,v in expected.items())
                 or host['NetworkMode']!='none' or not host['ReadonlyRootfs'] or host.get('Privileged')
                 or host.get('CapAdd') or host.get('Devices') or host['CapDrop']!=['ALL']

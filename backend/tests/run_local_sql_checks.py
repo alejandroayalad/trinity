@@ -10,10 +10,24 @@ import sys
 import tempfile
 from urllib.parse import quote
 import unittest
+import argparse
 
 
 def main():
     """Create a temporary cluster, run checks and always stop our own server."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--preview', action='store_true', help='Include preview database/HTTP acceptance')
+    parser.add_argument('--all', action='store_true', help='Include auth/catalog and preview acceptance')
+    parser.add_argument('--runtime-only', action='store_true', help='Run only preview container acceptance')
+    parser.add_argument('--failfast', action='store_true', help='Stop after the first failure and clean the cluster')
+    args = parser.parse_args()
+    patterns = ['test_sql_postgres.py']
+    if args.preview or args.all:
+        patterns.extend(('test_preview_postgres.py', 'test_preview_runtime.py'))
+    if args.all:
+        patterns.extend(('test_auth_postgres.py', 'test_catalog_postgres.py'))
+    if args.runtime_only:
+        patterns = ['test_preview_runtime.py']
     binary = Path(os.environ.get("TRINITY_PG_BIN", "/opt/homebrew/opt/postgresql@17/bin"))
     version = subprocess.check_output([str(binary / "postgres"), "--version"], text=True).strip()
     if version.split()[:3] != ["postgres", "(PostgreSQL)", "17.11"]:
@@ -40,9 +54,9 @@ def main():
                 "postgresql://trinity_test_owner@/trinity_test_sql?host=" + quote(str(socket), safe=""))
             suite = unittest.TestSuite([
                 unittest.defaultTestLoader.discover(str(backend / "tests"), pattern=pattern)
-                for pattern in ("test_sql_postgres.py",)
+                for pattern in patterns
             ])
-            result = unittest.TextTestRunner(verbosity=2).run(suite)
+            result = unittest.TextTestRunner(verbosity=2, failfast=args.failfast).run(suite)
             print(f"Database acceptance runtime: {version}; disposable Unix-socket cluster.")
             return 0 if result.wasSuccessful() else 1
         finally:
