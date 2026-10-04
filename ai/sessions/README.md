@@ -2,7 +2,7 @@
 
 Start with the relevant theme, then follow its dated records. Filenames and paths stay unchanged so existing evidence links remain valid. Each session has one primary theme; cross-topic links inside the record preserve related decisions. Earlier statements describe their historical gate, not current authorization or delivery status.
 
-The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates requirements, design, implementation and measured review evidence. The active continuation branch is `feat/catalog-permissions`: catalog and SQL are committed, and preview planning is preserved. The synchronized delivery branch is retained only as an equal reference. See the [reconciliation record](2026-10-04-catalog-sql-preview-reconciliation.md) for remaining implementation and runtime gates.
+The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates requirements, design, implementation and measured review evidence. The active continuation branch is `feat/catalog-permissions`: catalog and SQL are committed, and preview Step 2 groundwork is implemented offline. The synchronized delivery branch is retained only as an equal reference. See the [reconciliation record](2026-10-04-catalog-sql-preview-reconciliation.md) for remaining implementation and runtime gates.
 
 | Theme | Records |
 |---|---:|
@@ -12,7 +12,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Connector, Parquet and storage](#connector-parquet-and-storage) | 8 |
 | [Architecture and contracts](#architecture-and-contracts) | 13 |
 | [SQL implementation](#sql-implementation) | 9 |
-| [Dataset previews](#dataset-previews) | 3 |
+| [Dataset previews](#dataset-previews) | 4 |
 | [Delivery and working practices](#delivery-and-working-practices) | 7 |
 
 ## Catalog and permissions
@@ -81,6 +81,8 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-04 — SQL pairing — terminal semicolon and comments](2026-10-04-sql-terminal-comment-pairing.md)
 
 ## Dataset previews
+
+- [2026-10-04 — Dataset preview Step 2: offline groundwork](2026-10-04-dataset-preview-step-2.md)
 
 - [2026-10-04 — Dataset preview design and tasks — October 4, 2026](2026-10-04-dataset-preview-design-tasks.md)
 - [2026-10-04 — Dataset preview SDD proposal — October 4, 2026](2026-10-04-dataset-preview-proposal.md)

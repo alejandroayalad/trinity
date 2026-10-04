@@ -384,3 +384,24 @@ At October 4 closure, the existing CPython 3.14.8 environment passed 185 offline
 Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Steps 1–5 are implemented. Alayala authorized Step 5 delivery and session closure; real storage protection and live preparation remain separate verification gates. See the [session close and S3 handoff](../ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
 
 Current catalog delivery: [review and test evidence](../ai/sessions/2026-10-04-catalog-review-and-delivery.md), [SDD reading order](../sdd/catalog-permissions/README.md). Earlier test counts above retain their original session context.
+
+
+## Preview groundwork — Step 2
+
+`queries/preview.py` validates decoded query pairs and separates primitive parsing
+from semantic checks after the future shared rate debit. `queries/cursors.py`
+authenticates bounded, publication-bound cursors. `queries/preview_schemas.py`
+validates canonical columns, exact decimal strings, explicit diagnostic input,
+complete-key pages and the 5 MiB response limit. No preview endpoint is enabled.
+
+Run the focused offline checks from `backend/`:
+
+```sh
+.venv/bin/python -m unittest discover -s tests -p 'test_preview_unit.py' -v
+```
+
+Tests use synthetic publications and public test key bytes. No active publication
+or configured secret is needed. Real key configuration, shared rate storage,
+publication/evidence linkage and isolated execution remain integration work.
+The stored candidate stays unpublished. See [Step 2 evidence](../ai/sessions/2026-10-04-dataset-preview-step-2.md)
+and the [remaining stages](../sdd/dataset-preview/tasks.md).

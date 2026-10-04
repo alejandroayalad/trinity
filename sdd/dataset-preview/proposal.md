@@ -1,7 +1,7 @@
 # Proposal: Filtered, paginated dataset previews
 
 Date: 2026-10-04
-Status: Proposal approved October 4, 2026 when alayala requested the [specification](spec.md). The specification and D01–D03 are approved; [design](design.md)/[tasks](tasks.md) are drafted under the subsequent continuation request. Implementation remains separately authorized.
+Status: Proposal approved October 4, 2026 when alayala requested the [specification](spec.md). The specification and D01–D03 are approved; [design](design.md)/[tasks](tasks.md) are drafted under the subsequent continuation request. Step 2 is now separately authorized and implemented offline; see [implementation evidence](../../ai/sessions/2026-10-04-dataset-preview-step-2.md). Later stages remain pending.
 Inspected branch/HEAD: `feat/catalog-permissions`, `7d2e001`; SQL pairing and other uncommitted work are active in the same checkout and remain outside this change.
 Basis: A4, A9, A13–A21 in [DECISIONS.md](../../DECISIONS.md), the [API contract](../../docs/api-contract.md#preview-and-filter-choices), [OpenAPI](../../docs/openapi.json), and [security contract](../../docs/security-contract.md).
 Evidence: [proposal session](../../ai/sessions/2026-10-04-dataset-preview-proposal.md).

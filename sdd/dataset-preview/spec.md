@@ -1,7 +1,7 @@
 # Specification: Filtered, paginated dataset previews
 
 Date: 2026-10-04
-Status: Specification approved October 4, 2026 when alayala confirmed D01–D03. A16 records strict preview inputs and cursor continuity; A19 records shared rate accounting. The [design](design.md) and [tasks](tasks.md) are drafted under the subsequent continuation request. Implementation remains separately authorized.
+Status: Specification approved October 4, 2026 when alayala confirmed D01–D03. A16 records strict preview inputs and cursor continuity; A19 records shared rate accounting. The [design](design.md) and [tasks](tasks.md) are drafted under the subsequent continuation request. Step 2 is now separately authorized and implemented offline; see [implementation evidence](../../ai/sessions/2026-10-04-dataset-preview-step-2.md). Later stages remain pending.
 Branch: `feat/catalog-permissions`; inspected HEAD `e851e28`. Concurrent SQL work is preserved.
 Basis: [approved proposal](proposal.md), [API contract](../../docs/api-contract.md#preview-and-filter-choices), [OpenAPI](../../docs/openapi.json), [data contract v1](../../docs/schema.md), [security contract](../../docs/security-contract.md), [backend structure](../../docs/backend.md), and A9/A15–A21 in [DECISIONS.md](../../DECISIONS.md).
 Evidence: [specification session](../../ai/sessions/2026-10-04-dataset-preview-specification.md).
@@ -28,7 +28,7 @@ Failure example: an Analyst gets a facility cursor, then their stored role becom
 | D02 — Shared rate accounting | Count one authorized, well-shaped preview attempt before semantic filter/cursor/publication checks. Subsequent failures retain the debit. Use SQL's same per-user rolling budget, not a second preview quota. |
 | D03 — Cursor lifecycle | Defaults come from the pinned publication. A valid continuation requires the same active publication and effective filters. Cursors have no time-only expiry while their publication and signing key remain valid; reauthorize every use. |
 
-Alayala confirmed these refinements; they are recorded under A16/A19. His term “installation” refers to the existing `facility` field: selecting a specific `generator` requires its `facility`. This does not make a facility filter mandatory for an unfiltered generator-dataset preview. Existing role, page-size, publication and isolation rules remain mandatory. Cursor encoding/signing implementation remains design work.
+Alayala confirmed these refinements; they are recorded under A16/A19. His term “installation” refers to the existing `facility` field: selecting a specific `generator` requires its `facility`. This does not make a facility filter mandatory for an unfiltered generator-dataset preview. Existing role, page-size, publication and isolation rules remain mandatory. Cursor encoding/signing now has offline Step 2 implementation; deployment and endpoint integration remain pending.
 
 ## LLM
 
@@ -212,6 +212,8 @@ Scenario labels are independent of SQL's A/B examples. None has run for this spe
 ### Integration, evidence and remaining design work
 
 The proposal's absent-module inventory described its inspection time. During this specification inspection, concurrent SQL work had added `queries/repository.py`, `0003_query_admission.py` and changes to publication pinning. Their presence is not runtime acceptance and this workstream neither edits nor reviews them as completed delivery. Reinspect their final interfaces before design. Reuse the shared runner, admission and serialization path once authorized and verified; never install a duplicate preview executor or parallel rate/capacity tables.
+
+**Confirmed saved-evidence baseline:** the [October 1–2 live preparation record](../../evidence/live-preparation/2026-10-04-october-1-2/README.md) includes 16 required passes, 23 completed/frozen diagnostics, zero review warnings and recorded independent verification of 50 objects. It explicitly remains unpublished. Reuse existing frozen evidence; verify its connection to publication and preview. The existence of saved evidence is established; active-publication binding and preview runtime acceptance remain separate checks.
 
 Design must choose bounded cursor encoding/authentication and deployment key handling, strict transport parsing, typed preview runtime messages/expressions, shared artifact/diagnostic resolution and supervision interfaces. It must prove the selected DataFusion ordering/decimal semantics with the pinned libraries. Any new migration, dependency, shared contract change or security setting needs its concrete justification and the applicable authorization before execution. No library defaults are silently accepted here.
 

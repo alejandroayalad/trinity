@@ -14,7 +14,7 @@ Design mechanics use standard-library HMAC-SHA-256 with a bounded canonical payl
 
 The typed preview operation must extend shared runtime envelopes and result dispatch in coordination with SQL, preserving SQL policy revalidation and public behavior. A matched producer/runtime protocol and image are required; incompatible messages fail closed. Current shared lifecycle files exist, but this planning inspection is not proof they pass runtime acceptance.
 
-## Concrete dependency discovered
+## Initial dependency assessment — narrowed by subsequent evidence correction
 
 Current QueryResponse permits only empty diagnostics. The inspected publication pin carries public metadata/manifest identity, but not the complete frozen diagnostic projection required by preview. The three inspected migrations do not create A9 validation_results. Therefore the design requires the canonical complete producer/read model before delivery; absence cannot be represented by diagnostics=[]. Reinspect after concurrent work, reuse authoritative persistence where supplied, and coordinate any missing migration/producer prerequisite rather than silently implementing refresh/publication or activating a candidate.
 
@@ -32,3 +32,17 @@ Done: preview design/tasks drafted, shared interface boundaries and provenance d
 Pending: implementation authorization and all three preview evidence categories.
 Blocker: no planning blocker; shared-runtime acceptance and complete frozen provenance are prerequisites to endpoint delivery.
 Next: [ME] authorize Step 2 or select the bounded implementation scope.
+
+## Correction: stored evidence already exists
+
+[ME] Alayala corrected the initial assessment: reuse existing frozen evidence and verify its connection to publication and preview. [YOU] Read the retained [live-preparation README](../../evidence/live-preparation/2026-10-04-october-1-2/README.md), verification summary, bundle inventory and independent-readback receipt. These records confirm 16 required passes; 23 completed diagnostics (22 pass and one informational D09 finding); diagnostics_frozen=true; zero warnings; and a successful recorded independent readback of 50 objects. The bundle lists 49 members; the fiftieth object is bundle.json. published=false remains explicit.
+
+The earlier inference from absent PostgreSQL validation_results to an assumed missing producer/persistence prerequisite was too broad. The saved evidence already exists outside that proposed table. This correction takes precedence over the initial dependency wording above. The current design/tasks now require reuse and verification of active-publication → version/manifest → trusted evidence bundle/attempt/checkset → frozen diagnostics, with only demonstrated linkage/reader gaps to be implemented. No assumption of a new evidence store or re-running validation is justified by the inspected schema.
+
+This turn reviewed saved local evidence; it did not repeat S3 GETs or live preparation, inspect/change the active database pointer, publish the candidate or modify SQL code. All 50-object readback claims refer to the recorded independent run. The two-day evidence does not establish full-history preparation or preview runtime success. The existing evidence files were not modified.
+
+Done: stored candidate and validation evidence confirmed; design/tasks and status wording corrected.
+Pending: verify publication/preview integration and shared runtime when implementation is authorized.
+Blocker: no evidence-persistence blocker established.
+
+Correction checks passed: saved receipt/count consistency; local bundle/manifest SHA-256 identity against the recorded readback; validation/diagnostics summary hashes found in bundle members; 32 local links/anchors and balanced fences across four corrected artifacts; `git diff --check`. No runtime or cloud checks were repeated.

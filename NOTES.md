@@ -402,3 +402,12 @@ The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implemen
 ## Next slice: Refresh and publication — October 4, 2026
 
 [ME] Alayala selected Step 5, Refresh and publication: persist the candidate and validation evidence, publish automatically without review warnings, require Admin approval for warning-bearing candidates, and switch active publication atomically. [YOU] Recorded the sequence under A16, retained A9's failed/incomplete-check and atomic-reader guarantees, and updated current handoffs. The [supporting record](ai/sessions/2026-10-04-refresh-publication-next-slice.md) distinguishes this accepted decision from future implementation. No publication, code, migration or live operation was performed.
+
+## Preview evidence correction — October 4, 2026
+
+[ME] Alayala identified the existing frozen live-preparation evidence and corrected the proposed persistence prerequisite. [YOU] Verified the saved October 1–2 summary and readback receipt: 16 required passes, 23 completed/frozen diagnostics with one informational D09 finding, zero warnings, 50 independently verified stored objects, and published=false. The earlier inference from an absent PostgreSQL table to absent evidence persistence was too broad. Updated preview design/tasks to **reuse existing frozen evidence; verify its connection to publication and preview**. The [correction record](ai/sessions/2026-10-04-dataset-preview-design-tasks.md#correction-stored-evidence-already-exists) preserves history and precedence. No fresh cloud read, publication, migration or code change occurred; existing evidence files remain unchanged.
+
+
+## Dataset preview Step 2 — October 4, 2026
+
+[ME] Alayala authorized pure input validation, signed cursors and response models without an active publication; the candidate must stay unpublished until publication linkage is implemented and verified. [YOU] Added three separate preview modules and 28 offline tests, preserving existing SQL implementation and frozen evidence. Focused checks passed 28/28; the full offline suite passed 320 tests with 52 runtime checks skipped (372 total). The [Step 2 evidence](ai/sessions/2026-10-04-dataset-preview-step-2.md) records the initial test-guard correction, exact commands, model-location refinement and remaining gates. No preview route, actual shared debit, publication mutation, database/cloud operation or retained-account operator check occurred. Human continuation review and later-stage authorization remain pending.

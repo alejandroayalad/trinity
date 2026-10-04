@@ -1,11 +1,11 @@
 # Tasks: Filtered, paginated dataset previews
 
 Date: 2026-10-04
-Status: Plan only. Proposal/specification are approved and design/tasks are drafted; no preview implementation or endpoint exists. Implementation authorization remains the next gate. Unchecked tasks are future work, not completed evidence.
+Status: Step 2 authorized and implemented with offline checks. No preview endpoint exists. Later integration/runtime/operator stages remain pending and require their own authorization. See [Step 2 evidence](../../ai/sessions/2026-10-04-dataset-preview-step-2.md). Unchecked tasks are not completed evidence.
 Branch: `feat/catalog-permissions`; catalog and SQL histories are reconciled here. See the [continuation record](../../ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md). Shared execution changes must preserve the existing SQL contracts.
 Basis: [approved specification](spec.md), [design](design.md), A9/A15/A16/A19–A21, and [design/tasks evidence](../../ai/sessions/2026-10-04-dataset-preview-design-tasks.md).
 
-Sequencing: alayala selected Step 5, Refresh and publication, as the next slice under [A16](../../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). This preview plan remains available; its real-data delivery requires that publication lifecycle and complete frozen diagnostic provenance.
+Sequencing: alayala selected Step 5, Refresh and publication, as the next slice under [A16](../../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). Alayala subsequently authorized preview Step 2 without an active publication. Real-data delivery still requires that publication lifecycle and complete frozen diagnostic provenance; keep the candidate unpublished until linkage is implemented and verified.
 
 ## Human
 
@@ -19,19 +19,20 @@ There are four bounded implementation stages after ongoing evidence work. Pass e
 
 - [ ] [YOU] Keep source values, FINDINGS and evidence boundaries current whenever later preview work encounters actual data. Synthetic fixtures are not new anomalies or completeness proof.
 - [x] [ME] Approved the proposal and specification D01–D03; requested design/tasks. [YOU] Inspected shared SQL interfaces and drafted this bounded plan. This checkbox does not authorize implementation.
-- [ ] [ME] Authorize a concrete implementation stage or all stages. [YOU] Before edits, restate input → data flow → output and one failure tied to that stage; preserve concurrent SQL work.
+- [x] [ME] Authorized Step 2 only, without an active publication. [YOU] Explained input → flow → output and one failure before edits; preserved existing SQL files. This does not authorize later stages or publication.
 
 ### Step 2 — Strict request, cursor and response groundwork
 
-Scope: R01–R09, R13–R17, R22. This stage adds pure components/tests when authorized; it does not expose a preview route.
+Scope: R01–R09, R13–R17, R22. This stage adds pure components/tests; it does not expose a preview route.
 
-- [ ] [YOU] Reinspect current shared runtime/provenance interfaces and document the agreed integration point with the SQL workstream. Confirm approved scope and initial source/test baseline; do not branch/reset/overwrite another terminal's work. Verify the A9 diagnostic producer/read model and record its exact availability before promising runtime delivery.
-- [ ] [YOU] Add primitive/semantic parsing, canonical default resolution and complete-key validation in `queries/preview.py`; cover unknown/duplicate/blank inputs, one-bound defaults, leap-year ranges, ID preservation and incompatible filters. Verify the exact D02 pre-/post-debit boundary without real rate storage yet.
-- [ ] [YOU] Add the bounded HMAC cursor codec and lazy secret-safe key configuration. Test authentic/forged tokens, duplicate/deep JSON, all bound fields, purpose/key/version, overlength/Unicode limits, stable restart and retirement. Prove worst-case valid source IDs fit the public cursor bound. No real key is committed or printed.
-- [ ] [YOU] Add closed PreviewResponse/diagnostic models and canonical column reuse, exact decimal/date/null encoding and whole-response limits. Cover empty-first-page versus broken continuation, lookahead flags and prohibited extra SQL fields. Require frozen diagnostic input rather than defaulting missing provenance to [].
-- [ ] [YOU] Run focused offline tests and review this stage's diff. Record counts/skips and preserve existing auth/catalog/SQL contracts. [ME] Review one concrete cursor continuation example; record only an observed explanation, not inferred understanding.
+- [x] [YOU] Reinspect current shared runtime/provenance interfaces and document the agreed integration point with the SQL workstream. Confirmed approved scope and inspected the initial source/test baseline without overwriting another terminal's work. Reuse existing frozen evidence; publication/preview linkage verification is deferred to Step 3. Inspection confirms the current publication reader exposes metadata/manifest identity but no frozen diagnostic projection. Actual publication-to-bundle linkage remains Step 3; evidence persistence is not missing.
+- [x] [YOU] Add primitive/semantic parsing, canonical default resolution and complete-key validation in `queries/preview.py`; cover unknown/duplicate/blank inputs, one-bound defaults, leap-year ranges, ID preservation and incompatible filters. Verify the exact D02 pre-/post-debit boundary without real rate storage yet.
+- [x] [YOU] Add the bounded HMAC cursor codec and lazy secret-safe key configuration. Test authentic/forged tokens, duplicate/deep JSON, all bound fields, purpose/key/version, overlength/Unicode limits, stable restart and retirement. Prove worst-case valid source IDs fit the public cursor bound. No real key is committed or printed.
+- [x] [YOU] Add closed PreviewResponse/diagnostic models and canonical column reuse, exact decimal/date/null encoding and whole-response limits. Cover empty-first-page versus broken continuation, lookahead flags and prohibited extra SQL fields. Require frozen diagnostic input rather than defaulting missing provenance to [].
+- [x] [YOU] Run focused offline tests and review this stage's diff. Record counts/skips and preserve existing auth/catalog/SQL contracts.
+- [ ] [ME] Review the concrete continuation example in the Step 2 evidence; record only an observed explanation, not inferred understanding.
 
-Gate: pure contract checks pass. Runtime and database evidence remain pending. Missing shared runner/provenance does not prevent pure work, but blocks later real endpoint delivery.
+Gate: pure contract checks pass. Runtime and database evidence remain pending. Saved frozen evidence is confirmed; its connection to publication/preview and shared-runner readiness remain integration checks.
 
 ### Step 3 — Shared typed execution and endpoint integration
 
@@ -39,7 +40,7 @@ Scope: R02–R03, R07–R23. Coordinate mutations of shared SQL files explicitly
 
 - [ ] [YOU] Extend the shared operation contract with the typed preview payload and tagged/versioned envelopes. Update staging producer, runtime dispatch and result reader together; preserve SQL payload/policy revalidation and reject cross-kind/version confusion. Share the restricted engine context/serializer rather than copying lifecycle code.
 - [ ] [YOU] Implement typed DataFusion date/ID/full-key predicates, binary complete-key ordering and bounded lookahead. Add real temporary-Parquet engine fixtures for all three schemas, repeated dates/entities, Unicode/leading-zero IDs and exact decimal/null values. Verify no client expression/path enters execution.
-- [ ] [YOU] Implement trusted pinning/projection of complete frozen publication diagnostics using the canonical A9 evidence source. Reuse a completed producer/read model if present. If persistence is absent, identify the exact prerequisite migration/producer ownership and stop that integration path; do not fabricate evidence, activate a candidate or implement refresh commands implicitly. Any retained-database migration needs its separate explicit approval.
+- [ ] [YOU] Reuse existing frozen evidence; verify its connection to publication and preview. Implement the needed pinning/projection by tracing active publication → version/manifest → trusted bundle/attempt/checkset → frozen diagnostics, verifying recorded hashes and role-safe output. The October 1–2 candidate and validation bundle already exist. Identify only proven linkage/reader gaps, not an assumed missing persistence layer. Do not regenerate evidence, activate the candidate or implement refresh commands implicitly. Any demonstrated necessary retained-database migration needs separate explicit approval.
 - [ ] [YOU] Add PreviewService with the specified identity → shape → committed rate → semantic/cursor → publication/default/provenance → capacity sequence. Add the GET route and shared disconnect handling, lazy trusted configuration and full response validation/cursor signing. Keep the route unenabled for delivery until provenance and shared isolation pass; no callable path may fall back to API-process execution or mocks.
 - [ ] [YOU] Extend the shared supervisor result handling without weakening termination/cleanup, and test fake lifecycle failures before runtime acceptance. Review source/docstrings under CONTRIBUTING and run relevant SQL/auth/catalog regressions after shared edits. Record remaining configuration and image compatibility needs.
 
@@ -87,9 +88,9 @@ Gate: all three evidence categories have recorded results. If retained publicati
 
 All S01–S31 map back to R01–R24 in the approved specification. The detailed design supplies the implementation mechanics without changing the spec's public fields or D01–D03.
 
-### Planned commands — not executed by this planning request
+### Verification commands — executed status in Step 2 evidence
 
-Follow the repository's unittest workflow. Proposed preview test filenames are future artifacts, not claims that these commands currently find tests. Use the existing locked environment; do not install or change dependencies as part of planning.
+Follow the repository's unittest workflow. The unit-test file now exists and passed. Preview engine/container filenames remain future artifacts; their commands have not run. Use the existing locked environment; do not install or change dependencies as part of planning.
 
 | Purpose | Planned command from backend/ |
 |---|---|
@@ -97,13 +98,13 @@ Follow the repository's unittest workflow. Proposed preview test filenames are f
 | Exact temporary-Parquet engine fixtures | `.venv/bin/python -m unittest discover -s tests -p 'test_preview_engine.py' -v` |
 | Disposable PostgreSQL/HTTP, after runner extension | `.venv/bin/python tests/run_local_sql_checks.py` |
 | Explicitly configured real preview containers | `.venv/bin/python -m unittest discover -s tests -p 'test_preview_containers.py' -v` |
-| Full regression | `.venv/bin/python -m unittest discover -s tests -v` |
+| Offline regression, runtime opt-ins disabled | `env -u TRINITY_TEST_DATABASE_URL -u TRINITY_TEST_QUERY_IMAGE .venv/bin/python -m unittest discover -s tests -v` |
 
 Use `uv run --locked python` equivalents when the supported uv environment is available. Runtime opt-in/configuration must be documented during implementation; do not invent environment flags before tests exist. The default suite may skip runtime checks, so it cannot replace explicit PostgreSQL/container results. Use `git diff --check` plus focused link/OpenAPI checks for documentation. No formatter/linter/type-check command is assumed without checking the then-current pyproject configuration.
 
 ### Current checkpoint
 
-Done: approved specification and drafted design/tasks, with shared SQL integration and complete diagnostic provenance made explicit.
-Pending: implementation authorization; all preview tests/runtime/operator results.
-Blocker: no planning blocker. Missing frozen diagnostic provenance or unverified shared runtime blocks endpoint delivery, not pure contract work.
-Next: [ME] authorize Step 2 or choose the implementation scope.
+Done: Step 2 pure input/cursor/response implementation and offline checks; existing frozen evidence preserved.
+Pending: human review, Step 3 authorization/integration, and real runtime/operator evidence.
+Blocker: none for Step 2. Publication linkage and shared-runtime acceptance remain prerequisites for serving real preview data; candidate stays unpublished.
+Next: [ME] review the Step 2 continuation example and verification evidence.
