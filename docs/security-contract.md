@@ -1,6 +1,6 @@
 # Trinity security contract
 
-Status: agreed design, October 3, 2026, under [A19](../DECISIONS.md#a19--security-contract-and-local-execution-closed). No implementation, dependency installation, container launch, or security test is claimed. Analytical capacity limits are provisional. [API contract](api-contract.md) owns endpoints and wire behavior; [schema](schema.md) owns data and state invariants. A16, A17 and A18 remain in force with the explicit refinements below.
+Status: agreed design, October 3, 2026, under [A20](../DECISIONS.md#a20--seeded-local-authentication-for-the-challenge-closed) for local authentication and [A19](../DECISIONS.md#a19--security-contract-and-local-execution-closed). No implementation, dependency installation, container launch, or security test is claimed. Analytical capacity limits are provisional. [API contract](api-contract.md) owns endpoints and wire behavior; [schema](schema.md) owns data and state invariants. A16, A17 and A18 remain in force with the explicit refinements below.
 
 ## Roles and authorization
 
@@ -14,13 +14,17 @@ Authorize before protected data reads, file downloads or query execution. Apply 
 
 ## Authentication and trusted roles
 
-Store the application role in Clerk's **`public_metadata.role`**, using `viewer`, `analyst` or `admin`. Only trusted administration may change it. Clients cannot supply authoritative roles or actor IDs. Derive action actors from the verified identity; workers use internal service authority, not stored user tokens.
+A20 replaces Clerk with seeded local authentication for the challenge. Use accounts named `viewer`, `analyst`, and `admin`, one per persona. `auth/service.py` verifies credentials and issues opaque, unpredictable bearer session tokens. Store salted password hashes and session-token digests, never plaintext passwords or reusable tokens. The evaluator supplies seed passwords locally; no real credentials belong in Git, examples or logs. Exact hash library/parameters remain implementation details.
 
-Verify the session token, current Clerk session and current role on every authenticated product request, including polling. Do not cache role/session-status results in v1. Require the current session to belong to the verified identity. Invalid/inactive sessions are denied; missing/unknown roles grant no product access. If Clerk verification is unavailable, return `503 auth_unavailable` and perform no protected action. Apply role changes to subsequent requests once Clerk reports them; already-authorized accepted work may finish.
+Keep accounts and sessions in PostgreSQL as application state, unavailable to user SQL. Read the active account, unexpired/unrevoked session and current role on every authenticated product request, including polling. Do not cache session-status or role authority in v1. Roles are `viewer`, `analyst` and `admin`, assigned only by trusted seed/administrative code. Clients cannot supply authoritative roles or actor IDs. Derive action actors from the verified local identity; workers retain internal service authority.
 
-Use the API's bearer-session transport. Exact SDK/claim/issuer/key configuration remains to be implemented and checked; this contract does not silently accept earlier proposed algorithm, clock-skew or extra-claim defaults. Tradeoff: current provider checks add latency and provider availability/rate-limit dependence. Retries follow the bounded external-failure rule below.
+Use the API's bearer-session transport. Login accepts credentials only and returns a new server-issued session; logout revokes that session. Invalid credentials receive a generic denial without identifying whether an account exists. Invalid/inactive/expired/revoked sessions are denied; missing/unknown roles grant no product access. If authentication storage is unavailable, return `503 auth_unavailable` and perform no protected action. Account deactivation and role changes apply to subsequent requests; already-authorized accepted work may finish.
 
-Assign roles through trusted Clerk administration in v1. Assign the first Admin manually and provision one test account per persona. No default Viewer role is inferred for an unprovisioned user.
+Seeding is repeatable: create missing personas without silently resetting existing passwords, roles or identities. Keep stable local actor IDs and retained action history. No registration, password recovery, role-selection login or public role-management endpoint is added. Exact session lifetime, password-verification library, browser token handling and login throttling settings must be selected and tested during implementation. Never return password hashes or token digests through product APIs.
+
+Clerk is future production work behind `auth/service.py`, requiring explicit provider configuration, identity mapping and equivalent permission verification. It is not installed or contacted for challenge login, and no automatic provider fallback may bypass failed authentication.
+
+Design references: [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) and [session management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html). These support implementation controls, not a claim that Trinity already enforces them.
 
 ## SQL policy
 
@@ -146,7 +150,7 @@ Use HTTPS outside local development and only configured frontend origins. Enforc
 
 | Test area | Required evidence |
 |---|---|
-| Identity and roles | Direct API calls for all personas; denied access before reads/downloads; invalid/inactive sessions and unknown roles denied; role changes apply; Clerk outages block protected actions. |
+| Identity and roles | Direct API calls for all personas; denied access before reads/downloads; invalid/inactive sessions and unknown roles denied; role changes apply; local auth-storage outages block protected actions; fresh-clone login needs no Clerk configuration; seed reruns preserve accounts; credentials and role/actor tampering are rejected. |
 | SQL | Allowed arithmetic/CASE/function fixtures agree between SQLGlot and DataFusion; whole-input rejection of unsupported constructs, writes, hidden tables, file readers and URLs; exact decimal behavior. |
 | Isolation and cleanup | Container cannot reach network, S3, credentials, Docker control, unrelated mounts or unpublished files; mounts reject writes; timeout stops execution; memory bound holds; temporary resources are removed. |
 | Admission and limits | Cross-process user/global reservations; no slot release before termination; supervisor crash recovery; byte/row limits and truncation; 30/minute counter excludes polling; no partial results on resource failure. |
@@ -156,7 +160,7 @@ Also test the three-attempt external failure schedule within deadlines, denied/i
 
 ## Remaining implementation details
 
-1. Exact token verification configuration and SDK calls; role storage/current lookup policy is selected.
+1. Password-hash library/parameters, session lifetime, browser token handling, login throttling and seed commands; local account/session storage and current role checks are specified under A20.
 2. SQL dialect/AST forms, argument/type/numeric semantics and parser/engine compatibility fixtures; function names are selected.
 3. Container hardening, supervisor protocol/crash cleanup, S3 policies/local configuration and temporary-file handling; no-network read-only data access is selected.
 4. Query-slot physical schema, rate-window accounting and authentication/refresh-stage deadlines/error classification; slot authority, limits and attempt schedule are selected.

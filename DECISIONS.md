@@ -15,7 +15,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A5  | Product / business | Validation controls publication; no user warning for the known facility count issue after required checks pass. |
 | A6  | Technical / code   | Background workers run the full refresh pipeline using BullMQ and Redis, with bounded concurrency.              |
 | A7  | Technical / code   | PostgreSQL `job_outbox` records dispatch requests with application changes; retries must be safe.               |
-| A8  | Technical / code   | Clerk handles authentication; the backend enforces application permissions.                                  |
+| A8  | Technical / code   | Historical Clerk selection; superseded for the challenge by A20. |
 | A10 | Technical / code   | Python for the backend API and background workers.                                                           |
 | A11 | Technical / code   | FastAPI for the Python backend HTTP API.                                                                      |
 | A12 | Technical / code   | Psycopg 3 for PostgreSQL access and Alembic for schema migrations.                                              |
@@ -25,7 +25,8 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A16 | Product / business and Technical / code | Approved API flow, fixed warning-based publication, serialized refresh/recovery and detailed HTTP schemas. |
 | A17 | Technical / code   | Exact dependency versions and locked installation/update policy; compatibility checks remain pending. |
 | A18 | Technical / code   | Required v1 single-table SQL; joins, CTEs, and subqueries are optional after the core works and its tests pass. |
-| A19 | Technical / code | Security contract: trusted Clerk roles, selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
+| A19 | Technical / code | Security contract: trusted server-side roles (local authentication under A20), selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
+| A20 | Technical / code | Seeded local authentication for the challenge; unchanged server-side permissions; Clerk deferred to future production work. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -265,7 +266,7 @@ Sources: alayala's acceptance in this conversation; [AWS transactional outbox gu
 
 ### A8 — Clerk for authentication: closed
 
-**Current scope / supersession:** A19 selects `public_metadata.role`, trusted provisioning and current uncached token/session/role checks. Earlier open implementation scope below is historical where resolved by A19.
+**Current scope / supersession:** A20 rolls back Clerk for the challenge and replaces this choice with seeded local authentication. The original selection and reaffirmation below are historical, not current setup requirements. Clerk is future production work; no dual-provider implementation is required.
 
 Category: **Technical / code**.
 
@@ -293,11 +294,11 @@ Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Language selected; implementation and runtime verification pending.
 
-**Choice:** Use Python for the backend API and the background workers that execute A6's full refresh pipeline. Keep PostgreSQL for application state, DataFusion for published Parquet queries, BullMQ with Redis for background jobs, and Clerk for authentication under A4 and A6–A8.
+**Choice:** Use Python for the backend API and the background workers that execute A6's full refresh pipeline. Keep PostgreSQL for application state, DataFusion for published Parquet queries, BullMQ with Redis for background jobs, and seeded local authentication under A20. A4 and A6–A7 remain unchanged.
 
 **Reason:** Python fits the proposed PyArrow file preparation and DataFusion Python query path and lets the API and refresh workers share one application language. This is a design rationale, not a compatibility or performance result. Concrete packages and versions still need selection and verification.
 
-**Flow and failure example:** A request presents a Clerk token; the backend verifies identity, resolves a trusted role, and authorizes the operation. Permitted analytical reads capture one active publication and use only authorized files from that version. Decimal results preserve A9's exact-value contract. An Analyst query referencing PostgreSQL `job_outbox` must be rejected before execution. Selecting Python does not implement table-reference detection or authorization.
+**Flow and failure example:** A request presents a local session token; the backend verifies identity, resolves a trusted role, and authorizes the operation. Permitted analytical reads capture one active publication and use only authorized files from that version. Decimal results preserve A9's exact-value contract. An Analyst query referencing PostgreSQL `job_outbox` must be rejected before execution. Selecting Python does not implement table-reference detection or authorization.
 
 **Alternative not selected:** Use separate application languages for the API and data workers. A single language avoids adding a second application toolchain for this scope. No comparative benchmark or user rejection of a specific competing language is claimed.
 
@@ -317,13 +318,13 @@ Status: accepted by alayala on October 3, 2026. Framework selected; not installe
 
 **Choice and reason:** Use FastAPI for A10's Python HTTP API. Its request validation and generated OpenAPI documentation support the required catalog, preview, query, and Admin contracts. This selects the framework, not the endpoint schemas or security policy.
 
-**Flow and failure example:** A preview request passes field validation and backend identity/permission checks before accessing a permitted published dataset. The API returns JSON under the eventual response contract. A Viewer requesting generator detail must be denied before DataFusion execution. FastAPI validates request structure; Trinity must implement Clerk verification, role enforcement, SQL authorization, and resource limits.
+**Flow and failure example:** A preview request passes field validation and backend identity/permission checks before accessing a permitted published dataset. The API returns JSON under the eventual response contract. A Viewer requesting generator detail must be denied before DataFusion execution. FastAPI validates request structure; Trinity must implement local session verification, role enforcement, SQL authorization, and resource limits.
 
 **Alternative not selected:** Assemble request validation and API documentation separately around a smaller HTTP framework. FastAPI provides these facilities together; no comparative performance claim is made.
 
 **Tradeoff and boundaries:** Request/response models must stay aligned with the API contract, including exact decimal serialization. Framework defaults are not proof of correct authentication or SQL isolation. Refresh work continues through PostgreSQL outbox dispatch to BullMQ workers under A6–A7; selecting FastAPI does not replace that path with in-process background tasks.
 
-**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, Clerk authentication, role denials, and error handling. Dependency versions, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool; A13 selects the query binding and parser.
+**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, local authentication, role denials, and error handling. Dependency versions, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool; A13 selects the query binding and parser.
 
 Source: alayala's acceptance in this conversation; [FastAPI official features](https://fastapi.tiangolo.com/features/). Supporting record: [backend selection session](ai/sessions/2026-10-03-python-backend-selection.md#fastapi-follow-up).
 
@@ -417,7 +418,9 @@ Category: **Product / business** and **Technical / code**.
 
 Status: high-level design accepted by alayala on October 3, 2026, through the supplied `trinity-api-contract-final.md`. Detailed request/response fields, bounded defaults and persistence amendments are AI-authored specification work under his instruction to add missing details. No implementation or runtime verification is claimed.
 
-**Choice:** Use [the approved human overview and detailed API contract](docs/api-contract.md) and [OpenAPI schemas](docs/openapi.json). The 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
+**A20 amendment:** Local login/logout add two authentication operations. The original product permissions and workflow remain unchanged.
+
+**Choice:** Use [the approved human overview and detailed API contract](docs/api-contract.md) and [OpenAPI schemas](docs/openapi.json). The original 20 product operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
 
 **Publication and recovery:** Publication behavior is fixed: complete required checks and no review warnings publish automatically; complete required checks with frozen warnings require Admin approval; failed or incomplete checks block publication. No editable publication mode remains. One refresh lifecycle is admitted at a time, including pending review and unresolved failure. Run-again creates a new full run and abandons the old candidate; warning deletion resolves the block without new work; publication retry preserves the same eligible candidate and original approval requirements; discard permanently prevents publication while preserving history.
 
@@ -435,6 +438,8 @@ Source and contributions: [approved API completion session](ai/sessions/2026-10-
 
 ### A17 — Dependency versions and update policy: closed
 
+**A20 amendment:** Remove `clerk-backend-api` from challenge dependencies. Its former 7.0.0 pin and compatibility notes below are historical only. No replacement password library/version is selected here; check existing runtime support before adding one. All other selected versions and the lockfile policy remain unchanged.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Exact versions selected; installation, dependency resolution, advisory review, and runtime compatibility remain unverified.
@@ -448,7 +453,7 @@ Status: accepted by alayala on October 3, 2026. Exact versions selected; install
 | Migrations | [alembic 1.20.0](https://pypi.org/project/alembic/1.20.0/), [SQLAlchemy 2.1.3](https://pypi.org/project/SQLAlchemy/2.1.3/) | Alembic requires SQLAlchemy; restrict its use to migration infrastructure, preserving direct Psycopg repositories. |
 | Analytical execution | [pyarrow 25.0.1](https://pypi.org/project/pyarrow/25.0.1/), [datafusion 54.0.0](https://pypi.org/project/datafusion/54.0.0/), [sqlglot 30.21.0](https://pypi.org/project/sqlglot/30.21.0/) | A13 stack; install name is `datafusion`, not `datafusion-python`. |
 | Queue | [bullmq 3.3.0](https://pypi.org/project/bullmq/3.3.0/) | Python package under A6; its metadata requires `redis==7.4.1`, `msgpack==1.2.3`, `semver==3.1.0`, and `croniter==2.0.7`. These are package versions, not the Redis server version. |
-| Identity and external HTTP | [clerk-backend-api 7.0.0](https://pypi.org/project/clerk-backend-api/7.0.0/), [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Official identity adapter; reuse HTTPX for EIA HTTP and bounded timeouts rather than adding a second HTTP client. |
+| External HTTP | [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Reuse HTTPX for EIA HTTP and bounded timeouts. A20 removes clerk-backend-api from the challenge dependency set. |
 | Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. |
 
 Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server version is separate from BullMQ's `redis` Python client version. Exact deployment images/digests, frontend packages, and cloud resources remain outside this selection.
@@ -496,7 +501,7 @@ Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Design selected; analytical capacity limits are provisional and runtime verification is pending.
 
-**Choice:** Adopt [docs/security-contract.md](docs/security-contract.md), separate from the [A16 API contract](docs/api-contract.md). Use Clerk `public_metadata.role`, writable only by trusted administration, and verify token/current session/current role on every authenticated request without a role/session cache. Deny invalid, inactive, missing or unknown authority; verification outages allow no protected action.
+**Choice:** Adopt [docs/security-contract.md](docs/security-contract.md), separate from the [A16 API contract](docs/api-contract.md). Under A20, use the local account role, writable only by trusted administration, and verify the local session/current account/current role on every authenticated request without a role/session cache. A20 supersedes the original Clerk-specific authentication mechanism only. Deny invalid, inactive, missing or unknown authority; verification outages allow no protected action.
 
 **SQL and isolation:** Retain A18 single-table read-only SELECT; support filters, sorting, grouping, arithmetic, CASE, COUNT, SUM, AVG, MIN, MAX, ROUND, COALESCE and NULLIF. Keep one SQLGlot validation module and verify DataFusion compatibility. Reject unsupported/nested queries, writes and external readers. Run each query in its own container with only authorized published Parquet files mounted read-only, no network, no credentials and no Docker control. A trusted component downloads/checks files; the supervisor enforces limits, stops execution and cleans temporary resources. Separate private S3 read, candidate-create and publication authority. Keep A9 SHA-256 manifests/checksums and exact-file approval binding.
 
@@ -515,6 +520,30 @@ Status: accepted by alayala on October 3, 2026. Design selected; analytical capa
 Source: alayala's explicit security and documentation instructions; [session evidence](ai/sessions/2026-10-03-security-contract-and-api-split.md).
 
 ## Finalized specifications
+
+### A20 — Seeded local authentication for the challenge: closed
+
+Category: **Technical / code**.
+
+Status: accepted by alayala on October 3, 2026. Documentation only; authentication and seeded accounts are not implemented or tested.
+
+**Choice:** Roll back A8's Clerk selection for the challenge. Use local seeded Viewer, Analyst and Admin accounts with credential verification and server-issued sessions. Preserve A19's server-side roles, permission checks before protected reads, current session/role checks, denied unknown roles, and server-derived actor attribution. No Clerk account, key or network call is required for challenge authentication. Clerk is future production work, not a second challenge mode or automatic fallback.
+
+**Reason and evidence:** The supplied challenge brief permits simplified authentication and requires one seeded test user per persona (page 5), README-based local execution and test-user instructions (pages 3 and 7). Local authentication removes provider setup from that path. Missing Clerk configuration is a delivery risk; the brief does not establish that any external provider automatically fails the Gate.
+
+**Flow and failure example:** Local setup seeds the three accounts. Login verifies the submitted credentials and issues a session. Each protected request resolves the active account and current role from trusted local state before authorization. A Viewer changing a request body's role to admin still cannot refresh or read detailed datasets. Invalid, expired or revoked sessions grant no access; unavailable authentication storage fails closed.
+
+**Contract completion:** Keep bearer transport, backed by opaque revocable sessions and local PostgreSQL account/session records. Add login/logout to A16/OpenAPI. These HTTP/model details are AI-authored documentation completion for the selected local-authentication direction, not observed runtime behavior. Exact password-hash library/parameters, session lifetime, frontend token handling, login throttling and runnable seed commands remain implementation work.
+
+**Rejected alternative and tradeoff:** Requiring evaluator Clerk provisioning adds setup and availability dependencies. Maintaining both local and Clerk implementations adds code and tests before submission. Local login makes Trinity responsible for password hashes, session expiry/revocation and login abuse controls; simplified authentication must not bypass authorization.
+
+**History and scope:** Supersedes A8 and Clerk-specific parts of A10/A11/A15/A17/A19. Amend A9's actor/storage model and A16's authentication transport description while preserving product roles and existing protected operations. Remove the Clerk SDK from challenge dependencies; other dependency pins remain selected. The proposed query/worker simplification was discarded: per-query containers, BullMQ, Redis and job_outbox remain unchanged. Preserve earlier decision and session history.
+
+**Future production work:** Evaluate Clerk integration behind `auth/service.py`, including identity mapping for retained local actor history, user provisioning, session/role freshness and equivalent permission tests. This requires a separate production decision and is not required for challenge delivery.
+
+**Validation required:** Fresh-clone setup without Clerk configuration; repeatable seeding of all personas; valid/invalid login; expired/revoked session rejection; current role/account changes; no client-controlled identity/role; direct API permission denials before reads; login throttling and sanitized failures. No runtime checks have run.
+
+Source and contributions: alayala explicitly requested this rollback and documentation update. [Supporting session](ai/sessions/2026-10-03-seeded-local-authentication.md). See [security contract](docs/security-contract.md) and [API contract](docs/api-contract.md) for the current design.
 
 ### A9 — Data contract v1: finalized
 

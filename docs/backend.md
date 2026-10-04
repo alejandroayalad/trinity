@@ -2,7 +2,7 @@
 
 Status: structure and responsibility boundaries accepted by alayala on October 3, 2026, under [A15](../DECISIONS.md#a15--backend-structure-and-responsibility-boundaries-closed). Implementation pending. The tree below describes the files to implement; it is not a claim that they exist or run.
 
-[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-contract.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. [A19 security contract](security-contract.md) selects current Clerk verification, SQL functions, per-query containers, shared query admission and limits; implementation details and runtime verification remain pending.
+[DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-contract.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. [A19 security contract](security-contract.md) selects current local session/role verification under A20, SQL functions, per-query containers, shared query admission and limits; implementation details and runtime verification remain pending.
 
 ## Package and entrypoints
 
@@ -31,6 +31,10 @@ backend/
     ├── errors.py                      # Safe public error responses
     │
     ├── auth/
+    │   ├── router.py                  # Local login and logout endpoints
+    │   ├── repository.py              # Local users and revocable sessions
+    │   ├── schemas.py                 # Login request and session response models
+    │   ├── seed.py                    # Repeatable local persona provisioning
     │   ├── dependencies.py            # Auth requirements for HTTP endpoints
     │   ├── service.py                 # Verified identity and trusted role
     │   └── permissions.py             # Admin / Analyst / Viewer access rules
@@ -75,7 +79,6 @@ backend/
     ├── adapters/
     │   ├── postgres.py                # Psycopg connections and transaction primitives
     │   ├── s3.py                      # Object reads/writes and manifest access
-    │   ├── clerk.py                   # Clerk/JWT integration
     │   ├── bullmq.py                  # Queue integration
     │   └── outbox.py                  # Transactional outbox persistence/claim helpers
     │
@@ -110,9 +113,13 @@ Routers validate HTTP input and call authenticated feature services. Services ow
 
 `errors.py` maps failures to safe public codes/messages. Raw SQL-engine errors, stack traces, credentials, storage locations, or unauthorized dataset details must not leak through HTTP or runtime messages. Diagnostic records follow the existing sanitized-evidence rules.
 
+## Local authentication
+
+A20 replaces the Clerk adapter with local login/logout behind `auth/service.py`. The service verifies seeded credentials, issues/revokes sessions and resolves current server-side roles through `auth/repository.py`. The seed entrypoint creates the three personas without silently overwriting existing accounts. Actor IDs come from the authenticated local user; request-supplied roles/actors are rejected. See the [security contract](security-contract.md#authentication-and-trusted-roles) and [API login contract](api-contract.md#local-login-and-logout). Clerk is future production work, not a challenge adapter.
+
 ## Query and preview flow
 
-1. `auth/service.py` verifies the token and current Clerk session/`public_metadata.role` without caching role/session results. `auth/permissions.py` authorizes the capability before protected reads. Missing/unknown roles deny access.
+1. `auth/service.py` verifies the local bearer session, active account and current stored role without caching role/session results. `auth/permissions.py` authorizes the capability before protected reads. Missing/unknown roles deny access.
 2. `queries/service.py` pins one active publication and derives permitted manifest entries. It invokes the single `queries/runtime/sql_policy.py` module for whole-input SQL and physical-table checks before file downloads. Do not duplicate SQL rules in the API.
 3. The trusted supervisor behind `queries/client.py` reserves a shared PostgreSQL query slot, starts the analytical deadline, downloads only authorized objects through trusted `adapters/s3.py`, checks SHA-256 identities and stages a request-specific read-only Parquet mount.
 4. Start a separate container running `queries/runtime/main.py` for the approved query/preview/dashboard operation. Supply the approved operation, pinned IDs, local-file mapping and server limits through `contracts/queries.py`; supply no network, credentials or Docker control. `engine.py` registers only those mounted authorized files.
@@ -136,6 +143,7 @@ Provisional limits: 1,000 SQL output rows, 5 MiB response, 30 seconds including 
 
 | Owner | Canonical application models |
 |---|---|
+| `auth/repository.py` | `local_users`, `local_sessions`; credentials and sessions never enter analytical registration |
 | `settings/repository.py` | `shared_settings` |
 | `refresh/repository.py` | `refresh_runs`, `refresh_steps`, `data_versions`, `dataset_artifacts`, `validation_results`, `refresh_control`, `failure_warnings`, `api_commands` |
 | `publication/repository.py` | `approvals`, `publication_events`, `active_publication` |
@@ -182,8 +190,8 @@ The accepted tree locates responsibilities; it does not complete these contracts
 | Open item | Required outcome before implementing that path |
 |---|---|
 | Dependency versions and execution model | Compatible pinned releases; PostgreSQL pooling/sync-async choices; bounded worker/query concurrency and verified worker recovery. |
-| HTTP API implementation | Implement the 20 operations and field schemas in A16/OpenAPI, including dashboard, entity options, schedule status, rerun, warning resolution, retry and discard. |
-| SQL and authentication | Exact dialect/AST/argument forms and compatibility fixtures for selected functions; token configuration and tests of selected current role/session checks. |
+| HTTP API implementation | Implement the 22 operations and field schemas in A16/OpenAPI, including dashboard, entity options, schedule status, rerun, warning resolution, retry and discard. |
+| SQL and authentication | Exact dialect/AST/argument forms and compatibility fixtures for selected functions; token configuration and tests of local seeded login, revocation and current role/session checks. |
 | Query process contract and deployment | Trusted message transport, one network-disabled query container, authorized read-only file mounts, private S3 download permissions, termination/cleanup and shared PostgreSQL admission verification. |
 | Acceptance tests | Authorization before file reads, whole-input SQL rejection, exact decimals, snapshot consistency, transaction failures, final-file validation, timeout cleanup, resource exhaustion, and Redis/worker recovery. |
 
