@@ -1,0 +1,72 @@
+# Opt-in SQL services. Supply the reviewed image ID, read profile and paths.
+# Use with: docker compose -f compose.yaml -f compose.sql.yaml ...
+services:
+  api:
+    environment:
+      TRINITY_QUERY_STAGE_ROOT: /var/lib/trinity/queries
+      TRINITY_QUERY_STAGE_VOLUME: ${TRINITY_QUERY_STAGE_VOLUME:?Set a dedicated staging volume name}
+      TRINITY_QUERY_DEPLOYMENT_ID: ${TRINITY_QUERY_DEPLOYMENT_ID:?Set a stable deployment UUID}
+      TRINITY_QUERY_IMAGE: ${TRINITY_QUERY_IMAGE:?Set the locally built immutable image ID}
+      TRINITY_DOCKER_SOCKET: /var/run/docker.sock
+      TRINITY_QUERY_READ_PROFILE: ${TRINITY_QUERY_READ_PROFILE:?Set the published-object read profile}
+      TRINITY_S3_BUCKET: ${TRINITY_S3_BUCKET:?Set the existing bucket}
+      TRINITY_S3_PREFIX: ${TRINITY_S3_PREFIX:?Set the existing prefix}
+      TRINITY_S3_REGION: ${TRINITY_S3_REGION:?Set the region}
+      AWS_CONFIG_FILE: /run/query-aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /run/query-aws/credentials
+    # The trusted API needs the daemon socket; the query container never gets it.
+    group_add: ["${TRINITY_DOCKER_GID:?Set the daemon socket group ID}"]
+    depends_on:
+      query_stage_init:
+        condition: service_completed_successfully
+    volumes:
+      - query_stage:/var/lib/trinity/queries
+      - ${TRINITY_DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${TRINITY_QUERY_AWS_DIRECTORY:?Set the existing read-profile directory}:/run/query-aws:ro
+  query_stage_init:
+    image: ${TRINITY_QUERY_IMAGE:?Set the immutable image ID}
+    pull_policy: never
+    user: "0:0"
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: [no-new-privileges:true]
+    entrypoint: ["/opt/venv/bin/python", "-c"]
+    command:
+      - |
+        import os, stat
+        current = os.stat('/stage')
+        if current.st_uid == 0 and not os.listdir('/stage'):
+            os.chmod('/stage', 0o700)
+            os.chown('/stage', 10001, 10001)
+        elif current.st_uid != 10001 or current.st_gid != 10001 or stat.S_IMODE(current.st_mode) != 0o700:
+            raise SystemExit('Staging ownership requires operator review.')
+    volumes:
+      - query_stage:/stage
+  query_recovery:
+    image: trinity-api:local
+    group_add: ["${TRINITY_DOCKER_GID:?Set the daemon socket group ID}"]
+    command: ["python", "-m", "trinity.queries.recovery"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      query_stage_init:
+        condition: service_completed_successfully
+    environment:
+      TRINITY_DATABASE_URL: postgresql://trinity@postgres:5432/trinity
+      TRINITY_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      TRINITY_QUERY_STAGE_ROOT: /var/lib/trinity/queries
+      TRINITY_QUERY_STAGE_VOLUME: ${TRINITY_QUERY_STAGE_VOLUME:?Set a dedicated staging volume name}
+      TRINITY_QUERY_DEPLOYMENT_ID: ${TRINITY_QUERY_DEPLOYMENT_ID:?Set a stable deployment UUID}
+      TRINITY_QUERY_IMAGE: ${TRINITY_QUERY_IMAGE:?Set the immutable image ID}
+      TRINITY_DOCKER_SOCKET: /var/run/docker.sock
+    secrets: [postgres_password]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    volumes:
+      - query_stage:/var/lib/trinity/queries
+      - ${TRINITY_DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+volumes:
+  query_stage:
+    name: ${TRINITY_QUERY_STAGE_VOLUME:?Set a dedicated staging volume name}

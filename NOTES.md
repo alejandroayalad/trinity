@@ -282,6 +282,53 @@ Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the
 
 [ME] Alayala confirmed that he reviewed the slice, requested a PR to `main` so he can merge it, and selected live S3 + EIA verification next. [YOU] AI prepared that PR, integrated the newer findings commits from main without rewriting history, preserved both documentation histories, and checked the combined branch. The [closure record](ai/sessions/2026-10-04-local-login-review-close.md) distinguishes reviewed code and local test evidence from still-unverified live storage/EIA behavior. This close does not run EIA-key commands, write S3 objects or perform the final merge.
 
+## One-table SQL proposal — October 4, 2026
+
+[ME] Alayala selected the one-table read-only SQL slice, with SQLGlot validation before downloads and DataFusion execution. [YOU] AI stated the assumption that this begins the proposal stage, traced existing code and accepted A18/A19 contracts, and drafted the [Human/LLM proposal](sdd/single-table-sql/proposal.md). The proposal includes the required published-file staging, per-query container, shared admission and lifecycle checks before enabling the endpoint. Exact implementation details remain for specification/design review.
+
+The [proposal session](ai/sessions/2026-10-04-single-table-sql-proposal.md) records evidence and boundaries. Existing uncommitted catalog work is preserved. No application code, accepted decision, dependency, database or remote state changed. Documentation checks are separate from still-unverified SQLGlot/DataFusion compatibility and query isolation; no application tests ran in this documentation-only task.
+
+## One-table SQL specification — October 4, 2026
+
+[ME] Alayala approved the proposal scope and requested continuation to specification drafting. [YOU] AI drafted the [Human/LLM specification](sdd/single-table-sql/spec.md), with R01–R23 and S01–S28 covering whole-input policy before downloads, published-file authority, DataFusion isolation, limits, shared admission, recovery and safe output. D01–D03 propose the detailed grammar, rolling rate accounting and result presentation; they remain under review and have not been entered as accepted decisions.
+
+The [specification session](ai/sessions/2026-10-04-single-table-sql-specification.md) records scope and checks. Documentation checks do not prove parser/engine compatibility, container isolation or live storage. No design, application implementation, runtime test, migration, dependency or remote change occurred. Existing catalog work remains preserved.
+
+## Viewer SQL restriction clarification — October 4, 2026
+
+[ME] Alayala reaffirmed that Viewer must have no SQL button and cannot perform any action to run user-submitted SQL, matching the catalog navigation boundary. [YOU] AI made that existing A16/A19 rule explicit in the SQL proposal and specification: no SQL navigation/editor/Run control, direct-screen return to the permitted waiting/dashboard screen, and independent API denial before parsing, analytical rate/slot accounting, downloads or execution. Added R24/S29 for later frontend acceptance and strengthened R02/S03 for this backend slice. National dashboard/preview permissions remain intact.
+
+This clarification does not approve the remaining proposed D01–D03 details or authorize design/implementation. The [specification session](ai/sessions/2026-10-04-single-table-sql-specification.md) records verification. No application code or canonical permission rule changed.
+
+## One-table SQL design and tasks — October 4, 2026
+
+[ME] Alayala approved the corrected specification by requesting design/tasks. [YOU] Recorded D01–D03 under A16/A19, aligned API/security prose and drafted the [design](sdd/single-table-sql/design.md) and [five-stage task list](sdd/single-table-sql/tasks.md), preserving Viewer UI/API exclusion. The design covers bounded SQL validation, short identity/publication transactions, shared rate/capacity, immutable file staging, independent DataFusion restrictions and supervised container recovery.
+
+AI inspected installed SQLGlot/DataFusion signatures and official documentation; these checks do not prove SQL compatibility or isolation. Docker was not found in the agent PATH; no container or engine query was run. The [design/tasks session](ai/sessions/2026-10-04-single-table-sql-design-tasks.md) records document checks and remaining gates. Existing catalog/API Docker work is preserved. No implementation, dependency installation, build, migration, cloud action, commit or push occurred.
+
+## SQL pairing review preparation — October 4, 2026
+
+[ME] Alayala authorized AST/API inspection, minimum test preparation and incremental commits, with an explicit stop before core SQL validation. He reserves case review and core-validator implementation for human or paired work, and permits repetitive DataFusion test infrastructure only after the validator works. He will review failures and the security-sensitive execution path. The HTTP endpoint is excluded.
+
+[YOU] AI inspected pinned SQLGlot/DataFusion interfaces, prepared [81 proposed cases and an AST/API review](sdd/single-table-sql/pairing-gate.md), and added seven parser-only characterization tests. All seven passed; no validator accept/reject expectation or DataFusion query was executed. No dependency installation or production code change was needed. AST observations include typed DATE/CAST equivalence, omitted/explicit null-order equivalence, and function aliases normalizing to Coalesce. [Evidence and commit scope](ai/sessions/2026-10-04-sql-pairing-review-preparation.md) distinguish preparation from pending security/runtime acceptance. Existing catalog and Docker changes remain outside the SQL commits.
+
+## SQL single-statement pairing — October 4, 2026
+
+[ME] Alayala supplied the whole-input/count/nonempty/Select flow and restricted this step to it. He then restated the later physical-table, DATE/CAST, function-spelling and null-order comparisons; this is not recorded as completed human review or permission to implement all of them.
+
+[YOU] Implemented only `validate_single_statement` and a local `SQLValidationError`, with ten passing focused tests and seven passing parser characterizations. One trailing semicolon passes; the original B03 double semicolon fails. Inspection exposed A24's extra Semicolon node after a trailing comment, so the strict supplied flow currently rejects that approved form. [Pairing evidence](ai/sessions/2026-10-04-sql-single-statement-pairing.md) records this gap and the stop point. No full policy, execution, endpoint, download, dependency or role/UI change was made. Existing catalog/Docker work is preserved.
+
+## SQL terminal-comment pairing — October 4, 2026
+
+[ME] Alayala clarified exactly one real SELECT, optionally followed by one terminal semicolon, then only whitespace/comments. A second semicolon or statement must fail.
+
+[YOU] Added whole-input token boundary checks and narrowly handled SQLGlot's terminal comment-only Semicolon node, preserving its comments on the returned Select. A24 now passes; the original B03, extra statements and malformed trailing comments fail. Fourteen focused tests and seven parser characterizations passed. [Evidence](ai/sessions/2026-10-04-sql-terminal-comment-pairing.md) records the correction to the earlier A24 limitation. Full policy, execution and HTTP remain pending; no unrelated files or dependencies changed.
+
+## SQL implementation commits — October 4, 2026
+
+[ME] Alayala supplied the first paired statement-validation flow, clarified the terminal-semicolon rule, later delegated T05–T20, and requested local commits for validator/DataFusion, isolation and HTTP delivery. No push was requested.
+
+[YOU] Kept paired history, committed the remaining qualifier correction, separated isolation and HTTP changes, and reused the API Docker prerequisites. Verified the SQL-only staged snapshot: 273 offline checks passed (41 skipped); 11 SQL PostgreSQL/HTTP/container checks, seven container checks and 43 auth/database checks passed separately. Catalog/preview work remains separate. See [delivery evidence](ai/sessions/2026-10-04-sql-delivery-commits.md) and [operator instructions](backend/SQL.md) for exact commands and unverified boundaries. Synthetic tests do not establish live S3, retained-account execution, complete crash-race coverage or frontend hiding.
 ## Live storage protection checks — October 4, 2026
 
 [ME] Alayala requested the existing flow's live verification and supplied the EIA key locally in an ignored `.env`. [YOU] AI verified baseline `fde733b` (220 offline tests passed, 25 PostgreSQL tests skipped), installed the existing SDK's required optional `awscrt==0.36.0` in the local environment, and confirmed Python uses `trinity-writer`. A new 66-byte synthetic S3 object passed conditional creation, exact readback, conditional/unconditional overwrite denial, anonymous-read denial and writer-delete denial. Existing candidates were untouched; the probe remains stored. Operator policy/lifecycle inspection returned `AccessDenied`, so gate 2 remains incomplete and EIA/full preparation did not run. No code, lockfile, AWS policy, publication, commit or remote Git change occurred. See the [partial verification record](ai/sessions/2026-10-04-live-storage-protection-check.md) for evidence and the next operator action.
@@ -295,6 +342,75 @@ Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the
 ## October 1–2 live preparation passed — October 4, 2026
 
 [ME] Alayala authorized a new two-day version, all validation checks, S3 upload/readback, preservation of both previous failures and exact uncommitted-code evidence, keeping the candidate unpublished. [YOU] AI ran the existing command to exit 0: version `9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae`, all 16 required checks passed, all 23 diagnostics completed, zero review warnings. The known facility total mismatch remains informational. A fresh process invoked the existing verifier and checked all 50 S3 objects with exact sizes/SHA-256, no EIA requests and no S3 writes. Both prior runs (7 and 51 files) and the tested code remained unchanged. The candidate is `stored_unpublished`; no publication or Git delivery occurred. The [evidence package](evidence/live-preparation/2026-10-04-october-1-2/README.md) preserves the exact patch, file hashes, local CRT environment limitation, parent receipt and independent result; the [session](ai/sessions/2026-10-04-october-1-2-live-preparation.md) records scope and contributions. October 3/full-history readiness and fresh locked setup remain separate.
+
+## Catalog and permissions proposal — October 4, 2026
+
+[ME] Alayala selected catalog and permissions as the first bounded slice of step 5 and requested its SDD proposal. [YOU] AI traced the existing auth, dataset and publication code and drafted the [Human/LLM proposal](sdd/catalog-permissions/proposal.md), with national-only Viewer metadata and all three datasets for Analyst/Admin. The proposal preserves the public/internal dataset-key distinction, pre-publication metadata, safe freshness and one database snapshot. Greatest `run_seq` for `last_refresh` is a proposed interpretation for specification review, not an accepted decision.
+
+The [session record](ai/sessions/2026-10-04-catalog-permissions-proposal.md) records source evidence, scope and document checks. At alayala's subsequent request, AI created local branch `feat/catalog-permissions` in the same worktree; unrelated changes remain visible and uncommitted. Proposal review remains pending. No specification, design, tasks, application implementation, runtime test, live request, commit or push is claimed by this task. Existing local code, findings and live-evidence work is preserved.
+
+[ME] Alayala then accepted dashboard-only Viewer navigation and requested the proposal update. [YOU] AI recorded that presentation choice under A16 and linked the proposal, product scope and API overview to it. Viewer keeps national metadata/data API permissions; the future interface shows Catalog and SQL navigation only to Analyst/Admin. This is a documentation update, not implementation or approval of the full proposal. The same session records verification and pending frontend checks.
+
+## Catalog and permissions specification — October 4, 2026
+
+[ME] Alayala authorized the specification with “continue with specs please.” [YOU] AI drafted the [Human/LLM specification](sdd/catalog-permissions/spec.md) with R01–R15 and S01–S24, updated the proposal status and README index, and preserved the accepted Viewer navigation/API distinction. D01 proposes greatest `run_seq` for `last_refresh`; it remains under specification review, not an accepted decision. The [specification session](ai/sessions/2026-10-04-catalog-permissions-specification.md) records checks and scope. No design, tasks, implementation, runtime test, commit or push occurred in this step.
+
+## Catalog design and tasks — October 4, 2026
+
+[ME] Alayala approved the specification and requested design/tasks. [YOU] AI recorded D01 as accepted under A16 and aligned the API prose: `last_refresh` is the greatest-sequence attempt, while readiness remains tied to the active publication. AI drafted the [design](sdd/catalog-permissions/design.md) and [task plan](sdd/catalog-permissions/tasks.md), reusing existing authentication, metadata and state readers with no new production dependency or migration. Earlier proposed-status entries retain their historical meaning; the [design/tasks session](ai/sessions/2026-10-04-catalog-permissions-design-tasks.md) records the new authorization and document checks. No application implementation, runtime check or Git delivery occurred.
+
+## Catalog implementation — October 4, 2026
+
+[ME] Alayala authorized implementation and explicitly reserved the local operator check, keeping offline, real database/HTTP and operator evidence separate. [YOU] AI implemented the catalog route, canonical metadata, shared dataset policy, safe greatest-sequence refresh summary and optional hidden-input `--catalog` persona check. No new dependency or migration was needed.
+
+Offline evidence: 16 focused catalog tests passed; final regression passed 236 tests with 36 opt-in database tests skipped. Separate database/HTTP evidence: the disposable PostgreSQL 17.11 runner passed 70 checks (36 database-backed and 34 offline), including all three personas over real loopback HTTP before and after synthetic publication. The first full run found an outdated exact-route inventory; adding the new catalog path to that assertion resolved its single failure. Existing auth test/fixture bodies remained AST-identical after fixture extraction.
+
+The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implementation.md) records commands, timings, failure correction and limits. The existing CPython 3.14.8 environment matched direct dependency pins; fresh locked installation was not rerun. [ME] Retained-account operator results and observed understanding remain pending. No frontend/query-isolation or live publication proof is claimed. No commit, push or PR occurred.
+
+## Retained-account catalog operator check — October 4, 2026
+
+[ME] Alayala approved the two existing migrations and entered persona passwords privately. [YOU] AI initialized the empty Docker application schema, launched the existing missing-only provisioning and catalog commands, and verified safe results. All three active personas passed the interactive catalog check; all three resulting sessions were revoked. Short-password provisioning and a different-password login failed safely before successful retries; no existing user was reset. The [operator evidence](ai/sessions/2026-10-04-catalog-docker-operator-check.md) records commands, corrections and limits separately from automated tests. No publication existed, so this establishes retained-account metadata access before publication only. No production code, commit, push or PR was part of this follow-up.
+
+## Catalog review and focused Git delivery — October 4, 2026
+
+[ME] Alayala requested review, thematic session organization, commit and push, then explicitly selected the full catalog implementation and tests. [YOU] Prepared a separate branch from current main to preserve merged live-data/Docker work and exclude SQL/preview changes. The delivery checkout passed 239 offline checks (36 database skips) and all 70 auth/catalog acceptance checks separately. No blocking catalog defect was found in the reviewed paths. Added a [thematic session index](ai/sessions/README.md), [catalog entry page](sdd/catalog-permissions/README.md) and [current review evidence](ai/sessions/2026-10-04-catalog-review-and-delivery.md). Existing session filenames remain stable. No retained-account or cloud operation was rerun, and no merge/PR was requested.
+
+## Dataset preview proposal — October 4, 2026
+
+[ME] Alayala requested preview SDD while continuing SQL implementation in another terminal. [YOU] AI drafted the [proposal](sdd/dataset-preview/proposal.md) from existing A9/A16/A19 contracts: role-filtered records, typed date/entity filters, full-key pagination, authenticated publication-bound cursors, exact serialization and shared isolated execution. Viewer keeps national-only API access for the dashboard. Choice lists, dashboard aggregates, frontend and SQL policy remain outside this proposal. The [session](ai/sessions/2026-10-04-dataset-preview-proposal.md) distinguishes existing catalog proof from planned preview offline, real database/HTTP/container and operator evidence. Proposal review precedes specification; no code, runtime action or accepted-decision change was made.
+
+## Dataset preview specification — October 4, 2026
+
+[ME] Alayala requested the specification, approving the preview proposal. [YOU] AI drafted [24 requirements and 31 acceptance scenarios](sdd/dataset-preview/spec.md), including strict parameter handling, complete-key pagination, publication/cursor consistency, safe exact serialization, shared analytical admission and isolated lifecycle checks. D01–D03 propose input, rate-debit and cursor-lifecycle refinements for review; no accepted decision was silently added. The [specification evidence](ai/sessions/2026-10-04-dataset-preview-specification.md) keeps offline, real database/HTTP/container and operator proof separate. Concurrent SQL work was preserved; this turn made no code, runtime or migration change.
+
+## Preview specification accepted — October 4, 2026
+
+[ME] Alayala confirmed strict inputs (D01), shared SQL/preview rate accounting (D02), and same-filter/publication cursor continuation with current authorization and no time-only expiry (D03). [YOU] Recorded the choices in A16/A19 and aligned the [specification](sdd/dataset-preview/spec.md), API/security prose and status links. His “installation” refers to `facility` when selecting a `generator`. The [acceptance record](ai/sessions/2026-10-04-dataset-preview-specification.md#specification-acceptance) preserves the prior draft history. No SQL code/SDD or runtime action changed; design/tasks remain the next authorization stage.
+
+## Dataset preview design and tasks — October 4, 2026
+
+[ME] Alayala requested continuation after specification approval. [YOU] AI drafted the [design](sdd/dataset-preview/design.md) and [staged tasks](sdd/dataset-preview/tasks.md), reusing the shared SQL admission/staging/container lifecycle with a typed preview operation, bounded HMAC cursors and exact response validation. Complete frozen diagnostic provenance is an explicit delivery prerequisite; the existing empty-only SQL diagnostic response is insufficient. The [session](ai/sessions/2026-10-04-dataset-preview-design-tasks.md) records document checks and separates planning from unrun offline/runtime/operator acceptance. No production code, test execution, migration, build, credential generation or commit occurred in this workstream.
+
+## Catalog/SQL reconciliation and preview baseline — October 4, 2026
+
+[ME] Alayala requested one clean continuation branch with catalog delivery and SQL implementation preserved and pushed. [YOU] Merged both histories, retained newer main evidence, reconciled shared routes/test fixtures, and preserved accepted preview planning without implementing preview. The [reconciliation record](ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md) records conflict handling, checks, the canonical branch and unresolved preview provenance/runtime gates. No existing commit was rewritten and no main merge, retained migration or cloud operation was performed.
+
+## Slice task status correction — October 4, 2026
+
+[ME] Alayala confirmed catalog completion and identified SQL's stale unchecked tasks and preview's plan-only state. [YOU] Reconciled the three checklists with current source and recorded evidence, marking completed SQL work while separating unfinished acceptance checks. The [status correction](ai/sessions/2026-10-04-slice-task-status-correction.md) records verification and scope. Documentation checks passed; no runtime code changed or runtime tests reran.
+
+## Next slice: Refresh and publication — October 4, 2026
+
+[ME] Alayala selected Step 5, Refresh and publication: persist the candidate and validation evidence, publish automatically without review warnings, require Admin approval for warning-bearing candidates, and switch active publication atomically. [YOU] Recorded the sequence under A16, retained A9's failed/incomplete-check and atomic-reader guarantees, and updated current handoffs. The [supporting record](ai/sessions/2026-10-04-refresh-publication-next-slice.md) distinguishes this accepted decision from future implementation. No publication, code, migration or live operation was performed.
+
+## Preview evidence correction — October 4, 2026
+
+[ME] Alayala identified the existing frozen live-preparation evidence and corrected the proposed persistence prerequisite. [YOU] Verified the saved October 1–2 summary and readback receipt: 16 required passes, 23 completed/frozen diagnostics with one informational D09 finding, zero warnings, 50 independently verified stored objects, and published=false. The earlier inference from an absent PostgreSQL table to absent evidence persistence was too broad. Updated preview design/tasks to **reuse existing frozen evidence; verify its connection to publication and preview**. The [correction record](ai/sessions/2026-10-04-dataset-preview-design-tasks.md#correction-stored-evidence-already-exists) preserves history and precedence. No fresh cloud read, publication, migration or code change occurred; existing evidence files remain unchanged.
+
+
+## Dataset preview Step 2 — October 4, 2026
+
+[ME] Alayala authorized pure input validation, signed cursors and response models without an active publication; the candidate must stay unpublished until publication linkage is implemented and verified. [YOU] Added three separate preview modules and 28 offline tests, preserving existing SQL implementation and frozen evidence. Focused checks passed 28/28; the full offline suite passed 320 tests with 52 runtime checks skipped (372 total). The [Step 2 evidence](ai/sessions/2026-10-04-dataset-preview-step-2.md) records the initial test-guard correction, exact commands, model-location refinement and remaining gates. No preview route, actual shared debit, publication mutation, database/cloud operation or retained-account operator check occurred. Human continuation review and later-stage authorization remain pending.
 
 ## Python comment backfill — October 3, 2026
 
@@ -325,3 +441,26 @@ preparation code without changing executable statements. All 60 Python ASTs matc
 pre-merge main after removing docstrings; 223 offline tests passed and 25 opt-in
 PostgreSQL tests were skipped. See the main-integration section in the
 [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md).
+
+
+## Dataset preview Step 3 — October 4, 2026
+
+[ME] Alayala narrowed authorization to Step 3 only and requested comments about behavior and specific details. [YOU] Added the typed preview/runtime protocol, full-key DataFusion execution, strict service/route ordering, trusted frozen-evidence reader and shared result/cleanup integration. Comments explain behavior and limits; no change-history or line-by-line narration was added. The two missing stored evidence references are supplied as an unapplied migration draft, without backfill or activation. The default app keeps preview execution disabled.
+
+[YOU] Verified focused offline/engine behavior and existing SQL/auth/catalog regressions; the [Step 3 session](ai/sessions/2026-10-04-dataset-preview-step-3.md) records exact counts, initial test corrections and limits. A real synthetic producer bundle passes the new reader without evidence rewriting. No retained database migration, key configuration, image build, cloud call, publication, Step 4 acceptance or commit was performed. Retained publication linkage and matching-image acceptance remain pending.
+
+
+## Dataset preview Step 4 acceptance — October 4, 2026
+
+[ME] Alayala confirmed his Step 3 review and authorized Step 4. [YOU] Extended the disposable SQL runner with preview and combined database modes, added complete synthetic producer/publication fixtures and real PostgreSQL/loopback HTTP acceptance, and prepared container fault scenarios. Migration 0004 was applied only to fresh disposable PostgreSQL clusters. Retained state, saved candidate evidence and publication remain untouched.
+
+[ME] Built the matching shared query image and supplied terminal evidence. [YOU] Resolved its immutable identity and passed all 14 focused preview runtime cases, 71 combined PostgreSQL/HTTP/runtime cases and seven standalone container/frame cases. Together with the offline suite, 432 distinct tests passed; all 76 offline opt-in skips were covered by explicit runtime suites. The [acceptance record](ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md#final-checkpoint) records timing, cleanup, test corrections and the preserved production command guard. Preview delivery stays disabled pending retained publication linkage; no commit, push or Step 5 operator action occurred.
+
+
+## Dataset preview Step 5 — operator tooling and closure
+
+[ME] Alayala authorized Step 5 and subsequent closure, commits and push to `feat/catalog-permissions`. [YOU] Added an optional private-fixture preview mode to the existing persona checker. It checks known publication/rows/diagnostics, full-key continuation, exact filters, Viewer detail denial and logout/revocation; missing prerequisites return incomplete rather than pass. Default auth/catalog behavior is preserved. Passwords, tokens, cursors and response bodies are not printed.
+
+[YOU] Read-only inspection confirmed retained migration 0002 and zero publication events/active pointers. Hash-checked the existing candidate's Parquet bytes and described a concrete two-day Palisades fixture, extending AN-02 supporting evidence without changing the selected anomaly list. The [Step 5 handoff](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) records measured tests, commit/push authorization and the exact incomplete operator boundary. No retained migration, publication, key setup or live EIA/S3 call was performed. Closure delivers implemented tooling; it does not certify retained preview readiness or alayala's conceptual understanding.
+
+[YOU] Final Step 5 regression: seven focused checker tests passed; the offline suite passed 363 with 77 opt-in skips; the explicit combined PostgreSQL/HTTP/Docker suite passed 72 with no skips. Including unchanged Step 4 standalone container evidence, 440 distinct tests have passing evidence. Retained operator success is not claimed.

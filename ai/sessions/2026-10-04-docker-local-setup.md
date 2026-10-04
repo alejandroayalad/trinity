@@ -59,3 +59,7 @@ The setup was first built and tested in another working tree. This record report
 ## Next action
 
 [ME] Run steps 1–3 of "Run with Docker Compose" in `backend/README.md` with your own password.
+
+## Earlier catalog-inclusive run
+
+The original uncommitted checkout's [catalog-inclusive Docker verification](2026-10-04-docker-catalog-initial-verification.md) is preserved separately. It used a different throwaway project and included catalog tests. Its 272-test count and this Docker-only branch's 248-test count describe separate historical runs; neither is a new check performed during branch reconciliation.

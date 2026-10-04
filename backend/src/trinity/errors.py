@@ -1,6 +1,7 @@
 """Map API failures to bounded public problems without exposing raw exceptions."""
 
 import asyncio
+import re
 from http import HTTPStatus
 from uuid import uuid4
 
@@ -44,7 +45,7 @@ def install_handlers(app) -> None:
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request: Request, exc: RequestValidationError):
         # Error locations can contain attacker-supplied field names; allow known fields only.
-        fields = {"username", "password"}
+        fields = {"username", "password", "sql"}
         errors = [{"field": str(e["loc"][-1]) if e["loc"] and e["loc"][-1] in fields else "body",
                    "code": "invalid", "message": "Invalid field."} for e in exc.errors()[:20]]
         code = "invalid_json" if any(e["type"] == "json_invalid" for e in exc.errors()) else "invalid_request"
@@ -97,9 +98,13 @@ class SafeTransport:
                     body.extend(chunk)
                     if not message.get("more_body", False):
                         break
-            if scope.get("query_string"):
+            preview = scope['method'] == 'GET' and re.fullmatch(
+                r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
+            if len(scope.get('query_string', b'')) > 65536:
+                raise Problem(413, "request_too_large")
+            if scope.get("query_string") and not preview:
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "GET" and body:
+            if scope["method"] == "GET" and body and not preview:
                 raise Problem(422, "invalid_request")
             if scope["method"] == "POST":
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]

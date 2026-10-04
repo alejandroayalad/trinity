@@ -130,6 +130,8 @@ This expands F5. Alayala selected it as an anomaly; AI checked the plant values 
 
 ### AN-02 — Palisades enters the dataset fully offline
 
+**Preview handoff check, October 4:** the retained October 1–2 candidate Parquet files still match their manifest sizes/hashes. Palisades (`1715`, generator `1`) has capacity and outage `815.600000` MW on both days. These existing values support a proposed two-page operator fixture; the candidate remains unpublished. This extends AN-02 evidence without adding a new anomaly or changing its explanation. See the [fixture and verification boundary](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md#concrete-candidate-for-a-future-operator-fixture).
+
 **What happened?** Palisades (`facility = 1715`, generator `1`) first appears in our two-year export on **September 9, 2025**. Its capacity and outage were both **768.5 MW**, so it was **100% offline**. It stays at 100% offline for **389 consecutive daily records**, through October 2, 2026. On the last date, capacity and outage are both **815.6 MW**.
 
 **Why did it happen?** EIA explains that Palisades changed from decommissioning to restarting on September 9, 2025. It was producing no power, so EIA began counting it as an outage. This explains its entry into the dataset; the 389-day duration comes from our saved rows. [EIA explanation, January 26, 2026](https://www.eia.gov/TODAYINENERGY/detail.php?id=67047).

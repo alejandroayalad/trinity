@@ -1,4 +1,4 @@
-"""Create the local-auth API without importing live infrastructure state.
+"""Create the authenticated local API without importing live infrastructure state.
 
 Startup reads API configuration and opens a lazy database pool. Product requests
 fail closed if PostgreSQL is unavailable; health reports process liveness only.
@@ -12,9 +12,11 @@ from pydantic import BaseModel
 from trinity.adapters.postgres import Database
 from trinity.auth.router import router
 from trinity.auth.service import AuthService
+from trinity.catalog.router import router as catalog_router
 from trinity.config import load_api_settings
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
+from trinity.queries.router import router as queries_router
 
 
 class HealthResponse(BaseModel):
@@ -22,8 +24,8 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
-def create_app(*, settings=None, service=None) -> FastAPI:
-    """Return the API with local authentication, settings, and liveness routes.
+def create_app(*, settings=None, service=None, query_service=None, preview_service=None, enable_preview=False) -> FastAPI:
+    """Return the API with auth, catalog, SQL and a delivery-gated preview route.
 
     Register startup and shutdown hooks without opening a database here.
     Startup loads the supplied or environment settings and opens the database pool.
@@ -44,6 +46,9 @@ def create_app(*, settings=None, service=None) -> FastAPI:
                 raise
         else:
             application.state.auth = service
+        application.state.query_service = query_service
+        application.state.preview_service = preview_service
+        application.state.preview_enabled = enable_preview
         try:
             yield
         finally:
@@ -55,6 +60,8 @@ def create_app(*, settings=None, service=None) -> FastAPI:
     install_handlers(application)
     application.include_router(router)
     application.include_router(settings_router)
+    application.include_router(queries_router)
+    application.include_router(catalog_router)
 
     # The decorator registers this handler; the response model fixes the JSON shape.
     @application.get("/health", response_model=HealthResponse, tags=["health"])

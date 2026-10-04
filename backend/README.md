@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). Preview/dashboard rows and refresh workers remain pending.
 
 ## Setup
 
@@ -15,7 +15,7 @@ This installs the package and pinned backend dependencies from `uv.lock`. A chan
 
 ## Local API and three personas
 
-This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
+This slice exposes `GET /health`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/me`, `GET /api/v1/catalog`, `POST /api/v1/queries` and Admin-only `GET /api/v1/settings`. The static product contract still describes later routes; those routes are not implemented here.
 
 Use PostgreSQL **17.11**. Root `compose.yaml` supplies PostgreSQL, pinned to `postgres:17.11-bookworm`, and the API built from `backend/Dockerfile`. Both use loopback ports; the database uses a persistent named volume. The [official image](https://hub.docker.com/_/postgres) supports this tag and password initialization from a file. No existing database is migrated automatically. You can run the API in Docker (next section) or natively (steps 1–4 below). Both paths use the same Compose database.
 
@@ -55,7 +55,7 @@ The image uses CPython 3.14.8 and uv 0.12.23, installs only from `uv.lock` (`uv 
 
    ```zsh
    curl -s http://127.0.0.1:8000/health
-   docker compose exec api python -m trinity.auth.check
+   docker compose exec api python -m trinity.auth.check --catalog
    ```
 
 4. Stop the services and keep the data with `docker compose down`. Rebuild after code changes with `docker compose up -d --build --wait`. New migrations need step 2 again.
@@ -105,7 +105,7 @@ An empty installation returns `waiting` for Viewer/Analyst and `setup` for Admin
 
 Sessions expire after eight hours and do not slide. Logout revokes only the current session. Every protected call re-reads the active user, session and current role. Shared PostgreSQL login limits are 5 attempts/username, 30/direct peer and 60 globally in each 60-second window; `429` includes `Retry-After`. Password work runs in bounded child processes and uses full-cost scrypt. Credentials, token digests, raw database errors and storage paths are absent from public responses.
 
-### Run authentication acceptance
+### Run authentication and catalog acceptance
 
 From `backend/`, with PostgreSQL 17.11 binaries installed:
 
@@ -115,9 +115,39 @@ uv run --locked python tests/run_local_auth_checks.py
 
 On macOS the default binary directory is `/opt/homebrew/opt/postgresql@17/bin`; elsewhere export `TRINITY_PG_BIN` to the directory containing `postgres`, `initdb`, `pg_ctl` and `createdb`. The runner verifies version 17.11, creates a temporary cluster with no TCP listener and a private owner-only Unix socket, seeds synthetic users, runs real PostgreSQL/HTTP checks and stops/removes only its own temporary cluster. It never connects to the configured application database. Tests require a non-root OS user, as PostgreSQL initdb does.
 
-The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables those tests. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
+The normal `unittest discover` run skips the opt-in database class when `TRINITY_TEST_DATABASE_URL` is absent. The runner enables auth and catalog tests, including real loopback HTTP checks. Do not point this test variable at retained data: the opt-in tests reset the test schema. Test-only analytical guards establish policy behavior, not SQL/DataFusion/refresh endpoint security.
 
 The implementation session records the exact runtime commands/results. Compose startup, the locked image install and a synthetic three-persona flow were verified on October 4, 2026 ([Docker session](../ai/sessions/2026-10-04-docker-local-setup.md)); an evaluator-owned walkthrough remains separate verification. Migration downgrade was tested only inside the disposable cluster; never use downgrade as recovery for retained application history.
+
+### Catalog metadata and operator check
+
+`GET /api/v1/catalog` accepts the existing bearer session, no parameters and no body. Viewer receives only `national_outages`; Analyst/Admin receive all three analytical definitions. The response contains columns, units, keys, filter names, the national metric definition and safe freshness. It reads no analytical files or live source data.
+
+Before publication it returns metadata with `data_ready=false` and `publication=null`. Once a publication exists, its dates remain distinct from `last_refresh`, which reports the greatest-sequence attempt even if it failed. Database failure returns an error rather than false empty state. Viewer keeps this metadata API access for dashboard support; Catalog and SQL navigation remain hidden in the future Viewer interface. This slice implements no frontend, preview rows or SQL execution.
+
+The three evidence categories remain separate:
+
+| Evidence | Current result |
+|---|---|
+| Offline tests | 239 delivery regression checks passed, including 16 catalog checks; 36 opt-in database tests were skipped in that command and exercised separately below. |
+| Automated PostgreSQL/HTTP | The disposable runner passed 70 checks: 36 database-backed checks and 34 offline checks. Catalog's real HTTP test exercised all personas before and after synthetic publication. |
+| Your local operator check | Passed October 4 with retained Docker accounts and privately entered passwords for all three personas, with no active publication. See [operator evidence](../ai/sessions/2026-10-04-catalog-docker-operator-check.md). |
+
+For the operator check, keep your existing PostgreSQL setup and accounts. Start or restart the API from the updated checkout with `TRINITY_DATABASE_URL` set in that terminal. Using the existing virtual environment, from the repository root:
+
+```bash
+backend/.venv/bin/python -m uvicorn trinity.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
+```
+
+In a second terminal at the repository root:
+
+```bash
+backend/.venv/bin/python -m trinity.auth.check --catalog
+```
+
+The check prompts privately for each persona password and checks login, identity, settings permissions, permitted catalog metadata, logout and post-logout denial. It prints only a safe pass/fail summary for each persona. Empty publication state is a valid check outcome. It never publishes data or changes roles. Keep the default command without `--catalog` for the original auth-only check. The operator check does not replace the automated race, corrupted-state or outage tests.
+
+With uv available, the equivalent checker from `backend/` is `uv run --locked python -m trinity.auth.check --catalog`. This implementation used the existing CPython 3.14.8 virtual environment because uv was absent from the agent's PATH; every installed direct dependency matched its declared pin. That is not a fresh locked-install result. No new migration or dependency was added. See the [catalog implementation evidence](../ai/sessions/2026-10-04-catalog-permissions-implementation.md).
 
 ## EIA configuration
 
@@ -352,3 +382,141 @@ At October 4 closure, the existing CPython 3.14.8 environment passed 185 offline
 `src/trinity/main.py` creates the FastAPI application. `src/trinity/__init__.py` has no infrastructure initialization. `tests/` contains standard-library unittest tests, so no additional test framework is required.
 
 Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Steps 1–5 are implemented. Alayala authorized Step 5 delivery and session closure; real storage protection and live preparation remain separate verification gates. See the [session close and S3 handoff](../ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
+
+Current catalog delivery: [review and test evidence](../ai/sessions/2026-10-04-catalog-review-and-delivery.md), [SDD reading order](../sdd/catalog-permissions/README.md). Earlier test counts above retain their original session context.
+
+
+## Preview groundwork — Step 2
+
+`queries/preview.py` validates decoded query pairs and separates primitive parsing
+from semantic checks after the shared rate debit. `queries/cursors.py`
+authenticates bounded, publication-bound cursors. `queries/preview_schemas.py`
+validates canonical columns, exact decimal strings, explicit diagnostic input,
+complete-key pages and the 5 MiB response limit. No preview endpoint is enabled.
+
+Run the focused offline checks from `backend/`:
+
+```sh
+.venv/bin/python -m unittest discover -s tests -p 'test_preview_unit.py' -v
+```
+
+Tests use synthetic publications and public test key bytes. No active publication
+or configured secret is needed. Step 3 integration is described below; retained
+configuration and real runtime verification remain pending.
+The stored candidate stays unpublished. See [Step 2 evidence](../ai/sessions/2026-10-04-dataset-preview-step-2.md)
+and the [remaining stages](../sdd/dataset-preview/tasks.md).
+
+
+## Preview integration — Step 3
+
+`GET /api/v1/datasets/{dataset_key}/preview` now routes through `PreviewService`.
+It checks identity and primitive input before committing one shared analytical
+rate debit. Semantic/cursor checks, fresh permission, publication/evidence pinning
+and shared capacity follow. The common supervisor stages verified files and runs
+one typed preview operation in the isolated query runtime. No API-process query
+fallback exists. Diagnostic counts describe the frozen dataset, not the page.
+
+**Delivery stays disabled:** the default `create_app()` uses `enable_preview=False`.
+The internal constructor flag is for explicit acceptance configuration; it is not
+an operator environment switch or evidence of readiness. Only tests inject doubles.
+Step 4 records automated matching-image, database accounting, isolation and cleanup
+evidence below. Retained publication linkage is still required before delivery is enabled. No preview key is generated or configured by startup.
+
+The shared internal protocol now requires `protocol_version=1`, an explicit
+`operation_kind` (`sql` or `preview`) and an exact `operation_digest`. SQL retains
+its independent policy validation and public response. The API and query image
+must be deployed together; an older image fails closed. The user built the matching
+Step 4 acceptance image; this does not deploy it to the retained application.
+
+`0004_preview_evidence` has run **only in disposable test databases**. It adds nullable paired
+`data_versions.evidence_bundle_sha256` and `validation_attempt_id` references to the
+existing immutable bundle. It performs no backfill or publication. Applying it to
+the retained database requires separate approval. The publication writer must
+verify/freeze these references with the existing validation step, manifest,
+checkset and warning identity before activation; that writer remains a separate
+slice. Existing unbound versions fail the preview provenance read.
+
+The trusted reader checks the bundle hash, both summary hashes, all 16 required
+results and 23 completed diagnostics, including their detail identities. It emits
+only canonical notes for the requested dataset, never raw details or D09. These
+metadata reads do not download another dataset's Parquet.
+
+From `backend/`, run the offline preview checks:
+
+```sh
+.venv/bin/python -m unittest discover -s tests -p 'test_preview_*.py' -v
+```
+
+Without runtime opt-ins, these run temporary-Parquet/DataFusion and in-process
+TestClient checks; PostgreSQL/loopback HTTP/container cases skip. Use the explicit
+Step 4 commands below for that separate evidence. See [Step 3 evidence](../ai/sessions/2026-10-04-dataset-preview-step-3.md).
+
+
+## Preview acceptance — Step 4
+
+Automated acceptance passed: 432 distinct tests across offline, disposable
+PostgreSQL/HTTP and matching-image Docker suites. All 76 offline opt-in skips
+were covered by the explicit suites. Retained publication linkage and the
+operator check are still pending; preview execution remains disabled.
+
+The disposable SQL runner accepts `--preview` for SQL/preview acceptance and
+`--all` to include auth/catalog database regressions. `--runtime-only` selects the
+15 preview container cases (including the Step 5 checker); `--failfast` stops at the first failure. It initializes a fresh local
+PostgreSQL 17.11 cluster, migrates that temporary database through 0004, seeds
+complete synthetic producer evidence, and stops only its own cluster. It does
+not migrate or publish anything in the retained database.
+
+The user supplied the matching image with this build from the repository root:
+
+```sh
+PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH" docker build -f backend/Dockerfile.query -t trinity-query:preview-step4 backend
+```
+
+After that build, acceptance uses its immutable local image ID and the verified
+local Docker socket via `TRINITY_TEST_QUERY_IMAGE` and
+`TRINITY_TEST_DOCKER_SOCKET`. On the verified macOS Docker Desktop setup, run
+from the repository root:
+
+```sh
+export TRINITY_TEST_QUERY_IMAGE="$(/Applications/Docker.app/Contents/Resources/bin/docker image inspect trinity-query:preview-step4 --format '{{.Id}}')"
+export TRINITY_TEST_DOCKER_SOCKET="$HOME/.docker/run/docker.sock"
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --all
+backend/.venv/bin/python -m unittest discover -s backend/tests -p 'test_sql_containers.py' -v
+```
+
+Without the explicit image, database-only checks can run but container cases
+skip; exit zero then is not full Step 4 acceptance. Test storage serves exact
+synthetic bundle/Parquet bytes. A test-only bridge copies request files into a
+unique disposable daemon volume; this does not prove deployed Compose wiring or
+real S3 permissions. The acceptance record distinguishes real-container results from these remaining
+deployment and retained-publication boundaries.
+See [Step 4 evidence](../ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md).
+
+
+## Preview operator check — Step 5
+
+The optional `--preview-fixture` mode checks all three personas against an
+independently verified publication fixture. Default auth and `--catalog` behavior
+are unchanged. The fixture pins publication metadata, range, facility/generator,
+two expected rows per dataset and scoped frozen diagnostic summaries. Page size
+is fixed to 1, so the check must follow a real cursor and compare the second row.
+Missing publication, unavailable runtime, empty pages or no continuation return
+exit 2 (`not ready/incomplete`), never a pass. Other failures return 1.
+
+**Retained verification is blocked:** read-only inspection found zero retained
+publications and migration `0002_app_entry`; preview remains disabled. Do not run
+a test seed, publish the candidate or invent fixture metadata to satisfy this check.
+The [operator handoff](../ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md)
+records the concrete October 1–2 Palisades candidate, hash-checked expected rows,
+fixture fields and the missing retained publication/configuration prerequisites.
+
+Only after those prerequisites are verified, run from the repository root:
+
+```sh
+backend/.venv/bin/python -m trinity.auth.check --catalog --preview-fixture /absolute/private/preview-fixture.json
+```
+
+Keep the fixture outside Git. The terminal prompts privately for each password.
+Tokens/cursors stay in memory; the checker attempts logout on failure and checks
+revocation after successful checks. Output contains safe summaries only. This
+command neither configures nor enables preview and makes no publication changes.

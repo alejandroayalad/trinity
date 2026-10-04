@@ -1,0 +1,492 @@
+{
+  "status": "proposed_for_human_review",
+  "dialect": "postgres",
+  "cases": [
+    {
+      "id": "A01",
+      "expectation": "allow",
+      "sql": "SELECT period, outage FROM national_outages ORDER BY period LIMIT 10",
+      "reason": "Basic national selection, ordering and limit."
+    },
+    {
+      "id": "A02",
+      "expectation": "allow",
+      "sql": "SELECT facility, \"facilityName\", outage FROM facility_outages WHERE facility = '00566'",
+      "reason": "Canonical facility columns; source IDs remain strings."
+    },
+    {
+      "id": "A03",
+      "expectation": "allow",
+      "sql": "SELECT facility, generator, outage FROM generator_outages WHERE facility = '46' AND generator = '1'",
+      "reason": "Generator table; exact facility/generator literals."
+    },
+    {
+      "id": "A04",
+      "expectation": "allow",
+      "sql": "SELECT n.* FROM national_outages AS n",
+      "reason": "One table alias and qualified star."
+    },
+    {
+      "id": "A05",
+      "expectation": "allow",
+      "sql": "SELECT * FROM national_outages",
+      "reason": "Plain star expands canonical column order."
+    },
+    {
+      "id": "A06",
+      "expectation": "allow",
+      "sql": "SELECT outage FROM national_outages WHERE outage >= 1 AND outage <= 2 OR NOT (outage = 0) AND outage <> capacity AND outage != -1",
+      "reason": "Comparison and boolean tree; also test each operator independently later."
+    },
+    {
+      "id": "A07",
+      "expectation": "allow",
+      "sql": "SELECT outage FROM national_outages WHERE outage BETWEEN 1 AND 2 OR outage NOT BETWEEN 3 AND 4",
+      "reason": "Between and Not(Between)."
+    },
+    {
+      "id": "A08",
+      "expectation": "allow",
+      "sql": "SELECT facility FROM facility_outages WHERE facility IN ('46', '566') AND facility NOT IN ('371')",
+      "reason": "Literal-list IN; no nested SELECT."
+    },
+    {
+      "id": "A09",
+      "expectation": "allow",
+      "sql": "SELECT percentOutage FROM national_outages WHERE percentOutage IS NULL OR percentOutage IS NOT NULL",
+      "reason": "Is(Null), including the negate flag."
+    },
+    {
+      "id": "A10",
+      "expectation": "allow",
+      "sql": "SELECT DATE '2025-01-01' FROM national_outages",
+      "reason": "Typed DATE literal; must remain distinct from arbitrary CAST."
+    },
+    {
+      "id": "A11",
+      "expectation": "allow",
+      "sql": "SELECT +(outage + 1) - (-capacity * 2) / 3 FROM national_outages",
+      "reason": "Scalar arithmetic; unary plus may disappear in the tree."
+    },
+    {
+      "id": "A12",
+      "expectation": "allow",
+      "sql": "SELECT CASE WHEN outage > 0 THEN outage ELSE 0 END FROM national_outages",
+      "reason": "Searched CASE; If nodes only as its arms."
+    },
+    {
+      "id": "A13",
+      "expectation": "allow",
+      "sql": "SELECT CASE WHEN outage < 1 THEN NULL END FROM national_outages",
+      "reason": "Searched CASE without ELSE; null output."
+    },
+    {
+      "id": "A14",
+      "expectation": "allow",
+      "sql": "SELECT facility, COUNT(*), SUM(outage), AVG(outage), MIN(outage), MAX(outage) FROM facility_outages GROUP BY facility",
+      "reason": "All five selected aggregates; grouping by source column."
+    },
+    {
+      "id": "A15",
+      "expectation": "allow",
+      "sql": "SELECT COUNT(percentOutage) FROM national_outages",
+      "reason": "COUNT(expression) keeps SQL null semantics."
+    },
+    {
+      "id": "A16",
+      "expectation": "allow",
+      "sql": "SELECT ROUND(outage), ROUND(outage, 2), ROUND(outage, -1) FROM national_outages",
+      "reason": "ROUND argument shapes; exact rounding compatibility is later."
+    },
+    {
+      "id": "A17",
+      "expectation": "allow",
+      "sql": "SELECT COALESCE(percentOutage, 0), NULLIF(capacity, 0) FROM national_outages",
+      "reason": "Selected scalar/null functions."
+    },
+    {
+      "id": "A18",
+      "expectation": "allow",
+      "sql": "SELECT ROUND(SUM(outage), 2) AS total FROM national_outages ORDER BY total",
+      "reason": "Scalar function wrapping aggregate output; unique output alias."
+    },
+    {
+      "id": "A19",
+      "expectation": "allow",
+      "sql": "SELECT \"percentOutage\", \"outage\" AS \"value\" FROM \"national_outages\"",
+      "reason": "Quoted identifiers preserve exact canonical spelling."
+    },
+    {
+      "id": "A20",
+      "expectation": "allow",
+      "sql": "SELECT outage AS value, capacity AS value FROM national_outages",
+      "reason": "Duplicate public output labels are allowed when not ambiguously referenced."
+    },
+    {
+      "id": "A21",
+      "expectation": "allow",
+      "sql": "SELECT outage FROM national_outages ORDER BY outage DESC",
+      "reason": "Omitted null order must become NULLS LAST under D03."
+    },
+    {
+      "id": "A22",
+      "expectation": "allow",
+      "sql": "SELECT outage FROM national_outages ORDER BY outage DESC NULLS FIRST",
+      "reason": "Explicit NULLS FIRST must survive; AST resembles omitted null order."
+    },
+    {
+      "id": "A23",
+      "expectation": "allow",
+      "sql": "SELECT outage FROM national_outages ORDER BY outage ASC NULLS LAST LIMIT 0",
+      "reason": "Explicit null order and zero limit."
+    },
+    {
+      "id": "A24",
+      "expectation": "allow",
+      "sql": "/* ordinary comment */ SELECT outage FROM national_outages; -- done",
+      "reason": "Ordinary comments and one terminal semicolon."
+    },
+    {
+      "id": "A25",
+      "expectation": "allow",
+      "sql": "SELECT 'DROP TABLE local_users; -- text' AS note, TRUE, FALSE, NULL, 1.25 FROM national_outages LIMIT 1",
+      "reason": "SQL-looking text is a string literal, not another statement."
+    },
+    {
+      "id": "B01",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages; DELETE FROM national_outages",
+      "reason": "All statements must be inspected; trailing write."
+    },
+    {
+      "id": "B02",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages; SELECT capacity FROM national_outages",
+      "reason": "Two read-only statements are still outside v1."
+    },
+    {
+      "id": "B03",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages;;",
+      "reason": "Extra empty statement must not be discarded silently."
+    },
+    {
+      "id": "B04",
+      "expectation": "reject",
+      "sql": "SELECT 1",
+      "reason": "Exactly one physical analytical table is required."
+    },
+    {
+      "id": "B05",
+      "expectation": "reject",
+      "sql": "SELECT * FROM local_users",
+      "reason": "Application-state table is unavailable."
+    },
+    {
+      "id": "B06",
+      "expectation": "reject",
+      "sql": "SELECT * FROM unpublished_candidate",
+      "reason": "An unpublished/unknown name is not analytical authority."
+    },
+    {
+      "id": "B07",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national",
+      "reason": "Internal registry key is not a public SQL table."
+    },
+    {
+      "id": "B08",
+      "expectation": "reject",
+      "sql": "SELECT * FROM public.national_outages",
+      "reason": "Schema qualification is excluded."
+    },
+    {
+      "id": "B09",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages n JOIN facility_outages f ON n.period = f.period",
+      "reason": "JOIN is excluded even for permitted names."
+    },
+    {
+      "id": "B10",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages, facility_outages",
+      "reason": "Comma FROM becomes a Join node."
+    },
+    {
+      "id": "B11",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages a JOIN national_outages b ON a.period = b.period",
+      "reason": "Self-join is still a join."
+    },
+    {
+      "id": "B12",
+      "expectation": "reject",
+      "sql": "WITH n AS (SELECT * FROM national_outages) SELECT * FROM n",
+      "reason": "CTE is excluded."
+    },
+    {
+      "id": "B13",
+      "expectation": "reject",
+      "sql": "SELECT * FROM (SELECT * FROM national_outages) n",
+      "reason": "FROM subquery is excluded."
+    },
+    {
+      "id": "B14",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages WHERE period IN (SELECT period FROM facility_outages)",
+      "reason": "In.query is not an IN literal list."
+    },
+    {
+      "id": "B15",
+      "expectation": "reject",
+      "sql": "SELECT (SELECT MAX(outage) FROM facility_outages) FROM national_outages",
+      "reason": "Subquery hidden inside projection."
+    },
+    {
+      "id": "B16",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages ORDER BY (SELECT MAX(outage) FROM facility_outages)",
+      "reason": "Subquery hidden inside ORDER BY."
+    },
+    {
+      "id": "B17",
+      "expectation": "reject",
+      "sql": "SELECT * FROM read_parquet('private.parquet')",
+      "reason": "Table.this can be a function, not Identifier."
+    },
+    {
+      "id": "B18",
+      "expectation": "reject",
+      "sql": "SELECT * FROM \"s3://private.invalid/candidate.parquet\"",
+      "reason": "External storage URL cannot be a table."
+    },
+    {
+      "id": "B19",
+      "expectation": "reject",
+      "sql": "SELECT custom_fn(outage) FROM national_outages",
+      "reason": "Anonymous/custom function is not approved."
+    },
+    {
+      "id": "B20",
+      "expectation": "reject",
+      "sql": "SELECT ABS(outage) FROM national_outages",
+      "reason": "Known builtin outside the eight-function list."
+    },
+    {
+      "id": "B21",
+      "expectation": "reject",
+      "sql": "SELECT NVL(outage, 0) FROM national_outages",
+      "reason": "Normalizes to Coalesce but the spelling is not selected."
+    },
+    {
+      "id": "B22",
+      "expectation": "reject",
+      "sql": "SELECT IFNULL(outage, 0) FROM national_outages",
+      "reason": "Another unapproved spelling normalizing to Coalesce."
+    },
+    {
+      "id": "B23",
+      "expectation": "reject",
+      "sql": "SELECT CAST('2025-01-01' AS DATE) FROM national_outages",
+      "reason": "Explicit CAST shares the allowed typed-date tree."
+    },
+    {
+      "id": "B24",
+      "expectation": "reject",
+      "sql": "SELECT '2025-01-01'::DATE FROM national_outages",
+      "reason": "PostgreSQL cast spelling is also unapproved."
+    },
+    {
+      "id": "B25",
+      "expectation": "reject",
+      "sql": "SELECT DISTINCT outage FROM national_outages",
+      "reason": "SELECT DISTINCT is excluded."
+    },
+    {
+      "id": "B26",
+      "expectation": "reject",
+      "sql": "SELECT COUNT(DISTINCT outage) FROM national_outages",
+      "reason": "Distinct modifier inside an otherwise allowed function."
+    },
+    {
+      "id": "B27",
+      "expectation": "reject",
+      "sql": "SELECT SUM(outage) FILTER (WHERE capacity > 0) FROM national_outages",
+      "reason": "Aggregate FILTER wrapper is excluded."
+    },
+    {
+      "id": "B28",
+      "expectation": "reject",
+      "sql": "SELECT SUM(outage) OVER () FROM national_outages",
+      "reason": "Window expression is excluded."
+    },
+    {
+      "id": "B29",
+      "expectation": "reject",
+      "sql": "SELECT facility, SUM(outage) FROM facility_outages GROUP BY facility HAVING SUM(outage) > 0",
+      "reason": "HAVING is excluded."
+    },
+    {
+      "id": "B30",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages LIMIT 10 OFFSET 1",
+      "reason": "OFFSET is excluded."
+    },
+    {
+      "id": "B31",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages UNION ALL SELECT outage FROM national_outages",
+      "reason": "Set operations are excluded."
+    },
+    {
+      "id": "B32",
+      "expectation": "reject",
+      "sql": "SELECT facility FROM facility_outages WHERE facility LIKE '5%'",
+      "reason": "LIKE is outside the selected predicates."
+    },
+    {
+      "id": "B33",
+      "expectation": "reject",
+      "sql": "SELECT CASE outage WHEN 0 THEN 1 ELSE 0 END FROM national_outages",
+      "reason": "Simple CASE sets Case.this; only searched CASE is selected."
+    },
+    {
+      "id": "B34",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages ORDER BY 1",
+      "reason": "ORDER BY ordinal is excluded."
+    },
+    {
+      "id": "B35",
+      "expectation": "reject",
+      "sql": "SELECT facility, COUNT(*) FROM facility_outages GROUP BY 1",
+      "reason": "GROUP BY ordinal is excluded."
+    },
+    {
+      "id": "B36",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages LIMIT -1",
+      "reason": "LIMIT must be a nonnegative integer literal."
+    },
+    {
+      "id": "B37",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages LIMIT 1 + 1",
+      "reason": "Computed LIMIT is excluded."
+    },
+    {
+      "id": "B38",
+      "expectation": "reject",
+      "sql": "SELECT 1e2 FROM national_outages",
+      "reason": "Scientific notation remains a Literal; check spelling."
+    },
+    {
+      "id": "B39",
+      "expectation": "reject",
+      "sql": "SELECT outage FROM national_outages WHERE outage > $1",
+      "reason": "User parameters are excluded."
+    },
+    {
+      "id": "B40",
+      "expectation": "reject",
+      "sql": "SELECT missing_column FROM national_outages",
+      "reason": "Resolve columns against the canonical table schema."
+    },
+    {
+      "id": "B41",
+      "expectation": "reject",
+      "sql": "SELECT outage AS value, capacity AS value FROM national_outages ORDER BY value",
+      "reason": "Ambiguous output alias cannot determine ordering."
+    },
+    {
+      "id": "B42",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages AS n(renamed)",
+      "reason": "TableAlias.columns is not allowed."
+    },
+    {
+      "id": "B43",
+      "expectation": "reject",
+      "sql": "SELECT * FROM national_outages FOR UPDATE",
+      "reason": "Lock modifier is excluded."
+    },
+    {
+      "id": "B44",
+      "expectation": "reject",
+      "sql": "SELECT /*+ hint */ outage FROM national_outages",
+      "reason": "Hint text can survive only as comments in this dialect."
+    },
+    {
+      "id": "B45",
+      "expectation": "reject",
+      "sql": "SELECT DATE '2025-02-30' FROM national_outages",
+      "reason": "Parser acceptance does not prove a real calendar date."
+    },
+    {
+      "id": "B46",
+      "expectation": "reject",
+      "sql": "SELECT COALESCE(outage) FROM national_outages",
+      "reason": "Coalesce requires at least two scalar arguments."
+    },
+    {
+      "id": "B47",
+      "expectation": "reject",
+      "sql": "SELECT MIN(outage, capacity) FROM national_outages",
+      "reason": "Selected MIN is single-argument aggregate, not multiargument form."
+    },
+    {
+      "id": "B48",
+      "expectation": "reject",
+      "sql": "SELECT ROUND(outage, capacity) FROM national_outages",
+      "reason": "ROUND scale must be an integer literal."
+    },
+    {
+      "id": "B49",
+      "expectation": "reject",
+      "sql": "SELECT SUM(AVG(outage)) FROM national_outages",
+      "reason": "Nested aggregates are excluded."
+    },
+    {
+      "id": "B50",
+      "expectation": "reject",
+      "sql": "DROP TABLE national_outages",
+      "reason": "DDL is not a SELECT."
+    },
+    {
+      "id": "B51",
+      "expectation": "reject",
+      "sql": "SET timezone = 'UTC'",
+      "reason": "Session statements are excluded."
+    },
+    {
+      "id": "B52",
+      "expectation": "reject",
+      "sql": "EXPLAIN SELECT outage FROM national_outages",
+      "reason": "EXPLAIN is outside the grammar even if read-only."
+    },
+    {
+      "id": "E01",
+      "expectation": "engine_review",
+      "sql": "SELECT outage / 0 FROM national_outages",
+      "reason": "Permitted syntax; reachable zero division must fail safely without partial output."
+    },
+    {
+      "id": "E02",
+      "expectation": "engine_review",
+      "sql": "SELECT AVG(outage), ROUND(outage, -1) FROM national_outages GROUP BY outage",
+      "reason": "Inspect exact output type, scale and rounding using synthetic decimals after validator review."
+    },
+    {
+      "id": "E03",
+      "expectation": "engine_review",
+      "sql": "SELECT SUM(facilityName) FROM facility_outages",
+      "reason": "Grammar uses approved names; numeric type requirement must fail safely. Review static versus engine error boundary."
+    },
+    {
+      "id": "E04",
+      "expectation": "engine_review",
+      "sql": "SELECT period, SUM(outage) FROM national_outages",
+      "reason": "Invalid grouping must fail safely; not a reason to permit hidden subqueries or rewrite the user query."
+    }
+  ]
+}
