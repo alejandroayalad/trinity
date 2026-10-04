@@ -281,3 +281,32 @@ Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the
 ## Local-login review closure and PR — October 4, 2026
 
 [ME] Alayala confirmed that he reviewed the slice, requested a PR to `main` so he can merge it, and selected live S3 + EIA verification next. [YOU] AI prepared that PR, integrated the newer findings commits from main without rewriting history, preserved both documentation histories, and checked the combined branch. The [closure record](ai/sessions/2026-10-04-local-login-review-close.md) distinguishes reviewed code and local test evidence from still-unverified live storage/EIA behavior. This close does not run EIA-key commands, write S3 objects or perform the final merge.
+
+## Catalog and permissions proposal — October 4, 2026
+
+[ME] Alayala selected catalog and permissions as the first bounded slice of step 5 and requested its SDD proposal. [YOU] AI traced the existing auth, dataset and publication code and drafted the [Human/LLM proposal](sdd/catalog-permissions/proposal.md), with national-only Viewer metadata and all three datasets for Analyst/Admin. The proposal preserves the public/internal dataset-key distinction, pre-publication metadata, safe freshness and one database snapshot. Greatest `run_seq` for `last_refresh` is a proposed interpretation for specification review, not an accepted decision.
+
+The [session record](ai/sessions/2026-10-04-catalog-permissions-proposal.md) records source evidence, scope and document checks. At alayala's subsequent request, AI created local branch `feat/catalog-permissions` in the same worktree; unrelated changes remain visible and uncommitted. Proposal review remains pending. No specification, design, tasks, application implementation, runtime test, live request, commit or push is claimed by this task. Existing local code, findings and live-evidence work is preserved.
+
+[ME] Alayala then accepted dashboard-only Viewer navigation and requested the proposal update. [YOU] AI recorded that presentation choice under A16 and linked the proposal, product scope and API overview to it. Viewer keeps national metadata/data API permissions; the future interface shows Catalog and SQL navigation only to Analyst/Admin. This is a documentation update, not implementation or approval of the full proposal. The same session records verification and pending frontend checks.
+
+## Catalog and permissions specification — October 4, 2026
+
+[ME] Alayala authorized the specification with “continue with specs please.” [YOU] AI drafted the [Human/LLM specification](sdd/catalog-permissions/spec.md) with R01–R15 and S01–S24, updated the proposal status and README index, and preserved the accepted Viewer navigation/API distinction. D01 proposes greatest `run_seq` for `last_refresh`; it remains under specification review, not an accepted decision. The [specification session](ai/sessions/2026-10-04-catalog-permissions-specification.md) records checks and scope. No design, tasks, implementation, runtime test, commit or push occurred in this step.
+
+## Catalog design and tasks — October 4, 2026
+
+[ME] Alayala approved the specification and requested design/tasks. [YOU] AI recorded D01 as accepted under A16 and aligned the API prose: `last_refresh` is the greatest-sequence attempt, while readiness remains tied to the active publication. AI drafted the [design](sdd/catalog-permissions/design.md) and [task plan](sdd/catalog-permissions/tasks.md), reusing existing authentication, metadata and state readers with no new production dependency or migration. Earlier proposed-status entries retain their historical meaning; the [design/tasks session](ai/sessions/2026-10-04-catalog-permissions-design-tasks.md) records the new authorization and document checks. No application implementation, runtime check or Git delivery occurred.
+
+## Catalog implementation — October 4, 2026
+
+[ME] Alayala authorized implementation and explicitly reserved the local operator check, keeping offline, real database/HTTP and operator evidence separate. [YOU] AI implemented the catalog route, canonical metadata, shared dataset policy, safe greatest-sequence refresh summary and optional hidden-input `--catalog` persona check. No new dependency or migration was needed.
+
+Offline evidence: 16 focused catalog tests passed; final regression passed 236 tests with 36 opt-in database tests skipped. Separate database/HTTP evidence: the disposable PostgreSQL 17.11 runner passed 70 checks (36 database-backed and 34 offline), including all three personas over real loopback HTTP before and after synthetic publication. The first full run found an outdated exact-route inventory; adding the new catalog path to that assertion resolved its single failure. Existing auth test/fixture bodies remained AST-identical after fixture extraction.
+
+The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implementation.md) records commands, timings, failure correction and limits. The existing CPython 3.14.8 environment matched direct dependency pins; fresh locked installation was not rerun. [ME] Retained-account operator results and observed understanding remain pending. No frontend/query-isolation or live publication proof is claimed. No commit, push or PR occurred.
+
+## Retained-account catalog operator check — October 4, 2026
+
+[ME] Alayala approved the two existing migrations and entered persona passwords privately. [YOU] AI initialized the empty Docker application schema, launched the existing missing-only provisioning and catalog commands, and verified safe results. All three active personas passed the interactive catalog check; all three resulting sessions were revoked. Short-password provisioning and a different-password login failed safely before successful retries; no existing user was reset. The [operator evidence](ai/sessions/2026-10-04-catalog-docker-operator-check.md) records commands, corrections and limits separately from automated tests. No publication existed, so this establishes retained-account metadata access before publication only. No production code, commit, push or PR was part of this follow-up.
+
