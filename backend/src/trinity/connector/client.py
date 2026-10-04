@@ -2,8 +2,10 @@
 
 import asyncio
 from asyncio import sleep
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
+import hashlib
+import json
 import logging
 import math
 import re
@@ -13,6 +15,9 @@ from urllib.parse import quote, quote_plus
 import httpx
 
 from trinity.config import EIASettings, load_eia_settings
+from trinity.connector.retrieval import (
+    RetrievalAttempt, RetrievalMetadata, RetrievalTracker, utc_now,
+)
 
 
 _BASE_URL = "https://api.eia.gov/v2/nuclear-outages/"
@@ -48,10 +53,27 @@ class EIAClientError(RuntimeError):
     """Safe failure details, without response bodies or credential-bearing URLs."""
 
     def __init__(self, code: str, *, status_code: int | None = None) -> None:
+        self.metadata: RetrievalMetadata | None = None
         self.code = code
         self.status_code = status_code
         suffix = f" (HTTP {status_code})" if status_code is not None else ""
         super().__init__(f"EIA request failed: {code}{suffix}.")
+
+
+class EIAInputError(ValueError):
+    """Invalid collection arguments, with a finalized retrieval record."""
+
+    def __init__(self, metadata: RetrievalMetadata) -> None:
+        self.metadata = metadata
+        super().__init__(metadata.error_message)
+
+
+class EIARetrievalCancelled(asyncio.CancelledError):
+    """Cancellation still propagates, carrying the completed route evidence."""
+
+    def __init__(self, metadata: RetrievalMetadata) -> None:
+        self.metadata = metadata
+        super().__init__("EIA retrieval cancelled.")
 
 
 @dataclass(frozen=True)
@@ -77,6 +99,7 @@ class EIACollection:
     pages: list[EIAResponsePage]
     advertised_total: int | None
     page_size: int
+    metadata: RetrievalMetadata | None = None
 
     @property
     def record_count(self) -> int:
@@ -109,7 +132,7 @@ def _sanitize(value: Any, secret: str) -> Any:
     """Remove echoed credentials while preserving source values and unit metadata."""
     if isinstance(value, dict):
         return {
-            key: _sanitize(item, secret)
+            _sanitize(key, secret): _sanitize(item, secret)
             for key, item in value.items()
             if key.casefold() not in _PRIVATE_FIELDS
         }
@@ -263,6 +286,47 @@ class EIAClient:
         self, dataset: str, start: date, end: date, page_size: int,
         max_pages: int, timeout_seconds: float,
     ) -> EIACollection:
+        tracker = self.retrieval_tracker(dataset, start, end)
+        try:
+            collection = await self._collect(
+                dataset, start, end, page_size, max_pages, timeout_seconds, tracker
+            )
+        except asyncio.CancelledError:
+            raise EIARetrievalCancelled(tracker.finish(
+                "cancelled", error_code="cancelled", error_message="EIA retrieval cancelled."
+            )) from None
+        except EIAClientError as error:
+            error.metadata = tracker.finish(
+                "failed", error_code=error.code, error_message=str(error)
+            )
+            raise
+        except ValueError:
+            # Do not copy arbitrary exception text into evidence.
+            raise EIAInputError(tracker.finish(
+                "failed", error_code="invalid_arguments",
+                error_message="Invalid retrieval date range or limits."
+            )) from None
+        except Exception:
+            error = EIAClientError("unexpected_error")
+            error.metadata = tracker.finish(
+                "failed", error_code=error.code, error_message=str(error)
+            )
+            raise error from None
+        return replace(collection, metadata=tracker.finish("success"))
+
+    @staticmethod
+    def retrieval_tracker(dataset: str, start: date, end: date) -> RetrievalTracker:
+        route, fields = _ROUTES[dataset]
+        return RetrievalTracker(
+            dataset, _BASE_URL + route,
+            start if type(start) is date else None,
+            end if type(end) is date else None, fields,
+        )
+
+    async def _collect(
+        self, dataset: str, start: date, end: date, page_size: int,
+        max_pages: int, timeout_seconds: float, tracker: RetrievalTracker,
+    ) -> EIACollection:
         if type(max_pages) is not int or max_pages < 1:
             raise ValueError("max_pages must be a positive integer including the empty probe.")
         if (
@@ -285,7 +349,9 @@ class EIAClient:
                 for _ in range(max_pages):
                     if loop.time() >= deadline:
                         raise EIAClientError("pagination_deadline")
-                    page = await self._fetch_page(dataset, start, end, offset, page_size)
+                    page = await self._fetch_page(dataset, start, end, offset, page_size, tracker)
+                    tracker.pages_fetched += 1
+                    tracker.records_fetched += len(page.data)
                     if loop.time() >= deadline:
                         raise EIAClientError("pagination_deadline")
                     pages.append(page)
@@ -316,7 +382,8 @@ class EIAClient:
         raise EIAClientError("page_limit")
 
     async def _fetch_page(
-        self, dataset: str, start: date, end: date, offset: int, length: int
+        self, dataset: str, start: date, end: date, offset: int, length: int,
+        tracker: RetrievalTracker | None = None,
     ) -> EIAResponsePage:
         if type(start) is not date or type(end) is not date or start > end:
             raise ValueError("start and end must be dates with start <= end.")
@@ -344,7 +411,7 @@ class EIAClient:
         deadline = asyncio.get_running_loop().time() + _PAGE_TIMEOUT_SECONDS
         try:
             async with asyncio.timeout_at(deadline):
-                reply = await self._request_with_retries(route, params)
+                reply = await self._request_with_retries(route, params, tracker)
                 try:
                     payload = reply.json()
                 except (ValueError, UnicodeError):
@@ -358,14 +425,16 @@ class EIAClient:
             raise EIAClientError("request_deadline") from None
 
     async def _request_with_retries(
-        self, route: str, params: dict[str, str]
+        self, route: str, params: dict[str, str], tracker: RetrievalTracker | None = None,
     ) -> httpx.Response:
         """At most three identical GET attempts; validation is never retried."""
         attempt = 0
         while True:
             attempt += 1
+            if tracker is not None and attempt > 1:
+                tracker.retries += 1
             try:
-                reply = await self._http.get(route, params=params)
+                reply = await self._recorded_request(route, params, attempt, tracker)
             except _RETRYABLE_TRANSPORT_ERRORS as error:
                 code = "timeout" if isinstance(error, httpx.TimeoutException) else "transport_error"
                 failure = EIAClientError(code)
@@ -384,3 +453,66 @@ class EIAClient:
             if attempt == 3:
                 raise failure from None
             await sleep(_RETRY_DELAYS[attempt - 1])
+
+    async def _recorded_request(
+        self, route: str, params: dict[str, str], attempt: int,
+        tracker: RetrievalTracker | None,
+    ) -> httpx.Response:
+        """Capture every actual attempt before retry/backoff or validation."""
+        if tracker is None:
+            return await self._http.get(route, params=params)
+        started = utc_now()
+        reply = None
+        api_status = "no_response"
+        error_code = None
+        version = total = count = body = digest = None
+        try:
+            reply = await self._http.get(route, params=params)
+            api_status = "unknown"
+            if reply.status_code != 200:
+                error_code = "http_error"
+            try:
+                payload = _sanitize(reply.json(), self._settings.eia_api_key.get_secret_value())
+                body = json.dumps(
+                    payload, sort_keys=True, separators=(",", ":"),
+                    ensure_ascii=True, allow_nan=False,
+                )
+                digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+                if isinstance(payload, dict):
+                    response = payload.get("response")
+                    response = response if isinstance(response, dict) else {}
+                    api_status = "error" if "error" in payload or "error" in response else "no_error_reported"
+                    version = payload.get("apiVersion")
+                    version = version if isinstance(version, str) else None
+                    total = response.get("total")
+                    total = total if type(total) in (int, str) else None
+                    rows = response.get("data")
+                    count = len(rows) if isinstance(rows, list) else None
+            except (ValueError, UnicodeError):
+                # Arbitrary non-JSON bodies are not saved. There are no saved
+                # response bytes to hash; do not invent a checksum for them.
+                api_status = "invalid_json"
+                if error_code is None:
+                    error_code = "invalid_json"
+            return reply
+        except asyncio.CancelledError:
+            error_code = "interrupted"
+            raise
+        except httpx.TimeoutException:
+            error_code = "timeout"
+            raise
+        except httpx.HTTPError:
+            error_code = "transport_error"
+            raise
+        except Exception:
+            error_code = "unexpected_error"
+            raise
+        finally:
+            tracker.attempts.append(RetrievalAttempt(
+                offset=int(params["offset"]), requested_length=int(params["length"]),
+                attempt_number=attempt, started_at=started, completed_at=utc_now(),
+                http_status=reply.status_code if reply is not None else None,
+                api_status=api_status, api_version=version, advertised_total=total,
+                actual_row_count=count, error_code=error_code,
+                sanitized_response=body, response_sha256=digest,
+            ))

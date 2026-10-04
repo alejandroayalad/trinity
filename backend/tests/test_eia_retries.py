@@ -174,6 +174,10 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(offsets, [0, 1, 1, 2])
         self.assertEqual(result.record_count, 2)
         self.assertEqual(result.page_count, 3)  # Successful pages, not failed attempts.
+        self.assertEqual(result.metadata.pages_fetched, 3)
+        self.assertEqual(result.metadata.records_fetched, 2)
+        self.assertEqual(result.metadata.retries, 1)
+        self.assertEqual(len(result.metadata.attempts), 4)
         backoff.assert_awaited_once_with(1.0)
 
     async def test_page_deadline_interrupts_backoff_without_another_attempt(self):

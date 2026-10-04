@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. Product routes, authentication, retrieval records, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. It also records route/attempt evidence and provides one extraction command. Product routes, authentication, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -93,9 +93,47 @@ Each collection starts at offset zero and advances by the actual number of retur
 
 EIA supplies a record total, not a separate page count. `minimum_data_pages` is a derived lower bound: short nonterminal pages can increase the actual count. No expected count is invented when metadata is missing.
 
-The implementation defaults to `max_pages=1000` (including the empty probe) and `timeout_seconds=300` for the entire route collection. Each page fetch permits at most three attempts, so network attempts are bounded by 3 × max_pages as well as the deadline. Result page counts count successful validated responses, not failed attempts. Both pagination bounds are configurable, not EIA guarantees or measured performance targets. Exhausting either limit raises `page_limit` or `pagination_deadline`; partial rows are never returned as success. These route-extraction bounds are separate from analytical query limits. Persistent retrieval records, numeric normalization, full-window/cross-route validation and Parquet remain pending. Successful pagination is not proof that a candidate is ready for publication.
+The implementation defaults to `max_pages=1000` (including the empty probe) and `timeout_seconds=300` for the entire route collection. Each page fetch permits at most three attempts, so network attempts are bounded by 3 × max_pages as well as the deadline. Result page counts count successful validated responses, not failed attempts. Both pagination bounds are configurable, not EIA guarantees or measured performance targets. Exhausting either limit raises `page_limit` or `pagination_deadline`; partial rows are never returned as success. These route-extraction bounds are separate from analytical query limits. The full-route methods now attach retrieval metadata on success and failure; see below. Numeric normalization, full-window/cross-route validation and Parquet remain pending. Successful pagination is not proof that a candidate is ready for publication.
 
-### Start the API
+## Retrieve all three routes and save evidence
+
+Set `EIA_API_KEY` in the process environment as described above. From `backend/`, run:
+
+```bash
+uv run --locked python -m trinity.connector --start 2026-10-01 --end 2026-10-01 --output /tmp/trinity-retrieval-2026-10-01.jsonl
+```
+
+Use a new output filename for each run. The parent directory must exist. The command reserves the file before making any request and refuses to overwrite an existing file. The output is JSONL: one JSON object per route, written and synced after that route finishes. Standard output contains the same route summaries without the large attempt list.
+
+`retrieve_all()` in `connector/pipeline.py` uses one shared `EIAClient`, runs national → facility → generator sequentially, and keeps the same explicit date window. It continues after an individual route fails. It returns three `RetrievalResult` objects; only successful results contain an `EIACollection`. The command retains source response evidence in the JSONL file; it does not publish data or write Parquet. This fixed-window extraction command is not yet the full refresh pipeline or latest-national-date discovery.
+
+Options: `--page-size` (default 5,000), `--max-pages` (default 1,000, including the empty probe), and `--timeout-seconds` (default 300 per route). These are per-route bounds. The three sequential routes can therefore take up to roughly three route deadlines plus output time.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | All three routes finished extraction successfully. This does not mean full data validation passed. |
+| `1` | At least one route failed. Missing credentials produce three failed records without HTTP requests. |
+| `2` | Invalid command syntax or output could not be created/written. |
+| `130` | Cancelled. The interrupted route is recorded as `cancelled`; remaining routes are `skipped`. |
+
+### Retrieval metadata
+
+`fetch_national()`, `fetch_facility()` and `fetch_generator()` return `collection.metadata` on success. `EIAClientError`, `EIAInputError` (a `ValueError`) and `EIARetrievalCancelled` (an `asyncio.CancelledError`) carry `.metadata` on failure. Cancellation still propagates. The one-page methods retain their original return/error interface; full retrieval evidence belongs to the full-route methods and orchestration command.
+
+`RetrievalMetadata` includes dataset/route, UTC `started_at`/`completed_at`, date bounds, frequency/sort fields, `pages_fetched`, `records_fetched`, `retries`, `final_status`, `error_code`, `error_message` and attempt evidence. Counters are local to each call, including concurrent calls on a shared client.
+
+- `pages_fetched` counts responses that pass page validation, including the terminal empty probe. Failed HTTP attempts do not add pages.
+- `records_fetched` counts rows from those pages. On success it equals `collection.record_count`. On failure it is evidence of fetched rows, not a usable partial collection; a page later rejected for duplicate keys or total disagreement is included.
+- `retries` counts actual second/third HTTP attempts, summed across pages. An interrupted backoff does not count a retry that never started.
+- Final states are `success`, `failed`, `cancelled` and `skipped`. Times for skipped/configuration-failed routes describe record finalization, with no HTTP attempts.
+
+Each `RetrievalAttempt` records offset, requested length, attempt number within the page, UTC times, HTTP/API status, API version, advertised total, actual response row count and a safe error code. Shared route/frequency/window/sort details live on the parent record. `api_status=no_error_reported` only means no API error field appeared; it is not a validation pass. An in-flight request cancelled by a deadline has attempt code `interrupted` and the enclosing route has the specific deadline failure.
+
+JSON response bodies are sanitized before serialization and hashing. `sanitized_response` stores the exact string whose UTF-8 bytes produce `response_sha256` (SHA-256). No request URL with a key, request headers, cookies or raw exception text is saved. Non-JSON bodies and absent responses have null body/checksum fields; arbitrary raw error text is deliberately omitted. Attempt row counts may exist even when page validation fails.
+
+Evidence remains in memory until a route finishes, then the command flushes and syncs its line. Disk failure or a hard process kill can leave an incomplete output file; this command is not a durable worker/recovery system. A graceful cancellation records interrupted/skipped routes when output remains writable. Invalid command syntax stops before retrieval begins.
+
+## Start the API
 
 ```bash
 uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000
@@ -110,10 +148,10 @@ uv run --locked python -m unittest discover -s tests -v
 uv build
 ```
 
-Verified on CPython 3.14.8 with uv 0.12.23: 43 health, configuration and mocked EIA client/pagination/retry tests pass. Retry tests assert three-attempt exhaustion, exact backoff calls, permanent-error rejection, unchanged parameters, deadline handling and cancellation. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
+Verified on CPython 3.14.8 with uv 0.12.23: 59 health, configuration, mocked EIA client/pagination/retry, retrieval and command tests pass. Retry tests assert three-attempt exhaustion, exact backoff calls, permanent-error rejection, unchanged parameters, deadline handling and cancellation. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
 
 ## Layout and next slice
 
 `src/trinity/main.py` creates the FastAPI application. `src/trinity/__init__.py` has no infrastructure initialization. `tests/` contains standard-library unittest tests, so no additional test framework is required.
 
-Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. The next slice is the connector and typed Parquet pipeline. The lock now includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
+Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. The next slice is numeric normalization, data validation and the typed Parquet pipeline. The lock now includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.

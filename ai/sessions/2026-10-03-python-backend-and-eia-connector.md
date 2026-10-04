@@ -6,13 +6,13 @@ Original implementation branch: `build/minimum-python-project`.
 ## Session scope and current handoff
 
 [ME] Alayala requested the Python project, resolved dependencies, environment-based EIA authentication, three shared-client route fetchers, pagination and bounded retries. He clarified that this work was one long session and requested one supporting record plus a PR title and branch name that reflect its scope.
-[YOU] AI implemented the five stages recorded below. This documentation pass combines their records, updates the Engineering Notes links and PR description, and preserves the existing incremental commit history. Human code review remains pending.
+[YOU] AI implemented the stages recorded below. This documentation pass combines their records, updates the Engineering Notes links and PR description, and preserves the existing incremental commit history. Human code review remains pending.
 
 Decision references: A5/A9 (source totals and extraction), A10/A11/A15 (Python, FastAPI and package layout), A17 (dependency pins), and A19 (bounded retries). The local-login choice is recorded in stage 2; older identity contracts still require separate reconciliation.
 
-Current status: backend scaffold, environment configuration, three route fetchers, pagination and bounded retries are implemented. The latest stage reports 43 passing offline tests. Live EIA verification, persistent retrieval records, typed Parquet and the remaining product are pending. The full challenge Gate has not passed.
+Current status: backend scaffold, environment configuration, three route fetchers, pagination, bounded retries, route/attempt retrieval records and one orchestration command are implemented. The latest stage reports 59 passing offline tests. Live EIA verification, normalization, typed Parquet and the remaining product are pending. The full challenge Gate has not passed.
 
-The five stages below preserve the original evidence and corrections in order. Their test counts and pending/next statements describe that point in the session, not the final status. These are session summaries, not a verbatim transcript. This consolidation does not rerun or independently establish their historical runtime results.
+The stages below preserve the evidence and corrections in order. Their test counts and pending/next statements describe that point in the session, not the final status. These are session summaries, not a verbatim transcript. This consolidation does not rerun or independently establish their historical runtime results.
 
 ## Stage 1 — Minimum Python project
 
@@ -186,7 +186,7 @@ Blocker: no implementation blocker; live verification still needs an environment
 
 Next: record sanitized retrieval details for every attempt, including failed attempts.
 
-## Consolidation checks and next action
+## Consolidation checkpoint before stage 6
 
 [YOU] AI checked that all five stage bodies are retained, apart from heading nesting, and that repository Markdown links to the replaced files are updated. This is a documentation-only commit; application code and existing commits are unchanged. Historical test results above were not rerun for this cleanup.
 
@@ -195,3 +195,37 @@ Pending: human review, live EIA gate and persistent sanitized retrieval records.
 Blocker: live verification needs the environment key.
 
 Next: record sanitized retrieval details for every attempt, including failed attempts.
+
+
+## Stage 6 — Retrieval metadata and orchestration command
+
+Date: October 3, 2026 (America/Merida). Continued on PR #4 and the existing branch.
+
+### Objective and contributions
+
+[ME] Alayala requested a retrieval result/metadata model with route, start/completion times, page/record counts, retries, final status and errors, including failed routes; he also requested one orchestration command.
+[YOU] AI added `connector/retrieval.py`, instrumented full-route extraction in `client.py`, added the extraction stage in `connector/pipeline.py` and a `python -m trinity.connector` entrypoint. AI added 16 tests and metadata assertions to the existing retry-pagination test, updated the READMEs and extended this same continuous-session record. Human code review remains pending.
+
+### Behavior and decisions
+
+A9 extraction evidence and A19 retry limits are preserved. Each full-route call owns its counters. Success returns metadata with the collection; failures and cancellation carry metadata on typed exceptions. `RetrievalResult` exposes a collection only for successful extraction. Pages include the terminal empty probe; retries count additional HTTP attempts that actually began. An interrupted backoff does not add an unstarted retry. Failure counters report validated-page rows fetched, including a page later rejected for duplicate keys or totals; these are not a partial successful dataset.
+
+Attempt evidence records offsets/lengths, attempt numbers, UTC times, HTTP/API status, version, totals and row counts. Shared route/frequency/window/sort fields are on the route record. JSON responses are sanitized, serialized deterministically, and hashed with SHA-256 over the exact saved string's UTF-8 bytes. Non-JSON error bodies and missing responses have null body/checksum; raw arbitrary error text is not saved. API status is separate from page/collection validation.
+
+The command takes explicit `--start`, `--end` and `--output`. It uses one shared client for national, facility and generator in sequence. A normal route failure does not stop the remaining routes. Missing credentials produce three failed records without HTTP. Graceful cancellation emits an interrupted result and skipped results, then propagates. The command writes one JSONL record per completed route, flushes and syncs it before continuing, and refuses an existing output path before making requests. Console output contains route summaries; the file also contains sanitized attempt response evidence.
+
+Exit codes: 0 all extractions succeeded, 1 any route failed, 2 command/output failure, 130 cancellation. Per-route limits remain 1,000 pages and 300 seconds by default; all routes share the explicit date bounds, not a newly discovered latest date. This implements extraction only. It does not establish full-window/cross-grain validity, build Parquet, publish data, persist application state or replace A14's S3 design. Evidence is held in memory until route completion; a hard kill or disk failure can leave incomplete output. Durable worker recovery remains later work.
+
+### Verification and corrections
+
+`uv tool run --from uv==0.12.23 uv sync --locked` succeeded with CPython 3.14.8. The final `uv run --locked python -m unittest discover -s tests -v` passed all 59 offline tests. The existing Starlette/HTTPX test-client warning remains. No dependency pin or lockfile changed.
+
+New checks cover success/failure metadata for each route, failure after a good page, exact retry exhaustion, safe HTTP/API/JSON/shape/transport failures, request and backoff deadlines, invalid arguments, unexpected exceptions, isolated counters under concurrent calls, response redaction/checksums, one-client orchestration, continuation after failure, missing credentials, cancellation/skipped routes, saved command output, exit codes, refusal to overwrite and write failure. The retry-pagination check also confirms one recovered retry does not inflate pages or rows.
+
+The module `--help` check passed from `backend/`. An initial invocation from the repository root failed to import the package; rerunning from the documented backend working directory corrected the check. The first test-file creation also used the wrong relative working directory and created no file; it was corrected before running the new suite. All request tests use synthetic credentials and HTTPX MockTransport. No live EIA data was fetched, and FINDINGS remains unchanged.
+
+Done: metadata on successful/failed full-route calls, sanitized attempt evidence and one extraction command.
+Pending: human review, live EIA gate, normalization/validation and typed Parquet.
+Blocker: live verification needs the user's configured environment key.
+
+Next: run the documented fixed-window command locally with EIA_API_KEY set, then review the three route outcomes.

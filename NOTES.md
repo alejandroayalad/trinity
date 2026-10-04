@@ -192,3 +192,8 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Bounded EIA retries — October 3, 2026
 
 [ME] Alayala requested temporary-failure retries, a three-attempt limit, short backoff and no retries for permanent errors. [YOU] AI added the A19 three-total-attempt policy with one-/three-second waits, an HTTP status allowlist, selected temporary transport failures and a total page deadline inside the existing route deadline. Eleven new tests plus the updated prior checks pass: 43 offline tests total. No live EIA request was made. See the [retry stage](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-5--bounded-eia-retries).
+
+
+## Retrieval records and orchestration — October 3, 2026
+
+[ME] Alayala requested metadata for successful and failed retrievals and one command for all routes. [YOU] AI added per-call route metadata, sanitized attempt evidence/checksums, one shared-client orchestration function and a JSONL command. It continues after route failure, reports missing-key failures for all routes, preserves cancellation, refuses output overwrite and returns meaningful exit codes. All 59 offline tests passed on CPython 3.14.8, including 16 new retrieval/command tests. The existing retry-pagination test now checks metadata counts. Locked installation and module help passed. No live EIA call or new data finding is claimed. The [same continuous session, stage 6](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#stage-6--retrieval-metadata-and-orchestration-command) records semantics, command-check corrections and persistence limits. Human review, the live gate, normalization and Parquet remain pending.
