@@ -2,7 +2,7 @@
 
 Status: explanatory companion, October 3, 2026. Adapted from alayala's Obsidian `Data Contract.md` discussion notes. The canonical fields, keys, types, and behavior are in [data contract v1](schema.md), recorded by [A9](../DECISIONS.md#a9--data-contract-v1-finalized). This guide explains why selected fields exist; it is not a second schema or a record of implemented behavior.
 
-Read [the PostgreSQL model](schema.md#6-postgresql-application-model) for the complete field inventory, including primary keys, constraints, and recovery fields not repeated below. `?` means nullable under the conditions in that contract. Clerk actor IDs are external text identifiers. Historical session notes do not override the current specification. A16 amends the control model for fixed warning-based publication and durable recovery; analytical fields remain unchanged.
+Read [the PostgreSQL model](schema.md#6-postgresql-application-model) for the complete field inventory, including primary keys, constraints, and recovery fields not repeated below. `?` means nullable under the conditions in that contract. Actor columns retain text identifiers; new human actions store the stable local user UUID as text under amended A8. The new `auth_users`/`auth_sessions` schema is explicit in [the authentication amendment](schema.md#local-authentication-amendment-a8a19). Historical session notes do not override the current specification. A16 amends the control model for fixed warning-based publication and durable recovery; analytical fields remain unchanged.
 
 ## 1. `shared_settings` — How should the application operate?
 
@@ -16,7 +16,7 @@ One shared configuration for the application.
 | `schedule_timezone?` | Gives the schedule a timezone. “Run at 08:00” is otherwise ambiguous. |
 | `revision` | Detects conflicting edits. If two Admins edit revision 4, the second save must not silently overwrite the first. |
 | `updated_at` | Records when settings last changed. |
-| `updated_by?` | Records the Clerk user who changed them. |
+| `updated_by?` | Records the authenticated local user who changed them. |
 
 A16 removes the old shared `publication_mode` field; frozen candidate warnings determine whether approval is required.
 
@@ -143,7 +143,7 @@ One row records an Admin's approval of one validated, immutable version. This ex
 | Field | Why it exists |
 | --- | --- |
 | `version_id` | Identifies the exact version being approved. The contract permits one approval per version. |
-| `approved_by` | Records the Clerk ID of the Admin authorized at approval time. |
+| `approved_by` | Records the stable local user ID of the Admin authorized at approval time. |
 | `approved_at` | Records when the approval occurred. |
 | `manifest_sha256`, `validation_step_id`, `review_warning_digest` | Binds approval to exact files, validation and warning classification. |
 

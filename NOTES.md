@@ -172,3 +172,7 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 ## Backend contract publication — October 3, 2026
 
 [ME] Alayala requested focused commits, push and merge to main. [YOU] AI executes those authorized Git operations in two documentation slices and preserves the existing incremental branch history. Repository inspection confirms that backend implementation and runtime tests remain pending. See the [publication session](ai/sessions/2026-10-03-backend-contracts-publication.md) for scope, validation and the distinction between the completed design and executable work.
+
+## Local authentication design amendment — October 3, 2026
+
+[ME] Alayala replaced Clerk with reproducible local authentication and requested a focused branch from main. [YOU] AI checked the current main baseline, amended A8/A19 and the affected setup/dependency/backend/API/security notes, and explicitly specified two auth tables and login/logout endpoints. Server-side persona permissions and unrelated data/job/publication decisions remain unchanged. Concrete defaults are attributed to AI completion work. No auth implementation or runtime security result is claimed. See the [session record](ai/sessions/2026-10-03-local-authentication-design.md) for verification and remaining implementation gates.

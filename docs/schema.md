@@ -147,7 +147,7 @@ Aggregate summaries by code/scope with affected counts, not unbounded raw rows. 
 
 ## 6. PostgreSQL application model
 
-Notation: fields are required unless suffixed `?`. Every `id` is its table's primary key. IDs are UUID except singleton `id = 1`, positive monotonic `run_seq`, and external text actor IDs. Event times are `timestamptz`; observation bounds are `date`; counters/revisions are nonnegative `bigint`. Statuses and codes are constrained text. `details`, `policy_snapshot`, and sanitized payloads are JSONB. These are logical constraints; migrations must enforce row-local rules and transaction rules must enforce cross-row invariants.
+Notation: fields are required unless suffixed `?`. Every `id` is its table's primary key. IDs are UUID except singleton `id = 1`, positive monotonic `run_seq`, and text actor references. Event times are `timestamptz`; observation bounds are `date`; counters/revisions are nonnegative `bigint`. Statuses and codes are constrained text. `details`, `policy_snapshot`, and sanitized payloads are JSONB. These are logical constraints; migrations must enforce row-local rules and transaction rules must enforce cross-row invariants.
 
 | Model | Fields | Keys and constraints |
 |---|---|---|
@@ -169,7 +169,20 @@ Expected required result rows: V01/V02/V03/V08 each once for each of `national`,
 
 The immutable policy snapshot contains `settings_revision`, `workflow_policy=warnings-v1`, `diagnostic_registry=warnings-v1`, `contract_version`, `validation_checkset`, `requested_start`, `end_strategy`, and `explicit_end` only for the fixed strategy. It agrees with the corresponding run/version columns. approval_required is derived only after diagnostic completion, not selected in the policy snapshot. Resolved bounds live on the run and are frozen separately by the worker; no candidate version can be created before that freeze. Changing the deployed contract cannot reinterpret an existing candidate; a worker must execute its recorded contract version or fail it as unsupported. A pass on a later check set cannot authorize an older candidate implicitly. Candidate bounds are expectations during preparation and must match measured artifact bounds at validation. A validated version requires non-null `validated_at`, manifest digest, and successful validation-step ID.
 
-Clerk IDs remain text references without local password/session/user tables solely for login. They are not database foreign keys to Clerk. Keep historical actor IDs if a Clerk user is removed. Never take `requested_by`, `approved_by`, or a role from an untrusted request body. Role-claim storage, token validation, and role-change propagation remain the separate authentication implementation contract. API actor fields are output-only.
+### Local authentication amendment (A8/A19)
+
+**Required schema addition, not an executed migration:** amended A8 replaces the former Clerk-only identity assumption with two application-state tables. Alembic must create these before the local seed/login flow can run. They are never analytical datasets or exposed through catalog, preview or SQL.
+
+| Model | Fields | Keys and constraints |
+|---|---|---|
+| `auth_users` | `id`, `username`, `password_hash`, `role`, `is_active`, `created_at` | UUID primary key; unique lowercase username (1–64 ASCII letters/digits/underscore); non-null Argon2id encoded hash including salt/parameters. Role constrained to viewer/analyst/admin; is_active boolean. Server-generated identity is stable across repeat seeding. No hard deletion in v1. |
+| `auth_sessions` | `id`, `user_id`, `token_hash`, `created_at`, `expires_at`, `revoked_at?` | UUID primary key; user_id FK to auth_users with deletion restricted; unique 64-character lowercase SHA-256 hex token digest; no raw token. expires_at = created_at + eight hours; revoked_at, when set, cannot precede created_at. Index user_id for revocation. A session is usable only before expires_at, with revoked_at null and an active user with a known role. |
+
+Existing `updated_by`, `requested_by`, `approved_by`, `actor_id`, `discarded_by`, and `resolved_by` columns keep their text type and current nullability. For new human actions, record the authenticated local `auth_users.id` as a canonical UUID string. API actor fields remain strings and output-only. Do not rewrite historical actor values or add cascades that delete history. No actor-column migration or Clerk-account import is required for the clean challenge database. If any deployed database already contains provider actors, preserve them as historical text; account mapping requires an explicit later migration.
+
+Use one transaction for seeding all missing personas and detecting conflicts; repeat seeding never overwrites existing hashes, roles, disabled state or IDs. Trusted disable/password reset must revoke that user's sessions transactionally. Login persists its session before returning a token; logout persists revocation before success. Expired/revoked sessions may be removed by bounded cleanup without touching users or application audit history. Login-throttle counters are still an implementation detail; these two tables do not claim to implement rate accounting.
+
+Never take an actor or role from an untrusted request body. Do not expose user/password/session rows through product APIs. See the [identity contract](security-contract.md#identity-and-trusted-roles) for password verification, session transport, current authority and failure rules.
 
 ### Application relationships
 
@@ -234,7 +247,7 @@ A16 supersedes the original selectable `publication_mode` workflow. One shared a
 
 ### Durable request and dispatch
 
-Require setup and Admin authority or a due scheduled occurrence. In one PostgreSQL transaction lock `refresh_control`, confirm no holder/unresolved warning, freeze schedule revision/workflow policy/window strategy, insert the run, reserve its slot, and insert its outbox obligation. HTTP commands also insert a durable `api_commands` receipt. No external EIA/S3/Redis/Clerk call belongs inside this transaction. Scheduled occurrence identity includes settings revision and intended UTC time; skipped or missed occurrences create no backlog.
+Require setup and Admin authority or a due scheduled occurrence. In one PostgreSQL transaction lock `refresh_control`, confirm no holder/unresolved warning, freeze schedule revision/workflow policy/window strategy, insert the run, reserve its slot, and insert its outbox obligation. HTTP commands also insert a durable `api_commands` receipt. No external EIA/S3/Redis call belongs inside this transaction. Scheduled occurrence identity includes settings revision and intended UTC time; skipped or missed occurrences create no backlog.
 
 A duplicate authorized command key with the same actor/action/target/body returns its stored receipt before stale revision checks. Conflicting reuse fails without revealing the original actor/resource. All successful command effects and receipt commit atomically. A durable receipt refers to the accepted operation and status URL, not a promise that work is still running. PUT settings uses compare-and-swap instead of this command mechanism.
 

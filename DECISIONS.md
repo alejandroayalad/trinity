@@ -15,7 +15,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A5  | Product / business | Validation controls publication; no user warning for the known facility count issue after required checks pass. |
 | A6  | Technical / code   | Background workers run the full refresh pipeline using BullMQ and Redis, with bounded concurrency.              |
 | A7  | Technical / code   | PostgreSQL `job_outbox` records dispatch requests with application changes; retries must be safe.               |
-| A8  | Technical / code   | Clerk handles authentication; the backend enforces application permissions.                                  |
+| A8  | Technical / code   | Seeded local users and server-stored sessions; the backend enforces application permissions.                                  |
 | A10 | Technical / code   | Python for the backend API and background workers.                                                           |
 | A11 | Technical / code   | FastAPI for the Python backend HTTP API.                                                                      |
 | A12 | Technical / code   | Psycopg 3 for PostgreSQL access and Alembic for schema migrations.                                              |
@@ -25,7 +25,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A16 | Product / business and Technical / code | Approved API flow, fixed warning-based publication, serialized refresh/recovery and detailed HTTP schemas. |
 | A17 | Technical / code   | Exact dependency versions and locked installation/update policy; compatibility checks remain pending. |
 | A18 | Technical / code   | Required v1 single-table SQL; joins, CTEs, and subqueries are optional after the core works and its tests pass. |
-| A19 | Technical / code | Security contract: trusted Clerk roles, selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
+| A19 | Technical / code | Security contract: trusted local roles, selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -263,29 +263,26 @@ An outbox is a durable list of work requests waiting to be sent. It is applicati
 
 Sources: alayala's acceptance in this conversation; [AWS transactional outbox guidance](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html) and [BullMQ idempotent jobs](https://docs.bullmq.io/patterns/idempotent-jobs). The AWS example explains the pattern; it does not select an AWS deployment or Amazon SQS for Trinity. Discussion evidence: [worker and outbox session](ai/sessions/2026-10-02-redis-bullmq-outbox-data-contract.md).
 
-### A8 — Clerk for authentication: closed
-
-**Current scope / supersession:** A19 selects `public_metadata.role`, trusted provisioning and current uncached token/session/role checks. Earlier open implementation scope below is historical where resolved by A19.
+<a id="a8--clerk-for-authentication-closed"></a>
+### A8 — Local authentication for evaluator setup: closed
 
 Category: **Technical / code**.
 
-Status: accepted by alayala on October 2, 2026. Provider selected; integration and test users are not implemented.
+Status: alayala replaced Clerk with reproducible local authentication on October 3, 2026, after PR #3 merged at `3aa713fdec0f4913808c7de195024e7f2e381831`. Design only; no login, seed command or migration is implemented by this patch. The concrete defaults below are AI-authored completion details under his request, not separately observed approvals.
 
-**Choice:** Use Clerk as the external authentication provider. The backend remains responsible for enforcing Viewer, Analyst, and Admin access on every protected path, as required by A4. Selecting Clerk does not select a backend language or framework.
+**Choice:** Seed one local user per persona (`viewer`, `analyst`, `admin`) in PostgreSQL. Store an Argon2id password hash and a trusted role on each user. Login issues a random opaque bearer token; PostgreSQL stores only its SHA-256 digest, user reference, creation/expiry times and revocation time. Each protected request reads the current session and user, checks expiry/revocation/active state, and applies the existing Viewer/Analyst/Admin permission rules. No client-provided role or actor ID grants authority.
 
-**Reason:** Delegate login and identity management to an external provider while Trinity implements its data-access rules. Alayala selected Clerk after the provider discussion.
+**Smallest session flow:** `POST /api/v1/auth/login` accepts username/password and returns a token valid for eight hours. Existing endpoints retain `Authorization: Bearer`. `POST /api/v1/auth/logout` revokes the current session. `GET /api/v1/me` keeps the existing role/capability/landing behavior. No registration, password-reset service, refresh tokens, JWT signing keys or role-management UI is required. The browser holds the token in memory; reload or expiry requires login again.
 
-**Reaffirmation:** Alayala considered local login and retained Clerk to follow the approach he would use in a professional team: delegate authentication and own Trinity's authorization and data behavior. This is his engineering rationale, not a claim that a provider earns a higher evaluation score. See the [October 3 handoff](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md).
+**Reproduction:** A planned, explicitly invoked seed command creates the three fixed usernames using passwords supplied through environment configuration. No provider account, email verification, external identity service or manual first-Admin provisioning is needed. Repeating the seed preserves user IDs, passwords, roles, disabled state and history; conflicting existing users cause an error. Missing/empty password configuration fails before any writes. See [README setup](README.md#local-authentication-setup-contract).
 
-**Rejected alternative:** Implement local credentials and login management for this challenge. A local `users` table is not required solely to authenticate users with Clerk; application-specific profile or role needs must be assessed separately.
+**Required contract changes:** Add `auth_users` and `auth_sessions` to the application schema; keep existing actor columns as output-only text references to stable local user IDs. Add only the two authentication endpoints and replace the OpenAPI security scheme. Remove the Clerk dependency/adapter/configuration; select and pin an Argon2id implementation during implementation under A17. Detailed fields and endpoint errors are explicit in [schema.md](docs/schema.md#local-authentication-amendment-a8a19) and [api-contract.md](docs/api-contract.md#local-login-and-logout).
 
-**Proposed integration, not a completed schema decision:** Store the application role in metadata users cannot edit, validate the Clerk session in the backend, and record the Clerk user identifier for human actions such as refresh requests and approvals. Clerk documents a metadata-based role approach without Organizations. Exact claims, token validation, role-change propagation, and actor retention rules still need a contract. Do not store authentication secrets in application history or outbox payloads.
+**Reason and tradeoff:** The evaluator can create all three personas from a clean local database without the author's provider account. Trinity now owns password hashing, session expiry/revocation and login throttling. Backend authorization remains mandatory on every protected path. PostgreSQL authentication failure returns `503 auth_unavailable`; it never grants fallback access.
 
-**Tradeoff:** Login depends on an external provider and its configuration. Local evaluator setup needs working provider configuration and a test identity for each persona. No provider account, paid plan, registration flow, or organization model is selected by this decision.
+**History / supersession:** The October 2 Clerk choice and October 3 reaffirmation are superseded only for identity/login. A19's Clerk metadata/current-provider checks are replaced by current database user/session checks. The earlier rejection of local credentials is no longer current. Preserve the historical [Clerk/model session](ai/sessions/2026-10-02-clerk-and-application-models.md) and [handoff](ai/sessions/2026-10-03-vault-reconciliation-and-handoff.md). No SQL, S3, Redis/BullMQ, refresh or publication choice changes.
 
-**Verification still required:** Provision Viewer, Analyst, and Admin test identities; verify login and invalid/expired-session rejection; prove permissions on catalog, previews, SQL, refresh, settings, and approval. Missing or unknown roles must not grant access. No authentication runtime test has run.
-
-Sources: alayala's explicit selection in this conversation; [Clerk metadata-based access control](https://clerk.com/docs/guides/secure/basic-rbac). Supporting record and proposed models: [Clerk and application models session](ai/sessions/2026-10-02-clerk-and-application-models.md).
+**Verification required:** Clean-database seed and repeat seed; all three persona logins; wrong-password and expired/revoked/disabled-session rejection; current role changes; direct API permission denials before reads; database outage denial; logout and safe logs. These are required checks, not completed runtime results. Source: alayala's current instruction; [patch session](ai/sessions/2026-10-03-local-authentication-design.md).
 
 ### A10 — Python for the backend API and workers: closed
 
@@ -293,11 +290,11 @@ Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Language selected; implementation and runtime verification pending.
 
-**Choice:** Use Python for the backend API and the background workers that execute A6's full refresh pipeline. Keep PostgreSQL for application state, DataFusion for published Parquet queries, BullMQ with Redis for background jobs, and Clerk for authentication under A4 and A6–A8.
+**Choice:** Use Python for the backend API and the background workers that execute A6's full refresh pipeline. Keep PostgreSQL for application state, DataFusion for published Parquet queries, BullMQ with Redis for background jobs, and local authentication under amended A8 and A4/A6–A7.
 
 **Reason:** Python fits the proposed PyArrow file preparation and DataFusion Python query path and lets the API and refresh workers share one application language. This is a design rationale, not a compatibility or performance result. Concrete packages and versions still need selection and verification.
 
-**Flow and failure example:** A request presents a Clerk token; the backend verifies identity, resolves a trusted role, and authorizes the operation. Permitted analytical reads capture one active publication and use only authorized files from that version. Decimal results preserve A9's exact-value contract. An Analyst query referencing PostgreSQL `job_outbox` must be rejected before execution. Selecting Python does not implement table-reference detection or authorization.
+**Flow and failure example:** A request presents a local session token; the backend verifies identity, resolves a trusted role, and authorizes the operation. Permitted analytical reads capture one active publication and use only authorized files from that version. Decimal results preserve A9's exact-value contract. An Analyst query referencing PostgreSQL `job_outbox` must be rejected before execution. Selecting Python does not implement table-reference detection or authorization.
 
 **Alternative not selected:** Use separate application languages for the API and data workers. A single language avoids adding a second application toolchain for this scope. No comparative benchmark or user rejection of a specific competing language is claimed.
 
@@ -317,13 +314,13 @@ Status: accepted by alayala on October 3, 2026. Framework selected; not installe
 
 **Choice and reason:** Use FastAPI for A10's Python HTTP API. Its request validation and generated OpenAPI documentation support the required catalog, preview, query, and Admin contracts. This selects the framework, not the endpoint schemas or security policy.
 
-**Flow and failure example:** A preview request passes field validation and backend identity/permission checks before accessing a permitted published dataset. The API returns JSON under the eventual response contract. A Viewer requesting generator detail must be denied before DataFusion execution. FastAPI validates request structure; Trinity must implement Clerk verification, role enforcement, SQL authorization, and resource limits.
+**Flow and failure example:** A preview request passes field validation and backend identity/permission checks before accessing a permitted published dataset. The API returns JSON under the eventual response contract. A Viewer requesting generator detail must be denied before DataFusion execution. FastAPI validates request structure; Trinity must implement local session verification, role enforcement, SQL authorization, and resource limits.
 
 **Alternative not selected:** Assemble request validation and API documentation separately around a smaller HTTP framework. FastAPI provides these facilities together; no comparative performance claim is made.
 
 **Tradeoff and boundaries:** Request/response models must stay aligned with the API contract, including exact decimal serialization. Framework defaults are not proof of correct authentication or SQL isolation. Refresh work continues through PostgreSQL outbox dispatch to BullMQ workers under A6–A7; selecting FastAPI does not replace that path with in-process background tasks.
 
-**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, Clerk authentication, role denials, and error handling. Dependency versions, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool; A13 selects the query binding and parser.
+**Verification still required:** Pin compatible Python/FastAPI dependencies; verify request validation, generated API schemas, decimal responses, local authentication, role denials, and error handling. Dependency versions, API contracts, SQL rules, and limits remain open. A12 selects the PostgreSQL driver and migration tool; A13 selects the query binding and parser.
 
 Source: alayala's acceptance in this conversation; [FastAPI official features](https://fastapi.tiangolo.com/features/). Supporting record: [backend selection session](ai/sessions/2026-10-03-python-backend-selection.md#fastapi-follow-up).
 
@@ -417,7 +414,9 @@ Category: **Product / business** and **Technical / code**.
 
 Status: high-level design accepted by alayala on October 3, 2026, through the supplied `trinity-api-contract-final.md`. Detailed request/response fields, bounded defaults and persistence amendments are AI-authored specification work under his instruction to add missing details. No implementation or runtime verification is claimed.
 
-**Choice:** Use [the approved human overview and detailed API contract](docs/api-contract.md) and [OpenAPI schemas](docs/openapi.json). The 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
+**Authentication amendment:** A8 adds login/logout (22 operations total) without changing the 20 product operations below.
+
+**Choice:** Use [the approved human overview and detailed API contract](docs/api-contract.md) and [OpenAPI schemas](docs/openapi.json). The original 20 operations cover role-aware app entry, one-time shared setup, editable daily schedule, national dashboard/metric, filtered previews and entity choices, permitted SQL, refresh history/progress, atomic recovery, and candidate review in a side panel.
 
 **Publication and recovery:** Publication behavior is fixed: complete required checks and no review warnings publish automatically; complete required checks with frozen warnings require Admin approval; failed or incomplete checks block publication. No editable publication mode remains. One refresh lifecycle is admitted at a time, including pending review and unresolved failure. Run-again creates a new full run and abandons the old candidate; warning deletion resolves the block without new work; publication retry preserves the same eligible candidate and original approval requirements; discard permanently prevents publication while preserving history.
 
@@ -448,7 +447,8 @@ Status: accepted by alayala on October 3, 2026. Exact versions selected; install
 | Migrations | [alembic 1.20.0](https://pypi.org/project/alembic/1.20.0/), [SQLAlchemy 2.1.3](https://pypi.org/project/SQLAlchemy/2.1.3/) | Alembic requires SQLAlchemy; restrict its use to migration infrastructure, preserving direct Psycopg repositories. |
 | Analytical execution | [pyarrow 25.0.1](https://pypi.org/project/pyarrow/25.0.1/), [datafusion 54.0.0](https://pypi.org/project/datafusion/54.0.0/), [sqlglot 30.21.0](https://pypi.org/project/sqlglot/30.21.0/) | A13 stack; install name is `datafusion`, not `datafusion-python`. |
 | Queue | [bullmq 3.3.0](https://pypi.org/project/bullmq/3.3.0/) | Python package under A6; its metadata requires `redis==7.4.1`, `msgpack==1.2.3`, `semver==3.1.0`, and `croniter==2.0.7`. These are package versions, not the Redis server version. |
-| Identity and external HTTP | [clerk-backend-api 7.0.0](https://pypi.org/project/clerk-backend-api/7.0.0/), [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Official identity adapter; reuse HTTPX for EIA HTTP and bounded timeouts rather than adding a second HTTP client. |
+| External HTTP | [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Reuse HTTPX for EIA HTTP and bounded timeouts. A8 removes the Clerk SDK. |
+| Local password hashing | Argon2id implementation and exact package version: pending selection and lockfile verification | Required by amended A8. Do not implement a custom password hash or treat a raw SHA-256 password digest as sufficient. |
 | Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. |
 
 Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server version is separate from BullMQ's `redis` Python client version. Exact deployment images/digests, frontend packages, and cloud resources remain outside this selection.
@@ -459,9 +459,9 @@ Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server vers
 
 **Flow and failure example:** A developer installs the selected Python release and committed lockfile. If project requirements and the lock disagree, the locked install fails rather than silently selecting another SQL parser. A parser upgrade must pass the SQL-policy regression corpus before deployment.
 
-**Evidence and verification:** The earlier October 3 public release/metadata lookup established the listed versions and declared constraints. DataFusion 54.0.0 requires PyArrow >=22 for Python >=3.14; 25.0.1 satisfies that declaration. Clerk 7.0.0 requires Pydantic >=2.11.2 and HTTPX >=0.28.1; the selected versions meet those declarations. These comparisons do not resolve the full dependency graph or prove security, native-wheel availability, decimal behavior, authentication, queue concurrency, or recovery. No packages, lockfile, database, or cloud resources have been installed or created. Run resolver, advisory, platform, and integration checks during implementation; report a conflict rather than silently changing an approved pin.
+**Evidence and verification:** The earlier October 3 public release/metadata lookup established the listed versions and declared constraints. DataFusion 54.0.0 requires PyArrow >=22 for Python >=3.14; 25.0.1 satisfies that declaration. The former Clerk 7.0.0 dependency is removed by amended A8; its compatibility constraints no longer apply. These comparisons do not resolve the full dependency graph or prove security, native-wheel availability, decimal behavior, authentication, queue concurrency, or recovery. No packages, lockfile, database, or cloud resources have been installed or created. Run resolver, advisory, platform, and integration checks during implementation; report a conflict rather than silently changing an approved pin.
 
-**Scope and history:** This accepts the dependency versions and repeatability policy from the earlier proposal. Alayala explicitly keeps the API and security contracts under review. SQL restrictions, Clerk role/session lookup behavior, async/pool execution choices and their numeric limits, scheduling details, and process isolation are not approved by this dependency decision. The version numbers are unchanged from the reviewed proposal. Alayala also authorized committing and pushing the dependency update on the current branch; no API/security publication, implementation, PR, or merge was requested.
+**Scope and history:** This accepts the dependency versions and repeatability policy from the earlier proposal. Alayala explicitly keeps the API and security contracts under review. SQL restrictions, role/session lookup behavior, async/pool execution choices and their numeric limits, scheduling details, and process isolation are not approved by this dependency decision. All retained version numbers are unchanged from the reviewed proposal. The October 3 A8 amendment removes `clerk-backend-api` and requires a reviewed Argon2id package pin; no manifest or lockfile exists on this main baseline to edit. Alayala also authorized committing and pushing the dependency update on the current branch; no API/security publication, implementation, PR, or merge was requested.
 
 Sources: [Python 3.14.8](https://www.python.org/downloads/release/python-3148/), [uv 0.12.23](https://pypi.org/project/uv/0.12.23/), per-package release links above, [PostgreSQL version policy](https://www.postgresql.org/support/versioning/), [Redis 8.10.2](https://github.com/redis/redis/releases/tag/8.10.2), and [uv locking](https://docs.astral.sh/uv/concepts/projects/sync/). Supporting record: [dependency acceptance session](ai/sessions/2026-10-03-dependency-versions-accepted.md).
 
@@ -496,19 +496,19 @@ Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Design selected; analytical capacity limits are provisional and runtime verification is pending.
 
-**Choice:** Adopt [docs/security-contract.md](docs/security-contract.md), separate from the [A16 API contract](docs/api-contract.md). Use Clerk `public_metadata.role`, writable only by trusted administration, and verify token/current session/current role on every authenticated request without a role/session cache. Deny invalid, inactive, missing or unknown authority; verification outages allow no protected action.
+**Choice:** Adopt [docs/security-contract.md](docs/security-contract.md), separate from the [A16 API contract](docs/api-contract.md). Under amended A8, store roles in `auth_users`, writable only through trusted provisioning/administration. Verify the opaque bearer token against `auth_sessions` and read the current active user/role on every authenticated request without a role/session cache. Deny invalid, inactive, missing or unknown authority; verification outages allow no protected action.
 
 **SQL and isolation:** Retain A18 single-table read-only SELECT; support filters, sorting, grouping, arithmetic, CASE, COUNT, SUM, AVG, MIN, MAX, ROUND, COALESCE and NULLIF. Keep one SQLGlot validation module and verify DataFusion compatibility. Reject unsupported/nested queries, writes and external readers. Run each query in its own container with only authorized published Parquet files mounted read-only, no network, no credentials and no Docker control. A trusted component downloads/checks files; the supervisor enforces limits, stops execution and cleans temporary resources. Separate private S3 read, candidate-create and publication authority. Keep A9 SHA-256 manifests/checksums and exact-file approval binding.
 
 **Limits and recovery:** Provisional analytical limits are 1,000 output rows, 5 MiB responses, 30 seconds including file downloads/reads, 1 GiB per query container, two active analytical requests per user and four deployment-wide. Use PostgreSQL transactions for shared slots; release only after execution ends or is stopped. Accept 64 KiB JSON, 16 KiB UTF-8 SQL and initially 30 analytical requests/user/minute, excluding progress polling. Temporary external failures permit three total attempts with one- and three-second waits within the operation deadline; invalid SQL, denied access and failed validation are not retried. Preserve A16 settings revisions, single-refresh admission and explicit failed-run recovery.
 
-**Deployment:** Prepare Docker Compose local execution first; AWS/hosting remains undecided. The supplied challenge PDF requires local execution and a repository link; no public application URL requirement was found. Exact images, hardening, S3 policies, rate-window/storage mechanics and refresh-stage deadlines remain implementation work. A17 dependencies are unchanged.
+**Deployment:** Prepare Docker Compose local execution first; AWS/hosting remains undecided. The supplied challenge PDF requires local execution and a repository link; no public application URL requirement was found. Exact images, hardening, S3 policies, rate-window/storage mechanics and refresh-stage deadlines remain implementation work. A17 changes only the authentication dependency as recorded in amended A8; all other pins remain unchanged.
 
 **Reason and rejected alternatives:** Bound query access to explicitly staged files, keep authority current and enforce deployment-wide admission. Reject client-editable roles, cached role/session authority in v1, direct S3 access from query containers, per-API-process concurrency counters as the global guard, and freeing a slot on HTTP timeout alone. Retain immutable validated files instead of allowing approval to authorize changed bytes. Choose local reproducibility before selecting public hosting.
 
 **Flow and failure example:** An authorized Analyst request pins a publication, passes the shared SQL policy, reserves a PostgreSQL slot and receives authorized staged files in a network-disabled query container. If execution exceeds its deadline, the supervisor stops it; its slot remains occupied until termination is confirmed. A restarted API cannot launch a fifth query merely because a prior supervisor lost its connection.
 
-**History and precedence:** Refines A8/A13/A15/A18. Supersedes the combined document's `trinity_role` field, ABS proposal, 2 MiB/15-second/one-user/two-instance analytical limits and direct runtime storage-read capability. The old proposal is preserved in the [split session](ai/sessions/2026-10-03-security-contract-and-api-split.md#superseded-security-proposals). A16 remains accepted for API behavior and supersedes selectable publication modes; `publication_events.publication_mode` is a derived historical outcome only. Earlier token-claim defaults and database pool choices are not silently accepted. Existing A9 SHA-256 identity is reaffirmed.
+**History and precedence:** The October 3 local-authentication amendment replaces only the Clerk identity, role-storage and session-check mechanism. A19 originally refined A8/A13/A15/A18. Supersedes the combined document's `trinity_role` field, ABS proposal, 2 MiB/15-second/one-user/two-instance analytical limits and direct runtime storage-read capability. The old proposal is preserved in the [split session](ai/sessions/2026-10-03-security-contract-and-api-split.md#superseded-security-proposals). A16 remains accepted for API behavior and supersedes selectable publication modes; `publication_events.publication_mode` is a derived historical outcome only. Earlier token-claim defaults and database pool choices are not silently accepted. Existing A9 SHA-256 identity is reaffirmed.
 
 **Validation required:** Local persona flows, denied-before-read evidence, SQLGlot/DataFusion fixtures, read-only mounts/no-network/no-secret/no-Docker checks, stop/cleanup proof, PostgreSQL multi-process admission/crash recovery, deadline-bounded retries, rate/polling behavior, immutable approval and publication races. Measure cold reads, previews, dashboards and grouped SQL before adjusting provisional limits. No such runtime tests have run.
 

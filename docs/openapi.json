@@ -3,7 +3,7 @@
   "info": {
     "title": "Trinity API contract",
     "version": "1.0.0",
-    "description": "High-level API flow accepted under A16; security design accepted under A19. Detailed HTTP fields authored under delegated specification work. See api-contract.md for API behavior and security-contract.md for enforcement rules. Not implemented or tested. Examples are synthetic."
+    "description": "High-level API flow accepted under A16; security design accepted under A19. Detailed HTTP fields authored under delegated specification work. See api-contract.md for API behavior and security-contract.md for enforcement rules. Not implemented or tested. Examples are synthetic. Amended A8 replaces Clerk with seeded local users and adds login/logout; 22 operations total."
   },
   "servers": [
     {
@@ -12,7 +12,7 @@
   ],
   "security": [
     {
-      "ClerkSession": []
+      "LocalSession": []
     }
   ],
   "tags": [
@@ -24,6 +24,9 @@
     },
     {
       "name": "admin"
+    },
+    {
+      "name": "auth"
     }
   ],
   "paths": {
@@ -61,7 +64,7 @@
                   "$ref": "#/components/schemas/MeResponse"
                 },
                 "example": {
-                  "user_id": "user_example_viewer",
+                  "user_id": "11111111-1111-4111-8111-111111111111",
                   "role": "viewer",
                   "capabilities": [
                     "national:read",
@@ -6760,15 +6763,160 @@
           }
         }
       }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Create a local session",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "description": "Accept username/password only; apply separate cross-process login throttling. Unknown usernames receive comparable password-verification work. Issue a random opaque token only after committing its digest and eight-hour session. No cookies, role input or automatic retries. See api-contract.md.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Local session created. Call GET /me for current permissions.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated correlation ID for this HTTP request."
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "413": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "422": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "429": {
+            "$ref": "#/components/responses/AuthThrottled"
+          },
+          "500": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "503": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "415": {
+            "$ref": "#/components/responses/AuthProblem"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Revoke the current local session",
+        "tags": [
+          "auth"
+        ],
+        "x-minimum-role": "viewer",
+        "description": "Commit revocation of the current bearer session before success; other sessions remain valid. Repeated use of a revoked token returns 401 invalid_session. No command receipt or Idempotency-Key.",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Current session revoked; no response body.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "description": "Server-generated correlation ID for this HTTP request."
+              },
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "413": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "422": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "429": {
+            "$ref": "#/components/responses/AuthThrottled"
+          },
+          "500": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "503": {
+            "$ref": "#/components/responses/AuthProblem"
+          },
+          "415": {
+            "$ref": "#/components/responses/AuthProblem"
+          }
+        }
+      }
     }
   },
   "components": {
     "securitySchemes": {
-      "ClerkSession": {
+      "LocalSession": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "Verify bearer session token, current Clerk session and public_metadata.role on every authenticated request, without role/session caching. Only trusted administration changes role. Reject invalid/inactive sessions and missing/unknown roles; verification outage permits no protected action. No client role or actor is trusted. A19; implementation and verification pending."
+        "bearerFormat": "opaque",
+        "description": "Random local session token. Verify its SHA-256 digest against PostgreSQL auth_sessions and check expiry, revocation, active user and current auth_users.role on every protected request without authority caching. Deny invalid authority; database failure returns 503 auth_unavailable. No client role/actor is trusted. A8/A19; implementation and verification pending."
       }
     },
     "parameters": {
@@ -7320,7 +7468,7 @@
         ],
         "examples": [
           {
-            "user_id": "user_example_viewer",
+            "user_id": "11111111-1111-4111-8111-111111111111",
             "role": "viewer",
             "capabilities": [
               "national:read",
@@ -9348,7 +9496,8 @@
           "dependency_unavailable",
           "query_resource_limit",
           "query_timeout",
-          "internal_error"
+          "internal_error",
+          "invalid_credentials"
         ]
       },
       "FieldError": {
@@ -9460,6 +9609,144 @@
             "current_revision": null
           }
         ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_]+$",
+            "description": "Normalized to lowercase by the server."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 1,
+            "maxLength": 1024,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 128,
+            "description": "Opaque secret with at least 256 bits of random entropy; never log or persist in the browser."
+          },
+          "token_type": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expires_at": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        },
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_at"
+        ]
+      }
+    },
+    "responses": {
+      "AuthProblem": {
+        "description": "Safe Problem Details. 400 invalid_json; 403 forbidden; 413 request_too_large; 415 unsupported_media_type; 422 invalid_request; 500 internal_error; 503 auth_unavailable. Never include credential values.",
+        "headers": {
+          "X-Request-ID": {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Server-generated correlation ID for this HTTP request."
+          },
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "AuthUnauthorized": {
+        "description": "401: login uses invalid_credentials for unknown username, wrong password or disabled user; protected requests use authentication_required or invalid_session.",
+        "headers": {
+          "X-Request-ID": {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Server-generated correlation ID for this HTTP request."
+          },
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          },
+          "WWW-Authenticate": {
+            "schema": {
+              "type": "string"
+            },
+            "description": "Bearer challenge."
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "AuthThrottled": {
+        "description": "Busy or rate limited. Analytical requests use A19 shared concurrency and per-user rate limits; progress polling is excluded from the analytical counter. Retry-After is required.",
+        "headers": {
+          "X-Request-ID": {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Server-generated correlation ID for this HTTP request."
+          },
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          },
+          "Retry-After": {
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            },
+            "description": "Bounded seconds to wait when retry timing is known; always supplied for 429."
+          }
+        },
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
       }
     }
   },

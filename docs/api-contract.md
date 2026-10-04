@@ -105,10 +105,12 @@ The following sections complete the field and HTTP specification. Implementation
 
 ## Endpoint inventory
 
-All 20 approved operations are represented in [openapi.json](openapi.json). Role names denote minimum capabilities, with dataset restrictions applied separately.
+The 20 original operations plus the two A8 authentication operations (22 total) are represented in [openapi.json](openapi.json). Role names denote minimum capabilities, with dataset restrictions applied separately.
 
 | Method and path | Minimum role | Request body | Response |
 |---|---|---|---|
+| `POST /auth/login` | none; credentials verified | LoginRequest | LoginResponse; 200. |
+| `POST /auth/logout` | viewer | EmptyRequest | No body; 204. |
 | `GET /me` | viewer | none | MeResponse; 200. |
 | `GET /settings` | admin | none | SettingsResponse; 200. |
 | `PUT /settings` | admin | SettingsRequest | SettingsResponse; 200. |
@@ -132,17 +134,45 @@ All 20 approved operations are represented in [openapi.json](openapi.json). Role
 
 ## Detailed API contract
 
-The supplied design fixes user-visible behavior. The field schemas, names, bounded defaults, command receipts, and additional persistence fields below are AI-authored completion details under alayala's request to fill missing requests and responses. They have not been independently runtime-tested or selected one by one. They must preserve the approved flow. A19 selects current Clerk verification, the SQL function set and per-query containers in the separate [security contract](security-contract.md). Detailed token/parser/container configuration still requires implementation and verification.
+The supplied design fixes user-visible behavior. The field schemas, names, bounded defaults, command receipts, and additional persistence fields below are AI-authored completion details under alayala's request to fill missing requests and responses. They have not been independently runtime-tested or selected one by one. They must preserve the approved flow. A19 selects current local user/session verification, the SQL function set and per-query containers in the separate [security contract](security-contract.md). Detailed password-hashing/parser/container configuration still requires implementation and verification.
 
 [openapi.json](openapi.json) is the exact machine-readable HTTP shape, using OpenAPI 3.1.1. The field reference below is generated from that file. This prose defines cross-field and transaction rules that JSON Schema alone cannot establish. [A16](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) records precedence; [schema.md](schema.md) defines persistence and unchanged analytical semantics. A17 remains the sole dependency-version decision.
 
 ### Shared transport and values
 
-All paths below are relative to `/api/v1`. Require a verified Clerk identity and server-side permission for every operation. Use HTTPS outside localhost. JSON bodies use `application/json`; errors use `application/problem+json`. Reject unknown body fields and unsupported query parameters. Reject a nonempty body on GET or the warning DELETE. Empty-body command POSTs require `{}`. Limit JSON input to 64 KiB and SQL to 16 KiB encoded UTF-8. These are accepted input limits under A19, not performance measurements.
+All paths below are relative to `/api/v1`. Require a verified local session and server-side permission for every protected operation. `POST /auth/login` is the sole unauthenticated application endpoint; it accepts credentials and grants no product access without verification. Use HTTPS outside localhost. JSON bodies use `application/json`; errors use `application/problem+json`. Reject unknown body fields and unsupported query parameters. Reject a nonempty body on GET or the warning DELETE. Empty-body command POSTs require `{}`. Limit JSON input to 64 KiB and SQL to 16 KiB encoded UTF-8. These are accepted input limits under A19, not performance measurements.
 
-Every response includes a server-generated `X-Request-ID` and `Cache-Control: no-store`. For a permitted cross-origin frontend, expose `ETag`, `Location`, `Retry-After`, and `X-Request-ID`; allow the required `Authorization`, `Content-Type`, `If-Match`, and `Idempotency-Key` request headers and GET/PUT/POST/DELETE/OPTIONS methods. OPTIONS is transport preflight, not an additional product operation; the origin allowlist remains part of security configuration. IDs are UUID strings, except Clerk IDs and preserved EIA IDs. Dates are `YYYY-MM-DD`; event times are UTC RFC 3339 with `Z`. Revision and potentially large counts are decimal strings. Exact measurements and SQL numeric results are decimal strings; booleans remain JSON booleans. Null is never replaced with zero. Reject unsupported nested/binary SQL output instead of lossy conversion. Response times/counts used only for bounded UI controls are JSON integers as declared in OpenAPI.
+Every response includes a server-generated `X-Request-ID` and `Cache-Control: no-store`. For a permitted cross-origin frontend, expose `ETag`, `Location`, `Retry-After`, and `X-Request-ID`; allow the required `Authorization`, `Content-Type`, `If-Match`, and `Idempotency-Key` request headers and GET/PUT/POST/DELETE/OPTIONS methods. OPTIONS is transport preflight, not an additional product operation; the origin allowlist remains part of security configuration. IDs are UUID strings, except text actor references and preserved EIA IDs. Dates are `YYYY-MM-DD`; event times are UTC RFC 3339 with `Z`. Revision and potentially large counts are decimal strings. Exact measurements and SQL numeric results are decimal strings; booleans remain JSON booleans. Null is never replaced with zero. Reject unsupported nested/binary SQL output instead of lossy conversion. Response times/counts used only for bounded UI controls are JSON integers as declared in OpenAPI.
 
 Every analytical response contains one `Publication` object with publication and version IDs, observation bounds, latest observation date, and publication time. Resolve the active publication once. Catalog readiness/freshness and `/me` must describe a consistent publication snapshot within that request. A public caller cannot choose a storage path or arbitrary historical version.
+
+### Local login and logout
+
+**Explicit A8/A19 endpoint amendment:** add two operations to the original 20-operation A16 contract (22 total). Existing product paths and permissions do not change. Replace OpenAPI `ClerkSession` with `LocalSession`: an opaque bearer token, not a JWT. The following exact endpoint defaults are AI-authored completion details requested by alayala, pending implementation and runtime verification.
+
+| Operation | Request | Success | Failure |
+|---|---|---|---|
+| `POST /auth/login` | JSON `{username, password}`; no session required. Username is 1–64 ASCII letters/digits/underscore, normalized to lowercase; password is 1–1024 characters, never trimmed or normalized. Reject extra fields, including role/actor IDs. | `200` with `{access_token, token_type: "Bearer", expires_at}`. Token is a newly generated opaque secret; expires_at is eight hours after creation. Follow with `GET /me` for current role, capabilities and landing page. | `401 invalid_credentials` for unknown username, incorrect password or disabled user; `403 forbidden` for invalid stored role; `429 rate_limited` with Retry-After; `503 auth_unavailable` when verification/session persistence is unavailable. No token on failure. |
+| `POST /auth/logout` | Current `Authorization: Bearer` token and JSON `{}`; no query parameters. | `204`, no body, only after server-side revocation of that session. Other sessions are unaffected. | Missing token: `401 authentication_required`; invalid/expired/revoked token: `401 invalid_session`; unknown role: `403 forbidden`; database failure: `503 auth_unavailable`. A repeated call with a revoked token returns 401. |
+
+Both follow shared headers, content types, body limits and safe validation errors (`400 invalid_json`, `413 request_too_large`, `415 unsupported_media_type`, `422 invalid_request`). They do not use command receipts, ETags or idempotency keys. Do not automatically retry login after a lost response; a new user-initiated login creates a new independent session. Expiry bounds orphan sessions. Tokens and passwords never appear in logs or sample values. Authentication bodies receive no value-bearing validation diagnostics.
+
+The frontend stores the token in memory only and sends it through the existing Authorization header. Reload/expiry requires login again. On logout it clears its local token even if the request fails, but must not claim server revocation succeeded on failure. No cookies, browser-persistent token store, refresh endpoint, registration or client-selected persona authority is added. See [security](security-contract.md#identity-and-trusted-roles) and the [required schema additions](schema.md#local-authentication-amendment-a8a19).
+
+#### LoginRequest
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| `username` | string | yes | 1–64 characters; `^[A-Za-z0-9_]+$`; normalize to lowercase. |
+| `password` | string | yes | 1–1024 characters; preserve exactly; write-only. |
+
+#### LoginResponse
+
+| Field | Type | Required | Rule |
+|---|---|---|---|
+| `access_token` | string | yes | Opaque secret, 43–128 characters and minimum 256 bits of random entropy; response only. |
+| `token_type` | string | yes | Constant `Bearer`. |
+| `expires_at` | Timestamp | yes | Absolute UTC expiry; no sliding extension. |
 
 ### App entry and capabilities
 
@@ -264,7 +294,7 @@ Use RFC 9457 fields plus `code`, `request_id`, `errors`, `blocker`, and `current
 | Status | Stable codes and client action |
 |---|---|
 | 400 / 415 / 422 | `invalid_json` / `unsupported_media_type` / `invalid_request`, `invalid_cursor`, `sql_not_allowed`, `idempotency_key_required`; correct the input. |
-| 401 / 403 / 404 | `authentication_required`, `invalid_session` / `forbidden` / `resource_not_found`, `dataset_not_found`; sign in or stop the forbidden lookup. |
+| 401 / 403 / 404 | `authentication_required`, `invalid_session`, `invalid_credentials` / `forbidden` / `resource_not_found`, `dataset_not_found`; sign in or stop the forbidden lookup. |
 | 409 | `data_unavailable`, `publication_changed`, `setup_required`, `refresh_blocked`, `idempotency_conflict`, `action_not_allowed`, `candidate_ineligible`; use readiness/state information or restart pagination. |
 | 412 / 428 / 413 | `revision_mismatch` / `precondition_required` / `request_too_large`; reload target state, supply ETag, or reduce input. |
 | 429 / 500 / 503 / 504 | `rate_limited` / `internal_error` / `auth_unavailable`, `dependency_unavailable`, `query_resource_limit` / `query_timeout`; obey retry guidance. `query_failed` uses 422 for a safe user-correctable engine expression/type error. |
@@ -303,7 +333,7 @@ These values illustrate JSON transport only; they are not EIA evidence, real use
 
 ```json
 {
-  "user_id": "user_example_viewer",
+  "user_id": "11111111-1111-4111-8111-111111111111",
   "role": "viewer",
   "capabilities": [
     "national:read",
@@ -909,7 +939,7 @@ The earlier security proposals are superseded where A19 differs; their text is p
 
 ## Verification required
 
-The artifacts specify behavior. No application endpoint, database migration, provider setup, worker, or query runtime has been implemented by this task.
+The artifacts specify behavior. No application endpoint, database migration, local seed command, worker, or query runtime has been implemented by this task.
 
 | Scenario | Required result |
 |---|---|
@@ -931,6 +961,6 @@ The artifacts specify behavior. No application endpoint, database migration, pro
 | Redis loss or stale worker completion | Durable recovery works; stale generation/fence cannot resurrect or publish discarded work. |
 | Browser closes / query times out | Background refresh continues; isolated query execution terminates under its supervisor. |
 
-Still open: exact token configuration, SQL AST/type compatibility, executable DDL, refresh-stage deadlines, container hardening and supervision details, S3 policies, dependency compatibility, and runtime tests. A19 selects the security design and retry count; no control is proven merely by producing OpenAPI.
+Still open: password-hashing package/parameters, seed/session migrations and login throttling, SQL AST/type compatibility, executable DDL, refresh-stage deadlines, container hardening and supervision details, S3 policies, dependency compatibility, and runtime tests. A19 selects the security design and retry count; no control is proven merely by producing OpenAPI.
 
 Sources for HTTP/schema conventions: [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html), [RFC 9110 HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html), and [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html). Product behavior comes from alayala's supplied approved design; completion defaults are attributed above.

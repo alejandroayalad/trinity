@@ -12,15 +12,24 @@ Status: agreed design, October 3, 2026, under [A19](../DECISIONS.md#a19--securit
 
 Authorize before protected data reads, file downloads or query execution. Apply the same policy to direct API calls, catalogs, previews, dashboards, metadata, diagnostics and errors. Frontend controls never replace backend checks. A rendered action button and a stored command receipt are not authority; check current identity before protected lookup or replay.
 
-## Authentication and trusted roles
+<a id="authentication-and-trusted-roles"></a>
+## Identity and trusted roles
 
-Store the application role in Clerk's **`public_metadata.role`**, using `viewer`, `analyst` or `admin`. Only trusted administration may change it. Clients cannot supply authoritative roles or actor IDs. Derive action actors from the verified identity; workers use internal service authority, not stored user tokens.
+Amended A8 replaces Clerk with local authentication for reproducible evaluator setup. This changes identity/login only. Backend role and data boundaries above still apply to every protected request, including polling and command replay. Derive action actors from the verified local user; workers retain internal service authority and receive no stored user tokens.
 
-Verify the session token, current Clerk session and current role on every authenticated product request, including polling. Do not cache role/session-status results in v1. Require the current session to belong to the verified identity. Invalid/inactive sessions are denied; missing/unknown roles grant no product access. If Clerk verification is unavailable, return `503 auth_unavailable` and perform no protected action. Apply role changes to subsequent requests once Clerk reports them; already-authorized accepted work may finish.
+Seed exactly one account for each persona in PostgreSQL `auth_users`: usernames and roles `viewer`, `analyst`, `admin`. Passwords come from the evaluator's environment configuration and are stored only as salted Argon2id hashes. Use a maintained hashing library; choose its exact pinned release and resource parameters during implementation, then verify them locally. Do not log passwords or include them in example requests. There is no public registration or role-selection endpoint. Seed the first Admin through the same explicit local setup command, never through a request flag or automatic role fallback.
 
-Use the API's bearer-session transport. Exact SDK/claim/issuer/key configuration remains to be implemented and checked; this contract does not silently accept earlier proposed algorithm, clock-skew or extra-claim defaults. Tradeoff: current provider checks add latency and provider availability/rate-limit dependence. Retries follow the bounded external-failure rule below.
+Login checks username/password and active state, then issues a cryptographically random token with at least 256 bits of entropy. Store only its SHA-256 digest in `auth_sessions`; hashing a high-entropy session token is distinct from password hashing. Each session has an absolute eight-hour lifetime, with no sliding extension or refresh token. Create a new token for each successful login; never accept a client-selected token. Logout revokes the current session in PostgreSQL before reporting success. Trusted password reset disables existing sessions in the same transaction; no reset UI/API is in v1.
 
-Assign roles through trusted Clerk administration in v1. Assign the first Admin manually and provision one test account per persona. No default Viewer role is inferred for an unprovisioned user.
+Use `Authorization: Bearer <opaque-token>` for the existing API transport. Accept no authentication cookies, query-string tokens, role headers or caller-supplied actor IDs. The browser keeps the token only in memory, clears it on logout/401, and returns to login on reload or expiry. HTTPS is required outside localhost. CORS permits only configured frontend origins; it does not replace backend checks. Do not add cookie authentication without a separate CSRF contract.
+
+On every protected request, read the matching session and its current user together. Require an unexpired, unrevoked session and an active user. Resolve authority only from the stored role, constrained to `viewer`, `analyst`, `admin`; missing/unknown roles grant no product access. Do not cache role/session authority in v1. A committed role change, user disable or revocation applies to subsequent requests; already-authorized accepted work may finish under the existing rules. Disabled users cannot regain old sessions when re-enabled: trusted disable must revoke their sessions transactionally.
+
+Missing credentials return `401 authentication_required`; invalid/expired/revoked sessions or disabled users return `401 invalid_session`; unknown roles return `403 forbidden`. Login uses the same `401 invalid_credentials` for unknown username, wrong password and disabled user, with comparable password-verification work for unknown users. If the database cannot verify authentication, return `503 auth_unavailable` and perform no protected action. Never retry rejected credentials or fall back to an assumed persona. Add bounded login throttling across API processes with `429 rate_limited`/`Retry-After`, separately from analytical quotas. Its precise window/counter implementation remains an explicit pre-delivery task.
+
+The seed is transactional and repeatable: insert missing seed users, preserve existing IDs/hashes/roles/disabled state, and fail on identity or role conflicts. It must not reset an existing password, promote a changed account, re-enable a disabled user, truncate history or delete sessions. Validate all required environment passwords before writes, including the login contract's 1–1024 character bound; never trim or normalize passwords. Seed execution requires an explicit local-development setting; normal API startup never seeds users. Real credentials stay out of Git, output, logs, audit history, outbox and query containers.
+
+Required new tables and stable actor references are specified in [schema.md](schema.md#local-authentication-amendment-a8a19). The two new HTTP operations are specified in [api-contract.md](api-contract.md#local-login-and-logout). These are design amendments, not implemented controls. No external identity-provider configuration is required.
 
 ## SQL policy
 
@@ -106,7 +115,7 @@ Preserve the API's `413 request_too_large` and `429 rate_limited` responses and 
 
 Allow up to **three total attempts**, not three retries, for temporary external failures. Wait one second before attempt two and three seconds before attempt three. All attempts and waits remain within the operation's deadline; do not begin another attempt when its deadline has expired. The analytical budget does not restart after a download failure.
 
-Do not retry invalid SQL, denied access or failed validation. Invalid credentials/session/role are denials, not temporary provider outages. Do not blindly replay external writes: retries use the same durable operation/object identity and existing duplicate-safe rules. Recovery of an uncertain write first checks its recorded outcome. Queue redelivery is not permission to reset an exhausted attempt budget.
+Do not retry invalid SQL, denied access or failed validation. Invalid credentials/session/role are denials, not temporary authentication-store outages. Do not blindly replay external writes: retries use the same durable operation/object identity and existing duplicate-safe rules. Recovery of an uncertain write first checks its recorded outcome. Queue redelivery is not permission to reset an exhausted attempt budget.
 
 Authentication and refresh-stage deadlines, and concrete temporary-error classification, remain to be implemented. Do not apply the 30-second query deadline to the entire refresh. Exhausted/permanent refresh failures follow A16's failure-warning and Admin recovery rules. Explicit Admin Run again creates a new run; publication retry reuses the exact eligible candidate and its original approval requirement.
 
@@ -128,7 +137,7 @@ A16's single refresh lifecycle remains reserved during preparation, review, publ
 
 ## Exposure and deployment
 
-Viewer catalogs, data, diagnostics and errors contain national information only. Public errors expose no hidden schemas, storage paths, credentials or internal traces. Logs record actor, action, outcome and request/run ID; exclude tokens, raw SQL and raw source payloads. Use `Cache-Control: no-store` for authenticated responses. Any future result cache needs separate permission and invalidation rules.
+Viewer catalogs, data, diagnostics and errors contain national information only. Public errors expose no hidden schemas, storage paths, credentials or internal traces. Logs record actor, action, outcome and request/run ID; exclude passwords, password hashes, session tokens/digests, raw SQL and raw source payloads. Use `Cache-Control: no-store` for authenticated responses. Any future result cache needs separate permission and invalidation rules.
 
 Prepare local execution with **Docker Compose first**. No Compose file or runnable command is supplied by this documentation change. AWS and public hosting remain undecided. The local challenge PDF was inspected: page 7 requires a locally running solution and source runnable from README; page 8 requests a repository link. No public application URL requirement was found in the supplied brief. This does not establish whether a separate submission message adds requirements.
 
@@ -146,7 +155,7 @@ Use HTTPS outside local development and only configured frontend origins. Enforc
 
 | Test area | Required evidence |
 |---|---|
-| Identity and roles | Direct API calls for all personas; denied access before reads/downloads; invalid/inactive sessions and unknown roles denied; role changes apply; Clerk outages block protected actions. |
+| Identity and roles | Direct API calls for all personas; denied access before reads/downloads; invalid/inactive sessions and unknown roles denied; role changes apply; authentication-store outages block protected actions; repeat seeding preserves identity/history; wrong passwords and expired/revoked sessions fail; logout revokes server state. |
 | SQL | Allowed arithmetic/CASE/function fixtures agree between SQLGlot and DataFusion; whole-input rejection of unsupported constructs, writes, hidden tables, file readers and URLs; exact decimal behavior. |
 | Isolation and cleanup | Container cannot reach network, S3, credentials, Docker control, unrelated mounts or unpublished files; mounts reject writes; timeout stops execution; memory bound holds; temporary resources are removed. |
 | Admission and limits | Cross-process user/global reservations; no slot release before termination; supervisor crash recovery; byte/row limits and truncation; 30/minute counter excludes polling; no partial results on resource failure. |
@@ -156,7 +165,7 @@ Also test the three-attempt external failure schedule within deadlines, denied/i
 
 ## Remaining implementation details
 
-1. Exact token verification configuration and SDK calls; role storage/current lookup policy is selected.
+1. Auth migrations, seed command, password-hashing package pin/parameters, login throttling and session cleanup; local role storage, opaque bearer transport and current database checks are selected.
 2. SQL dialect/AST forms, argument/type/numeric semantics and parser/engine compatibility fixtures; function names are selected.
 3. Container hardening, supervisor protocol/crash cleanup, S3 policies/local configuration and temporary-file handling; no-network read-only data access is selected.
 4. Query-slot physical schema, rate-window accounting and authentication/refresh-stage deadlines/error classification; slot authority, limits and attempt schedule are selected.
