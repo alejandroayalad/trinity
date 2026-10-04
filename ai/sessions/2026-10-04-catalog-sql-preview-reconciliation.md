@@ -49,3 +49,7 @@ Done: histories merged, catalog/SQL checks passed, preview plans and both Docker
 Pending: preview Step 2 implementation kickoff; complete diagnostic provenance and existing runtime gates still apply to later delivery.
 Blocker: none for a clean Git continuation; no preview implementation is claimed.
 Next: [ME] continue on `feat/catalog-permissions` from preview tasks Step 2.
+
+## Remote history reconciliation
+
+The first atomic push was rejected because `origin/feat/catalog-permissions` already contained `35c7e0e`, `032b682` and `a3a3f15`. Neither remote branch changed in that attempt. After fetching, comparison confirmed their catalog implementation and evidence were already represented in the combined tree. Merge `815f70e` retains those commits as ancestors without removing SQL, preview or newer main work. Its tree is identical to tested reconciliation commit `1e2fc71`, so no additional runtime test was needed for that history-only merge. Both branch names will be advanced together with an atomic, non-forced push; `feat/catalog-permissions` remains the sole continuation branch.
