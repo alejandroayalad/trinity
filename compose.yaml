@@ -1,12 +1,15 @@
-# Local database only. The API runs with the locked backend environment.
+# Local development only: PostgreSQL and the API, published on loopback.
+# Supply TRINITY_POSTGRES_PASSWORD in the shell; see backend/README.md.
 services:
   postgres:
     image: postgres:17.11-bookworm
     environment:
       POSTGRES_DB: trinity
       POSTGRES_USER: trinity
-      POSTGRES_PASSWORD: ${TRINITY_POSTGRES_PASSWORD:?Supply a local database password}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets:
+      - postgres_password
     ports:
       - "127.0.0.1:15432:5432"
     volumes:
@@ -16,5 +19,36 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  api:
+    build: ./backend
+    image: trinity-api:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # No password in the URL; docker-entrypoint.sh supplies it to libpq.
+      TRINITY_DATABASE_URL: postgresql://trinity@postgres:5432/trinity
+      TRINITY_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "127.0.0.1:8000:8000"
+    # read_only is not used: Compose cannot copy an environment-sourced secret
+    # into a read-only container.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+secrets:
+  postgres_password:
+    environment: TRINITY_POSTGRES_PASSWORD
+
 volumes:
   postgres_data:
