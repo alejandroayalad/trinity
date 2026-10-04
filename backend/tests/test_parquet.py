@@ -103,6 +103,20 @@ class FileFixture(unittest.TestCase):
 class FreezeFilesTests(FileFixture):
     """Check real temporary Parquet writes, evidence and no-overwrite behavior."""
 
+    def test_live_leading_decimal_percentage_survives_saved_parquet(self) -> None:
+        rows = {key: [source_row(key)] for key in DATASETS}
+        rows["facility"] = [source_row(
+            "facility", period="2026-10-02", facility="869", capacity="1881.2",
+            outage="9.412", percentOutage=".5",
+        )]
+        result = self.freeze(evidence(rows))
+        saved = pq.read_table(result.root / "data/facility.parquet").to_pylist()
+        self.assertEqual(saved[0]["percentOutage"], Decimal("0.500000"))
+        source = json.loads((result.root / "source-evidence.json").read_text())
+        facility = next(item for item in source["routes"] if item["dataset"] == "facility")
+        original = json.loads(facility["attempts"][0]["sanitized_response"])
+        self.assertEqual(original["response"]["data"][0]["percentOutage"], ".5")
+
     def test_s01_all_schemas_survive_all_null_optional_columns(self) -> None:
         rows = {key: [source_row(key, facilityName=None, percentOutage=None)]
                 for key in DATASETS}
