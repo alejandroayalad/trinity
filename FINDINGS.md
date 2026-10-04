@@ -1,6 +1,6 @@
 # Data findings — Trinity
 
-Status: ongoing data evidence, October 2, 2026. A4 remains accepted: PostgreSQL stores application state; Apache DataFusion queries outage data in Parquet.
+Status: ongoing data evidence, October 4, 2026. Phase 3 now reproduces the selected findings from bundled historical inputs. A4 remains accepted: PostgreSQL stores application state; Apache DataFusion queries outage data in Parquet.
 
 Contract update: [A9](DECISIONS.md#a9--data-contract-v1-finalized) and [data contract v1](docs/schema.md) now specify keys, types, metric behavior, and validation rules. This is a new specification, not a rerun of the evidence below. Historical observations and source explanations remain unchanged.
 
@@ -9,6 +9,8 @@ Contract update: [A9](DECISIONS.md#a9--data-contract-v1-finalized) and [data con
 Alayala fetched the data, analyzed it, and wrote the original findings in this document. AI organized the text, corrected wording, and added evidence references. AI also ran separate read-only checks of the local CSV exports. These checks support the findings; they do not transfer authorship of the original analysis to AI.
 
 The evidence below distinguishes observed values from explanations and proposed product handling. Three selected anomalies are documented. Data review continues as new evidence appears; follow the [ongoing anomaly workflow](AGENTS.md#ongoing-anomaly-workflow). Remaining source-definition and verification work is tracked below. New candidates are not automatically confirmed findings.
+
+**October 4 reproduction:** AI adapted the existing report methods and recorded checks into [one offline command](scripts/generate_report.py), imported the reviewed source exports and sanitized API probes, and ran the analysis. All 16 historical claim checks passed. The [reproduction guide](evidence/findings/README.md), [measured report](evidence/findings/REPORT.md), and [full result with input checksums](evidence/findings/expected-report.json) provide the inputs, scope, and results. Synthetic tests are separate from this real saved-data evidence. No live EIA/S3 preparation or publication is established by this run.
 
 ## Data inspected
 
@@ -20,9 +22,11 @@ Local workspace files cover January 1, 2025 through October 2, 2026. A grain is 
 | Facility | `facility_20250101_20261002.csv` | 34,949 | 640 |
 | Generator | `generator_20250101_20261002.csv` | 60,549 | 640 |
 
-Supporting local report: `data/REPORT_20250101_20261002.md`. These paths refer to the data workspace, not this Obsidian folder. The report's explanations are not all independently verified. Agreement between exports does not prove that the API download is complete.
+Historical supporting report: `data/REPORT_20250101_20261002.md` in the original data workspace. It is not required by the repository's reproduction command. Its explanations are not all independently verified. Agreement between exports does not prove that the API download is complete.
 
 The later two-year export is in `data/last_2_years_20241002_20261002/`: 731 national rows, 39,863 facility rows, and 69,103 generator rows covering October 2, 2024–October 2, 2026. AN-02 and the new API checks use this export. All 731 dates are present, candidate keys are unique, and capacity/outage totals agree between national rows, facilities, and generators. The facility API total issue is documented below.
+
+Those three two-year files are now preserved byte-for-byte under [evidence/findings/inputs/](evidence/findings/inputs/). Their January 1, 2025–October 2, 2026 subwindow matches every parsed row and source field in the three original exports above; AI checked this during import. This keeps the original scope reproducible without duplicating the shorter files.
 
 ## F1 — Calculate percentages from capacity and outage
 
@@ -79,6 +83,8 @@ Another reactor example from the original notes is `(371, "2")`: Columbia unit 2
 | National vs sum of generators | `outage` | 640 | 0 |
 
 All 2,560 comparisons had an exact difference of 0 MW. Each export contains all 640 dates in this interval.
+
+**October 4 extension:** The bundled 731-day export produced 79,726 generator-to-facility and 2,924 facility/generator-to-national capacity/outage comparisons. All **82,650 comparisons** had an exact difference of **0 MW**. The command writes every date, entity, metric, compared value, and signed difference to `reconciliation.csv`; its hash is in the [retained result](evidence/findings/expected-report.json). The original 640-day observation above remains unchanged.
 
 **Limit:** This confirms agreement in the inspected exports. It does not prove full API history coverage, complete pagination, or the absence of reporting gaps at individual facilities. Do not invent a MW mismatch to satisfy the challenge.
 
@@ -150,13 +156,13 @@ This expands F5. Alayala selected it as an anomaly; AI checked the plant values 
 
 **How should Trinity handle it?** Send the downloaded version to validation. If its counts and required checks pass, it is ready for publication without a user-facing warning about this known EIA count issue. If validation fails, the version stays unpublished. See [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed) for the accepted rule and its relationship to Admin approval. The checks still need implementation.
 
-**How can someone check it?** The original responses are saved in `data/api_evidence_20261002/` in the data workspace. The [supporting checks](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) verify their counts, and the same session includes requests for a live rerun. Alayala selected this as the third anomaly; AI reproduced the mismatch and wrote the explanation.
+**How can someone check it?** Run the [offline report command](evidence/findings/README.md#run-from-the-repository-root) against the original sanitized responses now bundled in `evidence/findings/inputs/`. It checks counts, request scope, CSV agreement, and the empty probes at offsets 55 and 39,863. These are selected probes, not all original download pages. The [historical supporting checks](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) and live-rerun requests remain available. Alayala selected this as the third anomaly; AI reproduced the mismatch and wrote the explanation.
 
 ## API metadata and pagination checks
 
 **Metadata describes the dataset.** A route without `/data/` returns its description, fields, units, filters, and available dates. Adding `/data/` requests actual rows. This is how EIA documents its API. [EIA API guide](https://www.eia.gov/opendata/documentation.php).
 
-We queried all three route descriptions on October 2, 2026 and saved the responses in the data workspace under `data/api_evidence_20261002/`.
+We queried all three route descriptions on October 2, 2026 and saved the responses in the data workspace under `data/api_evidence_20261002/`. Reviewed copies are now bundled in `evidence/findings/inputs/` with the original bytes and checksums.
 
 | Item | Confirmed response |
 |---|---|
@@ -190,14 +196,16 @@ The [supporting session](ai/sessions/2026-10-02-palisades-pagination-and-metadat
 
 ## Reproduction and remaining evidence
 
-The workspace contains `fetch_eia.py`, `generate_report.py`, the exports, and the supporting report. The report lists this analysis command, run from the data workspace:
+Run from the repository root, using the bundled inputs and a new output directory:
 
 ```bash
-python3 generate_report.py --us data/us_20250101_20261002.csv --facility data/facility_20250101_20261002.csv --generator data/generator_20250101_20261002.csv --out REPORT_20250101_20261002.md
+python3 scripts/generate_report.py --inputs evidence/findings/inputs --out backend/artifacts/findings
 ```
 
-During the earlier formatting task, AI used separate inline, read-only checks and did not run or review `generate_report.py`. During the subsequent readiness review on October 2, AI reviewed the script and ran it against the full-window and September exports. The full-window report matched the stored report apart from its generation timestamp and reproduction output filename. Some explanations are fixed text rather than checked conclusions, so successful execution does not verify them. AN-01 above links to a separate executed command for its plant comparison.
+The command needs only Python's standard library and makes no network calls. It verifies input hashes, reports exact measured values, and returns `0` only when all recorded historical claim checks match. See the [guide](evidence/findings/README.md) for inputs, dates, output files, failure behavior, and the separate synthetic test command.
 
-Before submission, review the report's methods and preserve the checks used to reproduce the final findings. The new API checks verify units, frequency, filters, and the facility count mismatch; the precise seasonal capacity definition and EIA's revision methodology remain open. A9 selects full-window re-fetching for Trinity's revision handling and specifies validation checks; it does not establish EIA's internal methods. All three selected anomalies are documented: the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. Remaining source definitions, report review, reproduction, and validation implementation are separate from selecting anomalies; data evidence remains ongoing as defined in AGENTS.md.
+During the earlier formatting task, AI used separate inline checks. During the October 2 readiness review, AI reviewed and ran the old workspace `generate_report.py`; the report matched apart from its timestamp/output filename. Its fixed explanations were not calculated conclusions. The October 4 implementation reuses the useful methods and supporting session checks, removes those fixed causal claims, adds per-facility reconciliation, and checks exact full outage rather than the old 99.9% threshold.
+
+The report methods and inputs are now preserved for reproduction. The precise seasonal capacity definition and EIA's revision methodology remain open. A9 selects full-window re-fetching for Trinity's revision handling and specifies validation checks; it does not establish EIA's internal methods. All three selected anomalies remain the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. Real S3 protection and live preparation remain unverified. Data evidence remains ongoing as defined in AGENTS.md.
 
 See [Engineering Notes](NOTES.md) for contributions and [the closed session](ai/sessions/2026-10-02-data-findings-and-handoff.md) for the handoff.
