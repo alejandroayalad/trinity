@@ -152,6 +152,35 @@ class NormalizationTests(unittest.TestCase):
                 with self.subTest(field=name, value=value), self.assertRaises(NormalizationError):
                     normalize_row("facility", row)
 
+    def test_live_facility_leading_decimal_percentage_is_exact(self) -> None:
+        row = source_row("facility")
+        row.update(period="2026-10-02", facility="869", capacity="1881.2",
+                   outage="9.412", percentOutage=".5")
+        before = deepcopy(row)
+        result = normalize_row("facility", row)
+        self.assertEqual(result.values["percentOutage"], Decimal("0.5"))
+        self.assertEqual(result.diagnostic_codes, ())
+        self.assertEqual(row, before)
+
+    def test_leading_decimal_measurements_preserve_sign_and_scale_limits(self) -> None:
+        for field in ("capacity", "outage", "percentOutage"):
+            for text in (".5", "+.5", ".000001000", "-.0"):
+                with self.subTest(field=field, value=text):
+                    row = source_row(); row[field] = text
+                    self.assertEqual(normalize_row("national", row).values[field], Decimal(text))
+            row = source_row(); row[field] = ".0000001"
+            with self.assertRaises(NormalizationError) as caught:
+                normalize_row("national", row)
+            self.assertEqual(caught.exception.code, "decimal_scale")
+        row = source_row(); row["capacity"] = "-.5"
+        with self.assertRaises(NormalizationError) as caught:
+            normalize_row("national", row)
+        self.assertEqual(caught.exception.code, "negative_capacity")
+        row = source_row(); row.update(outage="-.5", percentOutage="-.5")
+        result = normalize_row("national", row)
+        self.assertEqual(result.values["outage"], Decimal("-0.5"))
+        self.assertEqual(result.values["percentOutage"], Decimal("-0.5"))
+
     def test_trailing_zeros_survive_parsing_even_with_low_decimal_precision(self) -> None:
         samples = (
             "863.4000000", "999999999999999999.9999990000", "0.0000010000",
@@ -208,7 +237,7 @@ class NormalizationTests(unittest.TestCase):
         # Decimal accepts some forms that this source contract rejects.
         # Check spelling rules as well as whether a value could be converted.
         for text in ("NaN", "sNaN", "Infinity", "-Infinity", "1e2", "1_000", "1,000",
-                     ".5", "1.", " 1", "1 ", "1\n", "１２", "++1", "abc"):
+                     ".", "+.", "-.", "1.", " 1", "1 ", "1\n", "１２", "++1", "abc"):
             for name in ("capacity", "outage", "percentOutage"):
                 row = source_row(); row[name] = text
                 with self.subTest(field=name, value=text), self.assertRaises(NormalizationError) as caught:

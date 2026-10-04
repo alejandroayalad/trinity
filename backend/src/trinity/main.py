@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from trinity.adapters.postgres import Database
 from trinity.auth.router import router
 from trinity.auth.service import AuthService
+from trinity.catalog.router import router as catalog_router
 from trinity.config import load_api_settings
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
@@ -51,6 +52,7 @@ def create_app(*, settings=None, service=None, query_service=None) -> FastAPI:
     application.include_router(router)
     application.include_router(settings_router)
     application.include_router(queries_router)
+    application.include_router(catalog_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["health"])
     async def health() -> HealthResponse:

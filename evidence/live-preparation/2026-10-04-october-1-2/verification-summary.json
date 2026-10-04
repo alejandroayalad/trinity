@@ -1,0 +1,443 @@
+{
+  "version_id": "9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae",
+  "local_candidate_root": "backend/artifacts/9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae",
+  "s3_uri": "s3://trinity-alayala-dev-01/private/candidates/9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae/",
+  "parent_result_sha256": "a9b34af5d3b56fee346615a9fa980570aedf6fd3c81e531aafd4b57eb8520e5b",
+  "validation_sha256": "725d3a21eee1d2c33ee648f7177eea117ae44048a9d8396bd2bffca3c2493d3d",
+  "diagnostics_sha256": "b35506ea0678131e7313c55c76f04fd9887919aff41d3d441991a47bf013a53f",
+  "required_checks": [
+    {
+      "check_code": "V01",
+      "dataset_key": "national",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V01-national.json",
+      "details_sha256": "4903f06bf7c903e6f4bc0785e71644b8509ac74f73499ed7b1e2c8ca18dae4ce"
+    },
+    {
+      "check_code": "V01",
+      "dataset_key": "facility",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V01-facility.json",
+      "details_sha256": "7222c116ec8eba587e4d04a5741659b8a403dd00c7da82c1fb763d1f06ee4ce0"
+    },
+    {
+      "check_code": "V01",
+      "dataset_key": "generator",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V01-generator.json",
+      "details_sha256": "ddfe9d930f31cd715389c8bf6f40ef2b99b9f62453f158db0a271fed2f036b0e"
+    },
+    {
+      "check_code": "V02",
+      "dataset_key": "national",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V02-national.json",
+      "details_sha256": "753a19e4bdf1560b4b66c31fa5abc267caddd52f6b5b75ba6f73601e279d1690"
+    },
+    {
+      "check_code": "V02",
+      "dataset_key": "facility",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V02-facility.json",
+      "details_sha256": "ebc5baf9860e2fc539b871efcfd82c0bfe43f8385c4378788ac76a84ffa29544"
+    },
+    {
+      "check_code": "V02",
+      "dataset_key": "generator",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V02-generator.json",
+      "details_sha256": "dca5b1540c655995ec8f20ba9b70ade40e333273c983fb11c68f5706443b4cc7"
+    },
+    {
+      "check_code": "V03",
+      "dataset_key": "national",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V03-national.json",
+      "details_sha256": "20d420d400f062213db8c186c5420e5798ac6e2697700e47dc29160aec970785"
+    },
+    {
+      "check_code": "V03",
+      "dataset_key": "facility",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V03-facility.json",
+      "details_sha256": "20d420d400f062213db8c186c5420e5798ac6e2697700e47dc29160aec970785"
+    },
+    {
+      "check_code": "V03",
+      "dataset_key": "generator",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V03-generator.json",
+      "details_sha256": "20d420d400f062213db8c186c5420e5798ac6e2697700e47dc29160aec970785"
+    },
+    {
+      "check_code": "V04",
+      "dataset_key": "all",
+      "status": "pass",
+      "checked_count": 3,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V04-all.json",
+      "details_sha256": "00b2f4e35a062b02dc3239144b5342fe9fb99472e737398d2e39479b10590d7a"
+    },
+    {
+      "check_code": "V05",
+      "dataset_key": "all",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V05-all.json",
+      "details_sha256": "f929ee33d37a4c1101d34586ee56899dee409216e007f30f63e63112c291f7bd"
+    },
+    {
+      "check_code": "V06",
+      "dataset_key": "all",
+      "status": "pass",
+      "checked_count": 220,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V06-all.json",
+      "details_sha256": "b23f25dc4bebafe816e30c6361c578c05f26a4cd14aca0710a66cc2dca5be8ee"
+    },
+    {
+      "check_code": "V07",
+      "dataset_key": "all",
+      "status": "pass",
+      "checked_count": 8,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V07-all.json",
+      "details_sha256": "ea58b86baefcdf4ef35e3e56f1b27429a9c1f783837ed7d9e6f08d0bd8f90971"
+    },
+    {
+      "check_code": "V08",
+      "dataset_key": "national",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V08-national.json",
+      "details_sha256": "8ddbff31c7fa661581912113adbe9798d26c7d21d3adf51e9cf5bc604a85fdfe"
+    },
+    {
+      "check_code": "V08",
+      "dataset_key": "facility",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V08-facility.json",
+      "details_sha256": "8ddbff31c7fa661581912113adbe9798d26c7d21d3adf51e9cf5bc604a85fdfe"
+    },
+    {
+      "check_code": "V08",
+      "dataset_key": "generator",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/V08-generator.json",
+      "details_sha256": "8ddbff31c7fa661581912113adbe9798d26c7d21d3adf51e9cf5bc604a85fdfe"
+    }
+  ],
+  "diagnostics": [
+    {
+      "check_code": "D01",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D01-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D01",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D01-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D02",
+      "dataset_key": "national",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D02-national.json",
+      "details_sha256": "3880545ea38b3e963a5cf633f40c779ddf7ba6393afa271a743c87f567b68a6c"
+    },
+    {
+      "check_code": "D02",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D02-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D02",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D02-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D03",
+      "dataset_key": "national",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D03-national.json",
+      "details_sha256": "3880545ea38b3e963a5cf633f40c779ddf7ba6393afa271a743c87f567b68a6c"
+    },
+    {
+      "check_code": "D03",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D03-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D03",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D03-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D04",
+      "dataset_key": "national",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D04-national.json",
+      "details_sha256": "3880545ea38b3e963a5cf633f40c779ddf7ba6393afa271a743c87f567b68a6c"
+    },
+    {
+      "check_code": "D04",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D04-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D04",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D04-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D05",
+      "dataset_key": "national",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D05-national.json",
+      "details_sha256": "3880545ea38b3e963a5cf633f40c779ddf7ba6393afa271a743c87f567b68a6c"
+    },
+    {
+      "check_code": "D05",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D05-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D05",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D05-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D06",
+      "dataset_key": "national",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 2,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D06-national.json",
+      "details_sha256": "3880545ea38b3e963a5cf633f40c779ddf7ba6393afa271a743c87f567b68a6c"
+    },
+    {
+      "check_code": "D06",
+      "dataset_key": "facility",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 110,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D06-facility.json",
+      "details_sha256": "ed645422beb9c3d263791d1466d1bbaae8069d9dcfe75ed7eed8b83a9a8e6419"
+    },
+    {
+      "check_code": "D06",
+      "dataset_key": "generator",
+      "severity": "warning",
+      "status": "pass",
+      "checked_count": 190,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D06-generator.json",
+      "details_sha256": "3d0e1c009ade0a4f0c5fd020be82e9c6f14b9aec7f213d898ad7ab79384bbb72"
+    },
+    {
+      "check_code": "D07",
+      "dataset_key": "facility",
+      "severity": "info",
+      "status": "pass",
+      "checked_count": 55,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D07-facility.json",
+      "details_sha256": "e6714ed64d99384ca1776658985373c96a4b4b3207881bc95fbd66151c4a4b4d"
+    },
+    {
+      "check_code": "D07",
+      "dataset_key": "generator",
+      "severity": "info",
+      "status": "pass",
+      "checked_count": 95,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D07-generator.json",
+      "details_sha256": "1dc5759acd9551c536858de40ef252865919cb3641b1564947d7030d21421680"
+    },
+    {
+      "check_code": "D08",
+      "dataset_key": "national",
+      "severity": "info",
+      "status": "pass",
+      "checked_count": 1,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D08-national.json",
+      "details_sha256": "fa9ad9f4090098b9bcd590bb101613ccd3726108c27a01136989d922fd28eb37"
+    },
+    {
+      "check_code": "D08",
+      "dataset_key": "facility",
+      "severity": "info",
+      "status": "pass",
+      "checked_count": 55,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D08-facility.json",
+      "details_sha256": "e6714ed64d99384ca1776658985373c96a4b4b3207881bc95fbd66151c4a4b4d"
+    },
+    {
+      "check_code": "D08",
+      "dataset_key": "generator",
+      "severity": "info",
+      "status": "pass",
+      "checked_count": 95,
+      "failed_count": 0,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D08-generator.json",
+      "details_sha256": "1dc5759acd9551c536858de40ef252865919cb3641b1564947d7030d21421680"
+    },
+    {
+      "check_code": "D09",
+      "dataset_key": "facility",
+      "severity": "info",
+      "status": "fail",
+      "checked_count": 1,
+      "failed_count": 1,
+      "details_path": "evidence/c8bf1d50-fd02-4f05-80f2-fe67c884a3eb/D09-facility.json",
+      "details_sha256": "f8cdc3380f6f3f34202772149919afd39b09ce72997e8c065e096385f2a26111"
+    }
+  ],
+  "diagnostics_frozen": true,
+  "warning_count": 0,
+  "approval_required": false,
+  "published": false,
+  "retrieval": [
+    {
+      "dataset": "national",
+      "route": "https://api.eia.gov/v2/nuclear-outages/us-nuclear-outages/data/",
+      "started_at": "2026-10-04T18:04:25.542361+00:00",
+      "completed_at": "2026-10-04T18:04:31.310157+00:00",
+      "records_fetched": 2,
+      "pages_fetched": 2,
+      "retries": 0,
+      "final_status": "success",
+      "requested_start": "2026-10-01",
+      "requested_end": "2026-10-02",
+      "terminal_page_rows": 0,
+      "source_response_sha256": [
+        "5169bc901472bd9612793f95796b2242c32b5ea0c9e5964750633fa375418c4b",
+        "ba46c41db68c0eaae0af5d23adc4c4427c8856ff46d62eeb3da735eac111f4ce"
+      ]
+    },
+    {
+      "dataset": "facility",
+      "route": "https://api.eia.gov/v2/nuclear-outages/facility-nuclear-outages/data/",
+      "started_at": "2026-10-04T18:04:31.310996+00:00",
+      "completed_at": "2026-10-04T18:04:35.197310+00:00",
+      "records_fetched": 110,
+      "pages_fetched": 2,
+      "retries": 0,
+      "final_status": "success",
+      "requested_start": "2026-10-01",
+      "requested_end": "2026-10-02",
+      "terminal_page_rows": 0,
+      "source_response_sha256": [
+        "9852f5be19e8de0a2e71e2c24bfda127b8388b4211258c3c3d425df71cb86872",
+        "1acacf8d31b1ef5720171bce66d06074f6f9f114a16f38d44d7f72c9fc2f505a"
+      ]
+    },
+    {
+      "dataset": "generator",
+      "route": "https://api.eia.gov/v2/nuclear-outages/generator-nuclear-outages/data/",
+      "started_at": "2026-10-04T18:04:35.198276+00:00",
+      "completed_at": "2026-10-04T18:04:37.652358+00:00",
+      "records_fetched": 190,
+      "pages_fetched": 2,
+      "retries": 0,
+      "final_status": "success",
+      "requested_start": "2026-10-01",
+      "requested_end": "2026-10-02",
+      "terminal_page_rows": 0,
+      "source_response_sha256": [
+        "19215d253bbeee20e47cd54d9caa940c072ae4292f4a8ce11990538438e94613",
+        "8e09ee952f60c3e297cbc9014a631497b5305955dbcd6765ea227c12f1bc6eb9"
+      ]
+    }
+  ]
+}

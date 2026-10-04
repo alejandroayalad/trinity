@@ -154,6 +154,8 @@ This expands F5. Alayala selected it as an anomaly; AI checked the plant values 
 
 **Rechecked October 3, 2026.** The connector's live extraction for October 1, 2026 again returned 55 facility rows against an advertised total of 95. See the [evidence brief](evidence/2026-10-03-first-live-eia-run.md).
 
+**Rechecked October 4, 2026.** The successful October 1–2 preparation returned 110 facility rows against 190 advertised, followed by an empty terminal page. All 16 required checks passed, including unique keys, date coverage and exact MW reconciliation. D09 retained the mismatch as informational, with zero review warnings. The candidate was stored and independently read back from S3 but remains unpublished. See the [tested-code and runtime evidence](evidence/live-preparation/2026-10-04-october-1-2/README.md).
+
 **How should Trinity handle it?** Send the downloaded version to validation. If its counts and required checks pass, it is ready for publication without a user-facing warning about this known EIA count issue. If validation fails, the version stays unpublished. See [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed) for the accepted rule and its relationship to Admin approval. The checks still need implementation.
 
 **How can someone check it?** Run the [offline report command](evidence/findings/README.md#run-from-the-repository-root) against the original sanitized responses now bundled in `evidence/findings/inputs/`. It checks counts, request scope, CSV agreement, and the empty probes at offsets 55 and 39,863. These are selected probes, not all original download pages. The [historical supporting checks](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) and live-rerun requests remain available. Alayala selected this as the third anomaly; AI reproduced the mismatch and wrote the explanation.
@@ -194,6 +196,16 @@ For the two-year request, offset **39,863** returned **zero rows**, while `total
 
 The [supporting session](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md) lists the saved requests, reproduction steps, and remaining limits.
 
+## Potential anomalies
+
+### CAND-01 — Leading-decimal source percentage — not an anomaly
+
+On October 4, 2026, retained `facility-nuclear-outages/data/` evidence for `(2026-10-02, facility 869)` showed `percentOutage=".5"`, capacity `1881.2` MW and outage `9.412` MW. Expected: preserve this valid decimal as exactly `0.5`. Observed: Trinity's parser rejected the missing leading zero. This was a confirmed parser defect, not malformed EIA data. A regression reproduced the rejection; the corrected parser and a new live preparation saved `0.500000` in Parquet while preserving `.5` in source evidence. Missing/null/blank percentages and invalid-text rules remain unchanged. The [supporting session](ai/sessions/2026-10-04-leading-decimal-parser-fix.md) identifies retained files, checksums, tests and reproduction.
+
+### CAND-02 — Requested October 3 rows absent — unresolved cause
+
+The October 4 retry requested October 1–3, 2026 from all three routes. Each returned only October 1–2 and an empty terminal page: 2 national, 110 facility and 190 generator rows. No duplicate daily keys were found. V04 confirmed the missing October 3 date in all three datasets; the other 15 required results passed. This is a verified observation for this retrieval, not proof of permanent missing data or its cause. Required coverage failure correctly blocked storage/publication; no rows were invented and no gate was relaxed. Keep this outside the selected AN-01–AN-03 list pending review. Repeat with the existing explicit-window preparation command and a new version; [evidence and version identities](ai/sessions/2026-10-04-leading-decimal-parser-fix.md) are retained.
+
 ## Reproduction and remaining evidence
 
 Run from the repository root, using the bundled inputs and a new output directory:
@@ -206,6 +218,6 @@ The command needs only Python's standard library and makes no network calls. It 
 
 During the earlier formatting task, AI used separate inline checks. During the October 2 readiness review, AI reviewed and ran the old workspace `generate_report.py`; the report matched apart from its timestamp/output filename. Its fixed explanations were not calculated conclusions. The October 4 implementation reuses the useful methods and supporting session checks, removes those fixed causal claims, adds per-facility reconciliation, and checks exact full outage rather than the old 99.9% threshold.
 
-The report methods and inputs are now preserved for reproduction. The precise seasonal capacity definition and EIA's revision methodology remain open. A9 selects full-window re-fetching for Trinity's revision handling and specifies validation checks; it does not establish EIA's internal methods. All three selected anomalies remain the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. Real S3 protection and live preparation remain unverified. Data evidence remains ongoing as defined in AGENTS.md.
+The report methods and inputs are now preserved for reproduction. The precise seasonal capacity definition and EIA's revision methodology remain open. A9 selects full-window re-fetching for Trinity's revision handling and specifies validation checks; it does not establish EIA's internal methods. All three selected anomalies remain the capacity increase, Palisades entering fully offline, and the facility API count mismatch. Callaway was not selected. S3 protection checks and [October 1–2 live preparation/readback](evidence/live-preparation/2026-10-04-october-1-2/README.md) now have scoped evidence against the recorded uncommitted patch. October 3 and full-history coverage remain unverified; the candidate remains unpublished. Data evidence remains ongoing as defined in AGENTS.md.
 
 See [Engineering Notes](NOTES.md) for contributions and [the closed session](ai/sessions/2026-10-02-data-findings-and-handoff.md) for the handoff.

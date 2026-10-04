@@ -22,6 +22,8 @@ A20 adds local login using one seeded account per persona. `POST /auth/login` ve
 
 `GET /me` returns the user's role, capabilities, data readiness, and landing screen. Before the first publication, Viewers and Analysts see a waiting screen. Only Admins can access setup. After setup, Admins can manage the first refresh even while data remains unavailable.
 
+[A16's Viewer navigation refinement](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) selects a dashboard-only Viewer interface, with no Catalog or SQL navigation. Analyst/Admin have those navigation entries. Viewer retains `catalog:read` and `preview:national` for dashboard support; these API permissions do not require visible Catalog navigation. Endpoint permissions and response schemas are unchanged.
+
 ### 2. Setup and settings
 
 | Endpoint | Purpose |
@@ -189,6 +191,8 @@ For a single blocker choose this order: `setup_required`, `schedule_disabled`, t
 ### Catalog and national dashboard
 
 `GET /catalog` returns only permitted dataset definitions, typed columns, units, daily keys, filters, the national metric definition, and freshness. Before publication it still returns those permitted static definitions with `data_ready: false` and `publication: null`. Viewer freshness contains only global refresh status/times; no candidate IDs, actor IDs, facility/generator counts, raw diagnostics, or run error details.
+
+Under [A16's catalog freshness refinement](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract), `freshness.last_refresh` describes the run with greatest `run_seq` in the request snapshot, including unfinished or failed runs; it is null when no run exists. Its only fields are `status`, `requested_at`, and nullable `finished_at`. Freshness observation/publication dates come from the active publication, not that latest attempt. A newer failed refresh does not make the existing publication unavailable.
 
 `GET /dashboard/national` accepts either `preset=30d|90d|1y` or both `start` and `end`. Omitting all parameters defaults to `30d`. Combining preset with custom dates, supplying only one custom bound, reversing dates, or exceeding 366 inclusive custom dates returns `422`. For this detailed contract `1y` is a rolling **365-day** window; label it “Last 365 days” in the UI. Presets end at `publication.latest_observation_date`. Custom ranges are not silently clipped to published coverage. Bounds outside coverage yield missing display points.
 

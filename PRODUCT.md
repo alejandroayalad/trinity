@@ -24,6 +24,8 @@ These are committed project features under A2–A3 as amended by A16. Setup and 
 
 Use a short initial configuration flow and one shared settings area. Distinguish fetching data from publishing it. Before the first valid publication, show that data is unavailable. A manual refresh is different from reloading the dashboard.
 
+Under [A16's Viewer navigation refinement](DECISIONS.md#a16--approved-api-flow-and-detailed-contract), Viewer uses only the national dashboard, without Catalog or SQL navigation. Analyst/Admin have Catalog and SQL navigation. Viewer retains national-only metadata and data API permissions to support the dashboard; backend authorization applies independently of visible controls.
+
 A16 includes a national dashboard with summary cards, daily trends and table values; 30/90-day and yearly presets; filtered entity choices; and candidate review in a side panel on the run page. One refresh lifecycle is admitted at a time. Required review and unresolved failures block another refresh; Admin recovery preserves history and abandons candidates permanently when requested. Separate organizations, registration, export, SQL autocomplete and query history remain outside scope. Detailed visual styling and frontend framework remain open.
 
 ## Data behavior and next implementation

@@ -16,9 +16,9 @@ from trinity.contracts.datasets import DATASETS
 # Require ASCII digits and fixed widths: YYYY-MM-DD.
 # The date parser below checks whether that date exists in the calendar.
 _DATE_TEXT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
-# Allow an optional sign, integer digits, and an optional decimal fraction.
+# EIA can omit the leading zero in a decimal fraction, such as ".5".
 # Reject exponents, separators, spaces, and special values such as NaN.
-_DECIMAL_TEXT = re.compile(r"[+-]?[0-9]+(?:\.[0-9]+)?")
+_DECIMAL_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)")
 # This type alias lists the possible output types. None represents a null.
 # Type hints describe values; the functions below perform the actual checks.
 ParsedValue = date | str | Decimal | None

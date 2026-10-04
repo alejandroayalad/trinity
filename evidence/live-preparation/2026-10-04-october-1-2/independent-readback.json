@@ -1,0 +1,7 @@
+{
+  "exit_code": 0,
+  "stdout": "{\"approval_required\": false, \"bundle_sha256\": \"2aa54c906e06994e27e3753062c3df4813d9c44a07b76ccdaf5791b57d58ce0e\", \"eia_requests\": 0, \"get_requests\": 50, \"manifest_sha256\": \"01df3875e36a037a4c86ed1dc75536e27a282bcfa2ae1fdfa7e03e87f2ce83dc\", \"published\": false, \"s3_write_requests\": 0, \"status\": \"verified\", \"unique_objects_read\": 50, \"verified_at\": \"2026-10-04T18:06:20.377517+00:00\", \"version_id\": \"9dcc2cc8-7b5f-4b7d-8bd8-5a94f211a0ae\", \"warning_count\": 0}\n",
+  "stderr": "",
+  "candidate_files_unchanged": true,
+  "verifier_script_sha256": "bca4d9f3e32c1e15b49f677d9504f02ea3fbecf25b94b33fff71672596f5cf07"
+}

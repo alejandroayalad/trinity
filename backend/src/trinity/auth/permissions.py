@@ -31,9 +31,13 @@ def require(principal: Principal, capability: str) -> None:
         raise Problem(403, "forbidden")
 
 
+def permitted_dataset_keys(principal: Principal) -> tuple[str, ...]:
+    """Return ordered internal dataset keys from the shared permission policy."""
+    require(principal, "catalog:read")
+    return ("national",) if principal.role == "viewer" else ("national", "facility", "generator")
+
+
 def require_dataset(principal: Principal, dataset: str) -> None:
     """Hide both unknown and unauthorized dataset keys behind the same denial."""
-    require(principal, "catalog:read")
-    permitted = ("national",) if principal.role == "viewer" else ("national", "facility", "generator")
-    if dataset not in permitted:
+    if dataset not in permitted_dataset_keys(principal):
         raise Problem(404, "dataset_not_found")
