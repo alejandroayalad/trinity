@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; real S3 protection and live preparation are unverified. Local login/logout, `/me`, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. Redis/BullMQ, workers, analytical routes and query isolation remain pending.
 
 ## Setup
 
@@ -283,7 +283,7 @@ Offline verification, with no EIA/S3 calls:
 .venv/bin/python -m unittest discover -s tests -q
 ```
 
-Command tests use synthetic HTTP and injected storage inside real child processes, real temporary Parquet files and real termination signals. See [tasks.md](../sdd/parquet-preparation/tasks.md) for current counts and limits. The live command above has not been run; real storage-policy checks and full-window EIA preparation remain pending. The existing `python -m trinity.connector` extraction command remains available and unchanged.
+Command tests use synthetic HTTP and injected storage inside real child processes, real temporary Parquet files and real termination signals. See [tasks.md](../sdd/parquet-preparation/tasks.md) for current counts and limits. The October 1–3 live command above reached validation after a parser correction but correctly failed because October 3 rows were absent. A separately authorized October 1–2 run passed all required checks and independent S3 readback; see the [exact evidence](../evidence/live-preparation/2026-10-04-october-1-2/README.md). The original three-day window remains unverified. The existing `python -m trinity.connector` extraction command remains available and unchanged.
 
 ## Start the API
 
