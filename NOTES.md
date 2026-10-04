@@ -204,3 +204,11 @@ Verification covers the diff, relative links/anchors, guide fields against the c
 [YOU] AI recorded this acceptance in the [same session](ai/sessions/2026-10-03-python-backend-and-eia-connector.md#session-close--reviewed-implementation-local-fetch-pending) and prepared a merge commit preserving the existing history. This close is documentation-only. The latest executed suite passed 59 offline tests; no tests were rerun and no live EIA request was made during closure.
 
 Status: implementation and human review complete; session closed. Local/live extraction remains pending and the live/full-challenge gates remain unpassed. Next: execute the documented fixed-window command locally with EIA_API_KEY and inspect all three outcomes.
+
+## Seeded local authentication — October 3, 2026
+
+[ME] Alayala rolled back Clerk for the challenge, selected seeded local authentication with unchanged server-side roles/permissions, and deferred Clerk to future production work. He discarded the separate query/worker simplification.
+
+[YOU] AI recorded A20 and A8 supersession, aligned current README/security/backend/API/OpenAPI/schema guidance, removed Clerk from challenge dependencies and retained historical decisions/sessions. Login/logout fields and local account/session records are AI-authored contract completion; no implementation or credentials were created. The [supporting session](ai/sessions/2026-10-03-seeded-local-authentication.md) records checks, corrections and pending runtime validation. The original drafting step performed no commit, push or remote mutation; the authorized local transfer is recorded below.
+
+[ME] Alayala requested removing the obsolete connector SDD and carrying only this local-authentication update onto current main. [YOU] Archived the five untracked SDD/planning files outside Git and cherry-picked the focused A20 commit into `docs/local-authentication-a20`. README/NOTES conflict resolution preserves the implemented connector and its historical checks. See the supporting session for transfer checks; no push, PR or merge is included.

@@ -4,6 +4,8 @@ Status: selected scope, not implemented. Owner: alayala. Keep this note within o
 
 **Purpose:** Let people explore U.S. nuclear outage data locally, run permitted SQL, and understand differences between national, facility, and generator records.
 
+**Login:** Seeded local accounts for the three personas under A20. Clerk is deferred production work. Authentication must preserve all server-side permission checks.
+
 **Core users:** Viewers see national trends only. Analysts explore all analytical datasets and run read-only SQL. Admins have Analyst access plus refresh and shared configuration controls.
 
 ## Committed product additions

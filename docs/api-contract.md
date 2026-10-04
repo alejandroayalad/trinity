@@ -6,7 +6,7 @@ Status: the supplied high-level API flow is approved by alayala on October 3, 20
 
 The approved source is `trinity-api-contract-final.md`. Its six-part design is retained here, followed by exact requests, responses, errors, and recovery rules. Publication is fixed by validation and warnings; no Admin chooses a publication mode. A failed lifecycle holds new refreshes until recovery or abandonment. Your downloaded source file is unchanged.
 
-Updated October 3, 2026. All endpoints use `/api/v1` and JSON. The backend verifies identity and permission on every request.
+Updated October 3, 2026. All endpoints use `/api/v1` and JSON, except the bodyless logout response. A20 adds public local credential verification; all product operations and logout require a verified local session and server-side authorization.
 
 ### 1. Roles and app entry
 
@@ -15,6 +15,8 @@ Updated October 3, 2026. All endpoints use `/api/v1` and JSON. The backend verif
 | **Viewer** | National dashboard and national data only. |
 | **Analyst** | All analytical datasets, previews, filters, and read-only SQL. |
 | **Admin** | Analyst access, setup, settings, refreshes, and candidate review. |
+
+A20 adds local login using one seeded account per persona. `POST /auth/login` verifies credentials and returns a session; `POST /auth/logout` revokes it. Clerk is future production work.
 
 `GET /me` returns the user's role, capabilities, data readiness, and landing screen. Before the first publication, Viewers and Analysts see a waiting screen. Only Admins can access setup. After setup, Admins can manage the first refresh even while data remains unavailable.
 
@@ -105,10 +107,12 @@ The following sections complete the field and HTTP specification. Implementation
 
 ## Endpoint inventory
 
-All 20 approved operations are represented in [openapi.json](openapi.json). Role names denote minimum capabilities, with dataset restrictions applied separately.
+The 20 original product operations plus two local authentication operations under A20 (22 total) are represented in [openapi.json](openapi.json). Role names denote minimum capabilities, with dataset restrictions applied separately.
 
 | Method and path | Minimum role | Request body | Response |
 |---|---|---|---|
+| `POST /auth/login` | public credential verification | LoginRequest | LoginResponse; 200. |
+| `POST /auth/logout` | authenticated local session | EmptyRequest | 204; no body. |
 | `GET /me` | viewer | none | MeResponse; 200. |
 | `GET /settings` | admin | none | SettingsResponse; 200. |
 | `PUT /settings` | admin | SettingsRequest | SettingsResponse; 200. |
@@ -132,17 +136,29 @@ All 20 approved operations are represented in [openapi.json](openapi.json). Role
 
 ## Detailed API contract
 
-The supplied design fixes user-visible behavior. The field schemas, names, bounded defaults, command receipts, and additional persistence fields below are AI-authored completion details under alayala's request to fill missing requests and responses. They have not been independently runtime-tested or selected one by one. They must preserve the approved flow. A19 selects current Clerk verification, the SQL function set and per-query containers in the separate [security contract](security-contract.md). Detailed token/parser/container configuration still requires implementation and verification.
+The supplied design fixes user-visible behavior, with A20 adding local login/logout. The field schemas, names, bounded defaults, command receipts, and additional persistence fields below are AI-authored completion details under alayala's request to fill missing requests and responses. They have not been independently runtime-tested or selected one by one. They must preserve the approved flow. A20 replaces Clerk with seeded local authentication; A19 retains the SQL function set and per-query containers in the separate [security contract](security-contract.md). Detailed token/parser/container configuration still requires implementation and verification.
 
-[openapi.json](openapi.json) is the exact machine-readable HTTP shape, using OpenAPI 3.1.1. The field reference below is generated from that file. This prose defines cross-field and transaction rules that JSON Schema alone cannot establish. [A16](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) records precedence; [schema.md](schema.md) defines persistence and unchanged analytical semantics. A17 remains the sole dependency-version decision.
+[openapi.json](openapi.json) is the exact machine-readable HTTP shape, using OpenAPI 3.1.1. The field reference below follows that file, including A20 login/logout fields. This prose defines cross-field and transaction rules that JSON Schema alone cannot establish. [A16](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) records precedence; [schema.md](schema.md) defines persistence and unchanged analytical semantics. A17 remains the sole dependency-version decision.
 
 ### Shared transport and values
 
-All paths below are relative to `/api/v1`. Require a verified Clerk identity and server-side permission for every operation. Use HTTPS outside localhost. JSON bodies use `application/json`; errors use `application/problem+json`. Reject unknown body fields and unsupported query parameters. Reject a nonempty body on GET or the warning DELETE. Empty-body command POSTs require `{}`. Limit JSON input to 64 KiB and SQL to 16 KiB encoded UTF-8. These are accepted input limits under A19, not performance measurements.
+All paths below are relative to `/api/v1`. Require a verified local session and server-side permission for every product operation and logout. `POST /auth/login` is the sole credential-verification exception; it grants no product access without successful authentication. Use HTTPS outside localhost. JSON bodies use `application/json`; errors use `application/problem+json`. Reject unknown body fields and unsupported query parameters. Reject a nonempty body on GET or the warning DELETE. Empty-body command POSTs require `{}`. Limit JSON input to 64 KiB and SQL to 16 KiB encoded UTF-8. These are accepted input limits under A19, not performance measurements.
 
-Every response includes a server-generated `X-Request-ID` and `Cache-Control: no-store`. For a permitted cross-origin frontend, expose `ETag`, `Location`, `Retry-After`, and `X-Request-ID`; allow the required `Authorization`, `Content-Type`, `If-Match`, and `Idempotency-Key` request headers and GET/PUT/POST/DELETE/OPTIONS methods. OPTIONS is transport preflight, not an additional product operation; the origin allowlist remains part of security configuration. IDs are UUID strings, except Clerk IDs and preserved EIA IDs. Dates are `YYYY-MM-DD`; event times are UTC RFC 3339 with `Z`. Revision and potentially large counts are decimal strings. Exact measurements and SQL numeric results are decimal strings; booleans remain JSON booleans. Null is never replaced with zero. Reject unsupported nested/binary SQL output instead of lossy conversion. Response times/counts used only for bounded UI controls are JSON integers as declared in OpenAPI.
+Every response includes a server-generated `X-Request-ID` and `Cache-Control: no-store`. For a permitted cross-origin frontend, expose `ETag`, `Location`, `Retry-After`, and `X-Request-ID`; allow the required `Authorization`, `Content-Type`, `If-Match`, and `Idempotency-Key` request headers and GET/PUT/POST/DELETE/OPTIONS methods. OPTIONS is transport preflight, not an additional product operation; the origin allowlist remains part of security configuration. IDs are UUID strings, except stable local text user/actor IDs and preserved EIA IDs. Synthetic `user_example_*` values below represent local actors, not Clerk identities. Dates are `YYYY-MM-DD`; event times are UTC RFC 3339 with `Z`. Revision and potentially large counts are decimal strings. Exact measurements and SQL numeric results are decimal strings; booleans remain JSON booleans. Null is never replaced with zero. Reject unsupported nested/binary SQL output instead of lossy conversion. Response times/counts used only for bounded UI controls are JSON integers as declared in OpenAPI.
 
 Every analytical response contains one `Publication` object with publication and version IDs, observation bounds, latest observation date, and publication time. Resolve the active publication once. Catalog readiness/freshness and `/me` must describe a consistent publication snapshot within that request. A public caller cannot choose a storage path or arbitrary historical version.
+
+### Local login and logout
+
+A20 selects seeded local authentication. The following endpoint fields are AI-authored completion of that instruction; implementation and runtime verification remain pending.
+
+`POST /auth/login` accepts exactly `username` and `password`; no role, actor ID or client-issued session is accepted. Verify the salted password hash, active account and known server-side role before creating a session. Return `200 LoginResponse` with `access_token`, `token_type: "Bearer"` and `expires_at`. Send the token in `Authorization: Bearer <token>` for subsequent protected requests. Tokens are opaque; current identity/role comes from local application state, not decoded client claims. Fetch `/me` after login for capabilities and landing behavior.
+
+Unknown username, wrong password and inactive account receive the same generic `401 invalid_credentials`. Login throttling returns `429 rate_limited`; storage failure returns `503 auth_unavailable` without issuing a session. Apply shared JSON limits, no-store headers, sanitized errors and credential/token redaction. Session lifetime, hashing parameters, browser token handling and throttle thresholds remain implementation details.
+
+`POST /auth/logout` requires the current valid session and `{}`. Revoke that session in local storage before returning `204` with no body. Its next use receives `401 invalid_session`; repeated logout with that revoked token also returns 401. Other sessions and already-accepted background work are unaffected. Do not claim successful logout when revocation cannot be persisted.
+
+The seed procedure creates Viewer, Analyst and Admin accounts without overwriting existing credentials, roles or IDs. Login and session records are specified in [schema.md](schema.md#6-postgresql-application-model); security requirements remain in [security-contract.md](security-contract.md#authentication-and-trusted-roles). No registration or password-recovery API is added.
 
 ### App entry and capabilities
 
@@ -264,7 +280,7 @@ Use RFC 9457 fields plus `code`, `request_id`, `errors`, `blocker`, and `current
 | Status | Stable codes and client action |
 |---|---|
 | 400 / 415 / 422 | `invalid_json` / `unsupported_media_type` / `invalid_request`, `invalid_cursor`, `sql_not_allowed`, `idempotency_key_required`; correct the input. |
-| 401 / 403 / 404 | `authentication_required`, `invalid_session` / `forbidden` / `resource_not_found`, `dataset_not_found`; sign in or stop the forbidden lookup. |
+| 401 / 403 / 404 | `authentication_required`, `invalid_session`, `invalid_credentials` / `forbidden` / `resource_not_found`, `dataset_not_found`; sign in or stop the forbidden lookup. |
 | 409 | `data_unavailable`, `publication_changed`, `setup_required`, `refresh_blocked`, `idempotency_conflict`, `action_not_allowed`, `candidate_ineligible`; use readiness/state information or restart pagination. |
 | 412 / 428 / 413 | `revision_mismatch` / `precondition_required` / `request_too_large`; reload target state, supply ETag, or reduce input. |
 | 429 / 500 / 503 / 504 | `rate_limited` / `internal_error` / `auth_unavailable`, `dependency_unavailable`, `query_resource_limit` / `query_timeout`; obey retry guidance. `query_failed` uses 422 for a safe user-correctable engine expression/type error. |
@@ -443,7 +459,22 @@ These values illustrate JSON transport only; they are not EIA evidence, real use
 
 ## Exact field reference
 
-This reference is generated from [OpenAPI](openapi.json). All response object fields are required unless marked optional; nullable is separate from optional. Objects reject unspecified fields in this version. Domain constraints below supplement JSON Schema.
+This reference follows [OpenAPI](openapi.json); A20 adds the matching local login fields. All response object fields are required unless marked optional; nullable is separate from optional. Objects reject unspecified fields in this version. Domain constraints below supplement JSON Schema.
+
+### LoginRequest
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `username` | string | yes | Length 1–128; local account name. |
+| `password` | string | yes | Length 1–1024; write-only credential input, never logged. |
+
+### LoginResponse
+
+| Field | Type | Required | Constraints |
+|---|---|---|---|
+| `access_token` | string | yes | Length 1–4096; opaque session secret, never logged/cached. |
+| `token_type` | string | yes | Exactly `Bearer`. |
+| `expires_at` | string | yes | RFC 3339 date-time; expiry enforced server-side. |
 
 ### EmptyRequest
 

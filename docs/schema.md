@@ -1,6 +1,6 @@
 # Trinity data contract v1
 
-Status: finalized specification, October 2, 2026 (America/Merida). Prepared by AI at alayala's request to finalize the data contract. These are implementation requirements, not implemented behavior or new runtime findings. [A9](../DECISIONS.md#a9--data-contract-v1-finalized) records the choice, alternatives, and limits. A1–A8 remain in force except where the approved [A16 workflow](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) supersedes selectable publication policy and recovery behavior. October 3 amendment: analytical fields/checks remain v1; application control fields and lifecycle below implement the approved warning-based flow. The original decisions/history remain recorded. [A19 security contract](security-contract.md) reaffirms SHA-256 identity and adds query admission/container rules; it does not change analytical fields or required data checks.
+Status: finalized specification, October 2, 2026 (America/Merida). Prepared by AI at alayala's request to finalize the data contract. These are implementation requirements, not implemented behavior or new runtime findings. [A9](../DECISIONS.md#a9--data-contract-v1-finalized) records the choice, alternatives, and limits. A20 supersedes A8 for challenge authentication and adds local identity records below. Other A1–A8 choices remain in force except where the approved [A16 workflow](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) supersedes selectable publication policy and recovery behavior. October 3 amendment: analytical fields/checks remain v1; application control fields and lifecycle below implement the approved warning-based flow. The original decisions/history remain recorded. [A19 security contract](security-contract.md) reaffirms SHA-256 identity and adds query admission/container rules; it does not change analytical fields or required data checks.
 
 ## 1. Boundary and data flow
 
@@ -147,10 +147,14 @@ Aggregate summaries by code/scope with affected counts, not unbounded raw rows. 
 
 ## 6. PostgreSQL application model
 
-Notation: fields are required unless suffixed `?`. Every `id` is its table's primary key. IDs are UUID except singleton `id = 1`, positive monotonic `run_seq`, and external text actor IDs. Event times are `timestamptz`; observation bounds are `date`; counters/revisions are nonnegative `bigint`. Statuses and codes are constrained text. `details`, `policy_snapshot`, and sanitized payloads are JSONB. These are logical constraints; migrations must enforce row-local rules and transaction rules must enforce cross-row invariants.
+A20 adds local account/session records and replaces external actor identity with local user references. These authentication fields are AI-authored completion of the selected direction; analytical fields and publication checks remain unchanged.
+
+Notation: fields are required unless suffixed `?`. Every `id` is its table's primary key. IDs are UUID except singleton `id = 1`, positive monotonic `run_seq`, and stable local text actor IDs under A20. Event times are `timestamptz`; observation bounds are `date`; counters/revisions are nonnegative `bigint`. Statuses and codes are constrained text. `details`, `policy_snapshot`, and sanitized payloads are JSONB. These are logical constraints; migrations must enforce row-local rules and transaction rules must enforce cross-row invariants.
 
 | Model | Fields | Keys and constraints |
 |---|---|---|
+| `local_users` | `id`, `username`, `password_hash`, `role`, `is_active`, `created_at` | Stable text actor ID; unique username. Role constrained to viewer/analyst/admin. Salted password hash only, with algorithm/parameters encoded for verification. Trusted seed/administrative changes only; no public credential or role writes. Preserve disabled accounts and actor history. |
+| `local_sessions` | `id`, `user_id`, `token_digest`, `created_at`, `expires_at`, `revoked_at?` | UUID PK; FK user_id to local_users. Unique digest of unpredictable bearer token, never its reusable plaintext. Require expiry after creation; expired/revoked sessions or inactive users deny access. Current role comes from local_users, not client claims or a session role snapshot. |
 | `shared_settings` | `id`, `setup_completed_at?`, `schedule_enabled`, `daily_time?`, `schedule_timezone?`, `revision`, `updated_at`, `updated_by?` | Singleton id=1. Before setup: disabled, null time/timezone. After setup: HH:mm daily time, valid IANA timezone and actor. No configurable publication_mode. Revision is the compare-and-swap token. |
 | `refresh_runs` | `id`, `run_seq`, `revision`, `rerun_of_run_id?`, `publication_generation`, `trigger_kind`, `requested_by?`, `request_key`, `requested_at`, `started_at?`, `finished_at?`, `status`, `settings_revision`, `policy_snapshot`, `requested_start`, `requested_end?`, `window_frozen_at?`, `execution_fence`, `lease_until?`, `error_code?`, `error_summary?` | Unique `run_seq` and `request_key`; rerun_of_run_id references the prior failed run. trigger_kind is manual/scheduled/rerun. Revision changes on public state/progress; publication_generation starts at 0 and increases on explicit publication retry. publication_failed is nonterminal. Manual/rerun actor required; scheduled actor null. Freeze policy/start/end strategy at creation. End and window-freeze time are null only before successful window discovery; set both once before extraction. Then start ≤ end and the bounds cannot change. A changed request cannot reuse its request key. Terminal states require finish time; failed requires sanitized error. |
 | `refresh_steps` | `id`, `run_id`, `step_seq`, `stage`, `work_key`, `attempt`, `status`, `execution_fence`, `started_at?`, `finished_at?`, `heartbeat_at?`, `processed_count`, `total_count?`, `progress_unit`, `error_code?`, `error_summary?` | FK to run; immutable per-run step_seq allocated monotonically for attempt pagination; unique (run_id, step_seq); unique `(run_id, stage, work_key, attempt)`; attempt ≥1. Stages `extract/prepare/validate/publish`; work key distinguishes route/partition work. States `pending/running/succeeded/failed/abandoned`. Finished states require finish time. Progress unit rows/files/checks/tasks; total_count is null until measured, never trusted from the known bad facility advertised total. A stale execution fence cannot commit outcomes. |
@@ -169,7 +173,7 @@ Expected required result rows: V01/V02/V03/V08 each once for each of `national`,
 
 The immutable policy snapshot contains `settings_revision`, `workflow_policy=warnings-v1`, `diagnostic_registry=warnings-v1`, `contract_version`, `validation_checkset`, `requested_start`, `end_strategy`, and `explicit_end` only for the fixed strategy. It agrees with the corresponding run/version columns. approval_required is derived only after diagnostic completion, not selected in the policy snapshot. Resolved bounds live on the run and are frozen separately by the worker; no candidate version can be created before that freeze. Changing the deployed contract cannot reinterpret an existing candidate; a worker must execute its recorded contract version or fail it as unsupported. A pass on a later check set cannot authorize an older candidate implicitly. Candidate bounds are expectations during preparation and must match measured artifact bounds at validation. A validated version requires non-null `validated_at`, manifest digest, and successful validation-step ID.
 
-Clerk IDs remain text references without local password/session/user tables solely for login. They are not database foreign keys to Clerk. Keep historical actor IDs if a Clerk user is removed. Never take `requested_by`, `approved_by`, or a role from an untrusted request body. Role-claim storage, token validation, and role-change propagation remain the separate authentication implementation contract. API actor fields are output-only.
+A20 replaces external Clerk actor references with stable local text user IDs. Human actor fields reference `local_users.id`; nullable automatic/scheduled actors remain null under the existing rules. Disable users instead of deleting their action history; no cascade may remove audit evidence. API actor fields remain output-only, and clients cannot set `requested_by`, `approved_by` or a role. Local auth records are application state, never available to user SQL. The [security contract](security-contract.md#authentication-and-trusted-roles) defines session/current-role checks. A future Clerk integration must map identities without rewriting historical actors.
 
 ### Application relationships
 
@@ -178,6 +182,8 @@ Split diagrams show one shared model. Repeated entities refer to the same table.
 ```mermaid
 erDiagram
     direction TB
+    LOCAL_USERS ||--o{ LOCAL_SESSIONS : authenticates
+    LOCAL_USERS |o--o{ REFRESH_RUNS : requests
     REFRESH_RUNS ||--o{ REFRESH_STEPS : attempts
     REFRESH_RUNS ||--o{ JOB_OUTBOX : dispatches
     REFRESH_RUNS ||--o{ FAILURE_WARNINGS : records
@@ -193,6 +199,7 @@ erDiagram
 ```mermaid
 erDiagram
     direction TB
+    LOCAL_USERS ||--o{ APPROVALS : approves
     DATA_VERSIONS ||--o| APPROVALS : may_require
     DATA_VERSIONS ||--o| PUBLICATION_EVENTS : published_once
     APPROVALS |o--o| PUBLICATION_EVENTS : authorizes
@@ -234,7 +241,7 @@ A16 supersedes the original selectable `publication_mode` workflow. One shared a
 
 ### Durable request and dispatch
 
-Require setup and Admin authority or a due scheduled occurrence. In one PostgreSQL transaction lock `refresh_control`, confirm no holder/unresolved warning, freeze schedule revision/workflow policy/window strategy, insert the run, reserve its slot, and insert its outbox obligation. HTTP commands also insert a durable `api_commands` receipt. No external EIA/S3/Redis/Clerk call belongs inside this transaction. Scheduled occurrence identity includes settings revision and intended UTC time; skipped or missed occurrences create no backlog.
+Require setup and Admin authority or a due scheduled occurrence. In one PostgreSQL transaction lock `refresh_control`, confirm no holder/unresolved warning, freeze schedule revision/workflow policy/window strategy, insert the run, reserve its slot, and insert its outbox obligation. HTTP commands also insert a durable `api_commands` receipt. No external EIA/S3/Redis call belongs inside this transaction. Scheduled occurrence identity includes settings revision and intended UTC time; skipped or missed occurrences create no backlog.
 
 A duplicate authorized command key with the same actor/action/target/body returns its stored receipt before stale revision checks. Conflicting reuse fails without revealing the original actor/resource. All successful command effects and receipt commit atomically. A durable receipt refers to the accepted operation and status URL, not a promise that work is still running. PUT settings uses compare-and-swap instead of this command mechanism.
 

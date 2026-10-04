@@ -4,9 +4,9 @@ Trinity is the selected product name for the Arkham Outage Explorer challenge. I
 
 **Status: Python scaffold and bounded EIA extraction implemented; product features pending, October 3, 2026.** This repository imports the selected October 1–2 planning and evidence documents from Obsidian. The originals remain unchanged. Local CSV checks support the initial findings. The backend now has a FastAPI health endpoint, bounded three-route extraction, retrieval evidence, one extraction command and offline tests. The outage explorer is not yet implemented.
 
-Current handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. The [minimum Python scaffold](backend/README.md) starts the implementation. Next: verify live extraction, then implement normalization and the typed Parquet pipeline; A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
+Current authentication handoff: [seeded local authentication](ai/sessions/2026-10-03-seeded-local-authentication.md). Backend handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. The [minimum Python scaffold](backend/README.md) starts the implementation. Current work: local authentication under A20 on `docs/local-authentication-a20`. Live extraction verification, normalization and the typed Parquet pipeline remain pending; A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
 
-Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines all 20 HTTP operations. [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine verification remains pending.
+Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines 22 HTTP operations (20 product operations plus local login/logout). [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine verification remains pending.
 
 ## Intended behavior
 
@@ -28,10 +28,10 @@ Scheduled refreshes and manual Admin refreshes use the same validation process. 
 | datafusion-python | Query the permitted published Parquet files. Outage rows are not copied into PostgreSQL for user queries. |
 | SQLGlot and backend policy | Inspect SQL structure and enforce the supported grammar and table permissions before analytical reads. |
 | BullMQ and Redis | Run the full refresh pipeline in background workers with bounded concurrency; PostgreSQL outbox records preserve dispatch requests. |
-| Clerk | Authenticate users; the backend enforces application permissions. |
+| Seeded local authentication | Authenticate Viewer, Analyst and Admin accounts; the backend enforces the same application permissions. Clerk is future production work under A20. |
 | Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Docker Compose is selected for local execution; frontend and public hosting remain open. Exact security implementation and verification remain pending. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), A1–A19.
+These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Docker Compose is selected for local execution; frontend and public hosting remain open. Exact security implementation and verification remain pending. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), A1–A20.
 
 ## Setup, running, and tests
 
@@ -55,10 +55,18 @@ The health response is `{"status":"ok"}`. It reports process liveness, not data 
 | Required README content | Status |
 |---|---|
 | Prerequisites, configuration, and local startup | Backend dependency resolution and locked installation verified; full application/Compose startup remains pending. `backend/.env.example` documents the environment-based EIA key loader. |
-| Seeded users for Viewer, Analyst, and Admin | Required; not created. Clerk is selected in [A8](DECISIONS.md#a8--clerk-for-authentication-closed); integration remains pending. |
+| Seeded users for Viewer, Analyst, and Admin | Required; not created. [A20](DECISIONS.md#a20--seeded-local-authentication-for-the-challenge-closed) selects local seeded accounts; Clerk configuration is not required. |
 | Automated test command and results | 59 health/configuration/mocked EIA client, pagination, retry, retrieval and command tests passed on CPython 3.14.8. The explicit three-route live check requires an EIA key and remains pending; see [backend instructions](backend/README.md#fetch-one-eia-page). |
 | Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. A19 selects three total attempts for temporary external failures with one- and three-second waits within the operation deadline; denied access, invalid SQL and failed validation are not retried. Refresh-stage deadlines and runtime checks remain pending. Preserve the last valid publication. |
 | Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. Historical source exports and scripts are still absent, so findings are not yet reproducible from a clean clone. |
+
+### Local authentication setup contract
+
+A20 selects local login as the challenge default. The planned seed step creates accounts named `viewer`, `analyst`, and `admin`, one per persona. The evaluator supplies passwords locally during setup; store only salted password hashes. Keep actual passwords, session tokens and local secret files out of Git and logs. `.env.example` will contain placeholders only. Seeding must be repeatable without duplicating users, resetting existing passwords/roles or deleting history.
+
+The README must gain exact working setup/seed/login/test commands when implementation is verified. No such commands or usable accounts exist yet. The intended flow is login with a seeded account, receive a local session, and exercise the unchanged server-side permissions. No Clerk account, key, provisioning or request is part of this flow. This removes the authentication provider dependency only; the existing EIA/storage setup requirements remain.
+
+Clerk is deferred production work behind `auth/service.py`; the challenge does not implement two providers or switch providers after an authentication failure.
 
 ## Documents required by Arkham
 
@@ -80,7 +88,7 @@ The health response is `{"status":"ok"}`. It reports process liveness, not data 
 | [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
 | [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |
 | [docs/security-contract.md](docs/security-contract.md) | Accepted A19 roles, SQL policy, container/S3 boundaries, admission, limits, retry rules and required verification. |
-| [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for all 20 approved API operations; not implemented endpoints. |
+| [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for 22 specified API operations; not implemented endpoints. |
 | [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
 | [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
 
