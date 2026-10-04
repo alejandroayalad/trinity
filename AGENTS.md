@@ -9,6 +9,7 @@ These rules apply to work in this documentation folder and to their later use in
 3. For data work, read `FINDINGS.md`. For product behavior, read `PRODUCT.md`.
 4. Read the relevant latest record in `ai/sessions/` when continuing prior work. Historical logs do not override newer decisions or user instructions.
 5. Inspect the actual files and repository status before edits. Preserve existing user work.
+6. Before writing or reviewing code, read `CONTRIBUTING.md` for comment and docstring rules.
 
 ## Work with alayala
 

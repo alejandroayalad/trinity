@@ -84,6 +84,7 @@ Clerk is deferred production work behind `auth/service.py`; the challenge does n
 | [PRODUCT.md](PRODUCT.md) | One-page product scope and selected additions. |
 | [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Code readability, comment, and docstring rules for human and AI contributors. |
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
 | [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
 | [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |

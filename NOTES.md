@@ -216,3 +216,7 @@ Status: implementation and human review complete; session closed. Local/live ext
 ## First live EIA run — October 3, 2026
 
 [ME] Alayala supplied his EIA key and asked AI to run the EIA workflow, record it in an `evidence/` folder and commit and push to `main`. [YOU] AI ran the offline suite (59 passed), the live gate (2 passed) and the fixed-window extraction for October 1, 2026 (exit 0; national 1, facility 55 of advertised 95, generator 95 rows). The facility result reproduces AN-03. The key was not found in any output. See the [evidence brief](evidence/2026-10-03-first-live-eia-run.md) and [session](ai/sessions/2026-10-03-first-live-eia-run.md). Normalization, Parquet and full-window validation remain pending.
+
+## Contributing and comment rules — October 3, 2026
+
+[ME] Alayala paused the Parquet slice and wrote rules for comments, docstrings and slice entry points, so that AI-generated code is readable for human review. [YOU] AI stashed the unfinished normalization files, added his text as `CONTRIBUTING.md` without changes, and linked it from `AGENTS.md` and `README.md`. No code or tests ran. Existing code has not been checked against the new rules. See the [session](ai/sessions/2026-10-03-contributing-comment-rules.md).
