@@ -28,6 +28,8 @@ class LiveEIATests(unittest.IsolatedAsyncioTestCase):
                     self.assertEqual(page.data[0]["period"], day.isoformat())
 
     async def test_paginated_counts_for_each_route(self) -> None:
+        # Unlike offline mocks, this uses the real service. An empty final page
+        # proves route exhaustion for this date, not complete source coverage.
         day = date(2026, 10, 1)
         async with EIAClient() as client:
             for fetch in (client.fetch_national, client.fetch_facility, client.fetch_generator):
@@ -42,6 +44,8 @@ class LiveEIATests(unittest.IsolatedAsyncioTestCase):
                         sum(len(page.data) for page in result.pages), result.record_count
                     )
                     if result.dataset != "facility" and result.advertised_total is not None:
+                        # Preserve the known facility total disagreement as evidence.
+                        # Other routes must agree with any supplied total.
                         self.assertTrue(result.total_matches)
                         self.assertGreaterEqual(result.data_page_count, result.minimum_data_pages)
 

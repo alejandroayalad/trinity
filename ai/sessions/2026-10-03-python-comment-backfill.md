@@ -12,7 +12,7 @@ main and origin/main both pointed to `3c45cdb`. AI created the requested branch
 from main and reviewed all 15 tracked Python files. Separate unfinished Parquet
 work was outside this main-based scope and was not restored or changed.
 
-## Changes and corrections
+## Initial changes and corrections
 
 - Added summaries for public source members and shared test fixtures. Expanded
   the client, extraction command, orchestration, and live-check entry points with
@@ -55,12 +55,38 @@ No formatter, linter, or type-check command is configured in `backend/pyproject.
 No build or live EIA check was run for this comment-only change. No live EIA credential
 was read, no new data evidence was collected, and no publication gate was tested.
 
+## Expanded rules detected during delivery
+
+The initial source documentation commit `1ab366a` and test/evidence commit
+`3929c2d` were pushed. Remote verification confirmed `3929c2d` as the branch head.
+The same final status inspection found a concurrent local change to
+`CONTRIBUTING.md`. AI had not edited that file.
+
+AI read the revised working copy. It requires explanations of meaningful blocks,
+unfamiliar Python behavior, ownership, difficult rules, and unusual test inputs.
+Its reviewed Git blob hash is `326fa2a90aac0cf8cf5fc9e3084e81495ebf6e04`.
+AI preserved this local file and did not stage it. The code backfill follows these
+newer rules, while the user's rule changes remain uncommitted locally.
+
+The expanded pass adds explanations for environment loading, Pydantic validation,
+HTTP client ownership, regular-expression redaction, frozen dataclasses, per-call
+evidence, response validation, pagination, deadlines, retries, cancellation, file
+sync, and test isolation. Examples show accepted and rejected totals/page limits.
+Comments distinguish blank optional percentages from nonempty values that require
+units. No executable statements or test assertions changed.
+
+The final scope changes 13 of the 15 reviewed Python files. Both package
+initializers already explain their import boundaries and remain unchanged.
+The AST comparison, compile checks, public-source docstring audit, and all 59
+offline tests passed again after the expanded pass. The same Starlette warning
+remains. No build or live EIA check ran.
+
 ## Delivery and open items
 
-Use two focused commits: source API documentation first, then test explanations
-and this verification record. This separates the application reading guide from
-test/evaluator evidence and preserves incremental history. Commit and push are
-explicitly authorized; no PR or merge was requested.
+The first two commits separate source documentation from test/evaluator evidence.
+A third focused commit carries the expanded teaching explanations and updated
+verification notes. Existing commits remain intact. Commit and push are explicitly
+authorized; no PR or merge was requested.
 
 Human review of the new wording remains open. A useful reading check is to explain
 why a short page does not finish collection: the client advances by the returned

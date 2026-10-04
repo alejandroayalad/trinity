@@ -9,12 +9,15 @@ from trinity.main import create_app
 
 class HealthTests(unittest.TestCase):
     def test_health_returns_process_liveness(self) -> None:
+        # The client calls the app in process. This proves the response contract,
+        # not that a deployed server or an external data service is available.
         with TestClient(create_app()) as client:
             response = client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
     def test_scaffold_exposes_no_product_operations(self) -> None:
+        # Planned endpoints must not appear as implemented in the scaffold schema.
         with TestClient(create_app()) as client:
             schema = client.get("/openapi.json").json()
             response = client.get("/api/v1/me")

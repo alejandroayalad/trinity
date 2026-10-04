@@ -46,6 +46,8 @@ def response(rows, total=None):
 
 class PaginationTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        # Replace the environment with a synthetic key. MockTransport handlers
+        # below serve pages locally; none of these tests request live EIA data.
         environment = patch.dict(os.environ, {"EIA_API_KEY": "synthetic-pagination-key"}, clear=True)
         environment.start()
         self.addCleanup(environment.stop)
@@ -91,6 +93,8 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.page_count, 3)
 
     async def test_short_nonterminal_pages_advance_by_actual_count(self):
+        # Short pages can precede more data. Skipping by requested length would
+        # lose rows; stopping at the first short page would return a partial result.
         rows = rows_for("national", 5)
         sizes = {0: 1, 1: 2, 3: 1, 4: 1, 5: 0}
         offsets = []
@@ -143,6 +147,8 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.total_matches)
 
     async def test_facility_total_mismatch_is_retained_as_evidence(self):
+        # Test totals both below and above the fetched count. Facility completion
+        # depends on an empty page, not on either misleading total.
         rows = rows_for("facility", 3)
         for total in (1, 95):
             def handler(request):
@@ -174,6 +180,7 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(caught.exception.code, "total_mismatch")
 
     async def test_changing_total_even_on_empty_probe_fails_every_route(self):
+        # A stable mismatch is allowed for facilities; a changing total is not.
         for dataset in ("national", "facility", "generator"):
             rows = rows_for(dataset, 2)
 
@@ -228,6 +235,7 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(calls), 4 if failure.status_code == 503 else 2)
 
     async def test_page_budget_fails_instead_of_truncating(self):
+        # Both data rows fit, but the budget lacks the empty probe needed for success.
         rows = rows_for("national", 2)
         offsets = []
 
@@ -243,6 +251,8 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(offsets, [0, 1])
 
     async def test_total_deadline_cancels_an_inflight_request(self):
+        # The mock outlasts the route deadline. Its finally block proves the
+        # request was cancelled instead of continuing after the caller failed.
         cancelled = []
 
         async def handler(request):
@@ -259,6 +269,8 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cancelled, [True])
 
     async def test_invalid_limits_make_no_request(self):
+        # NaN and infinity can defeat ordinary comparisons. True behaves like 1
+        # in Python, but none of these values is a valid finite numeric budget.
         calls = []
 
         def handler(request):

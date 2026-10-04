@@ -225,11 +225,17 @@ Status: implementation and human review complete; session closed. Local/live ext
 
 [ME] Alayala requested a branch from main, comments and docstrings under
 `CONTRIBUTING.md`, commits, and a push. [YOU] AI reviewed all 15 tracked Python
-files and changed nine, adding public API summaries, slice overviews, and brief
-reasons for non-obvious rules. The six remaining files already had sufficient
-explanations. Separate unfinished Parquet work remains outside this scope.
+files and changed 13, adding public API summaries, slice overviews, and explanations
+of processing steps, Python behavior, validation examples, and test mocks. The two
+package initializers already explain their import behavior. Separate unfinished
+Parquet work remains outside this scope.
 
-[YOU] All 59 offline tests passed on Python 3.14.8 using the existing environment
+[YOU] After the first two commits were pushed, final status inspection found a
+concurrent local update to `CONTRIBUTING.md`. AI read the expanded teaching rules
+and extended the backfill to follow them. The local rules edit was preserved and
+excluded from AI's commits.
+
+[YOU] All 59 offline tests passed again on Python 3.14.8 using the existing environment
 and this worktree's source. An AST comparison confirmed unchanged executable code
 across all 15 files. The health docstring adds a generated OpenAPI description.
 No build or live EIA check ran. The [backfill session](ai/sessions/2026-10-03-python-comment-backfill.md)
