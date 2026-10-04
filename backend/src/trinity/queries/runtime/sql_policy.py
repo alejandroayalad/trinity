@@ -362,6 +362,8 @@ class _Policy:
                                        for i, value in enumerate(projections)])
         for node in self.tree.walk():
             node.comments = None
+            if type(node) is exp.Column and node.table:
+                node.set("table", exp.to_identifier(self.table.alias_or_name, quoted=True))
             if type(node) is exp.Identifier:
                 node.set("quoted", True)
         return _Generator(dialect=Postgres()).generate(self.tree), tuple(columns)

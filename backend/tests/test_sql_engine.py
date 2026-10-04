@@ -93,3 +93,7 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(QueryExecutionError) as caught:
             self.execute("SELECT '" + 'x' * 10000 + "' FROM national_outages")
         self.assertEqual(caught.exception.code, 'query_resource_limit')
+
+    def test_canonical_qualifier_resolves_even_with_a_table_alias(self):
+        result=self.execute('SELECT national_outages.outage FROM national_outages n ORDER BY national_outages.period')
+        self.assertEqual(result['rows'][0],['1.000000'])
