@@ -1,0 +1,82 @@
+{
+  "format_version": 1,
+  "window": {
+    "start": "2024-10-02",
+    "end": "2026-10-02"
+  },
+  "source": "EIA nuclear-outages API v2; saved exports and sanitized diagnostic responses collected 2026-10-02",
+  "files": [
+    {
+      "file": "us_20241002_20261002.csv",
+      "role": "us",
+      "bytes": 25468,
+      "sha256": "1343f11770911318b2abd7c584680f27b920e55e974457e252775d28683e43f6"
+    },
+    {
+      "file": "facility_20241002_20261002.csv",
+      "role": "facility",
+      "bytes": 1945402,
+      "sha256": "eb33c5fc92f37a44ffc7c0a0e3d4a893ea9b67dcf16eb8625fc2fe76d337920a"
+    },
+    {
+      "file": "generator_20241002_20261002.csv",
+      "role": "generator",
+      "bytes": 3440293,
+      "sha256": "a9cadb00591d9be74538e36b235e19e02ad77b40e0136067bcafe9501a4dd172"
+    },
+    {
+      "file": "facility_browns_ferry.json",
+      "role": "facility_browns_ferry",
+      "bytes": 1500,
+      "sha256": "c63a69e651c3d674e1cd38d2bd7e733831717c488d31e8e97e346cdc95a1cc55"
+    },
+    {
+      "file": "facility_one_day.json",
+      "role": "facility_one_day",
+      "bytes": 18762,
+      "sha256": "3aa9529f9ebf8ce34327c2ae5da63a4d560fe931be0a0705848462a7c34825ed"
+    },
+    {
+      "file": "facility_one_day_after_last.json",
+      "role": "facility_one_day_after_last",
+      "bytes": 1352,
+      "sha256": "4ccb4f9151bd51adc564e65bfefe5c5847f848fa49337c0bad5954a509c2fc40"
+    },
+    {
+      "file": "facility_two_years_after_last.json",
+      "role": "facility_two_years_after_last",
+      "bytes": 1358,
+      "sha256": "a58c6b944e415e9d2dc574c465d5fbcd8e363896a94fcb6964040dda8bd505f4"
+    },
+    {
+      "file": "generator_browns_ferry.json",
+      "role": "generator_browns_ferry",
+      "bytes": 2313,
+      "sha256": "1926124d75c52523217b3504416c72b7a1849ece17df24591b1ca43388d5baac"
+    },
+    {
+      "file": "generator_one_day.json",
+      "role": "generator_one_day",
+      "bytes": 34008,
+      "sha256": "09bafdf4fd1abb2988e082c6a5c7df407d837ef0e994bbcdbeb0776e57e32a77"
+    },
+    {
+      "file": "metadata_facility.json",
+      "role": "metadata_facility",
+      "bytes": 1141,
+      "sha256": "088f811022bc784ccd1a3445f153c3f777f4cfc1c1570bce6e547aa0fbee47c6"
+    },
+    {
+      "file": "metadata_generator.json",
+      "role": "metadata_generator",
+      "bytes": 1245,
+      "sha256": "bce15f8a636786492c72e7528768673354aa8cc9a11b80c21887250d45b3226a"
+    },
+    {
+      "file": "metadata_us.json",
+      "role": "metadata_us",
+      "bytes": 1027,
+      "sha256": "16ffba30806766814eb9a17c5e0900e7a2b85bcf3b3ae178a17b4b67431c38a6"
+    }
+  ]
+}

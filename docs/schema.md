@@ -309,7 +309,7 @@ These are acceptance scenarios, not tests that have run:
 | Viewer tries detail through catalog, preview, SQL, or quality notes | Reject access; no facility/generator detail leaks. |
 | First refresh fails | No active event; show data unavailable and failed refresh outcome. |
 
-The detailed SQL grammar, resource limits, table-reference detection, and authentication checks need their own implementation contract and tests. A schema diagram does not prove SQL isolation. Clean-clone reproduction still needs sanitized source inputs/request definitions and analysis scripts; this document does not supply the missing historical exports.
+The detailed SQL grammar, resource limits, table-reference detection, and authentication checks need their own implementation contract and tests. A schema diagram does not prove SQL isolation. Historical findings now have [bundled inputs, request evidence, and a reproduction command](../evidence/findings/README.md). That saved-data report does not establish runtime SQL isolation, live preparation, or S3 protection.
 
 ## Sources and evidence limits
 

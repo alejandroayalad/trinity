@@ -252,6 +252,18 @@ The Step 2 handoff records a corrected settings-keyword mistake in a test fixtur
 
 Done: five implementation steps and offline verification. Pending: S3 configuration and real protection/live-preparation evidence. Blocker: real-storage acceptance remains open. Next: [ME] read the S3 requirements in `backend/README.md` before configuration.
 
+## Findings scripts — October 4, 2026
+
+[ME] Alayala selected Phase 3: reuse his existing analysis and saved inputs to make reconciliation and AN-01–AN-03 reproducible. He required explicit input scope/checksums, separate synthetic and real-data evidence, and preservation of the open Phase 2 live gate. He clarified that the existing AWS setup needs execution proof, not replacement.
+
+[YOU] AI reviewed the original `generate_report.py` and session checks, adapted their methods into one standard-library command, and imported three byte-preserved CSVs plus nine previously sanitized API responses. AI wrote 17 synthetic tests, ran the analysis, retained its measured outputs, and updated reproduction guidance. Alayala's original fetching and findings remain his work. No new anomaly or product decision was introduced.
+
+The real saved-data run reproduced all 16 historical claim checks and 82,650 exact zero-difference MW comparisons across 731 days. Every original 640-day CSV row matched the corresponding bundled subwindow. All 202 backend tests passed in CPython 3.14.8. An isolated copy with only repository files and the proposed additions reproduced both retained reports byte-for-byte using system Python 3.9.6 without a virtual environment, backend dependencies, or inherited credentials; all 17 focused tests also passed there. This compatibility observation does not change A17's selected backend interpreter.
+
+Before delivery authorization, the work was local and uncommitted on `main`. The isolated-tree check tested the proposed files; it did not establish remote availability. No EIA/S3 call, IAM change, dependency/lockfile change, commit, push, or application publication occurred during implementation. The earlier Python identity attempt failed because CRT support is absent; the user's attempted `uv add` then failed because `uv` was not on that shell's PATH. Neither error proves the existing AWS resources are broken. See the [session](ai/sessions/2026-10-04-findings-scripts-reproduction.md) and [reproduction guide](evidence/findings/README.md).
+
+[ME] Alayala then authorized committing, pushing, and merging the remaining work to `main`. [YOU] AI verified that this checkout was already on `main` and matched fetched `origin/main`, so a separate branch merge was unnecessary. Delivery uses two incremental commits: the reproducible command/tests/evidence, followed by the findings and handoff documentation. No history rewrite or unrelated worktree changes are part of this delivery. Remote-head equality and the final working-tree status are checked in the delivery response.
+
 ## FastAPI and local login SDD — October 4, 2026
 
 [ME] Alayala requested proposal, specification, design and tasks for the FastAPI/login slice, corrected Clerk to local authentication, and requested a new branch. This explicitly authorizes drafting all four artifacts together; it does not authorize implementation or delivery to the remote.
