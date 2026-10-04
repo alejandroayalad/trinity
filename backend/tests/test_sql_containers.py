@@ -74,12 +74,17 @@ class ContainerTests(unittest.TestCase):
         self.assertEqual(info['HostConfig']['NetworkMode'],'none')
         self.assertEqual(len(info['Mounts']),1)
         self.assertFalse(info['Mounts'][0]['RW'])
+        from copy import deepcopy
+        altered = deepcopy(info)
+        altered['Config']['Cmd'] = ['-c', 'print(1)']
+        with self.assertRaises(Problem):
+            self.docker.verify(altered, self.reservation)
         connection,stream=self.docker.attach(self.identifier,QueryDeadline(30))
         try:
             self.docker.start(self.identifier);body=json.loads(read_frames(stream))
         finally:connection.close()
         self.assertEqual(body['request_id'],str(self.request))
-        self.assertEqual(body['policy_digest'],self.query.digest)
+        self.assertEqual(body['operation_digest'],self.query.digest)
         self.assertEqual(body['result']['rows'],[['6','12.000000']])
 
     def test_probe_cannot_use_network_write_mount_or_read_siblings(self):

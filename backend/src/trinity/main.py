@@ -24,8 +24,8 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
-def create_app(*, settings=None, service=None, query_service=None) -> FastAPI:
-    """Return the API with authentication, settings, catalog, SQL, and liveness routes.
+def create_app(*, settings=None, service=None, query_service=None, preview_service=None, enable_preview=False) -> FastAPI:
+    """Return the API with auth, catalog, SQL and a delivery-gated preview route.
 
     Register startup and shutdown hooks without opening a database here.
     Startup loads the supplied or environment settings and opens the database pool.
@@ -47,6 +47,8 @@ def create_app(*, settings=None, service=None, query_service=None) -> FastAPI:
         else:
             application.state.auth = service
         application.state.query_service = query_service
+        application.state.preview_service = preview_service
+        application.state.preview_enabled = enable_preview
         try:
             yield
         finally:

@@ -34,3 +34,10 @@ def execution_factory(database, *, recovery=False):
         return QueryExecution(database,docker,reader,root,deployment)
     except Problem:raise
     except Exception:raise Problem(503,'dependency_unavailable') from None
+
+
+def preview_execution_factory(database, *, enabled=False):
+    """Keep delivery closed until the matched runtime and provenance are accepted."""
+    if enabled is not True:
+        raise Problem(503, 'dependency_unavailable')
+    return execution_factory(database)

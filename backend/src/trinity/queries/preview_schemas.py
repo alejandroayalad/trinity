@@ -1,8 +1,7 @@
 """Validate exact preview pages without asserting publication or evidence readiness.
 
-Diagnostics are required input, never inferred from missing evidence. The future
-trusted publication reader must establish their frozen provenance. These models
-and assemblers do not read data, authenticate users or enable a preview endpoint.
+Diagnostics are required input, never inferred from missing evidence. The trusted
+publication reader establishes their frozen provenance. These models and assemblers do not read data, authenticate users or enable a preview endpoint.
 """
 
 from datetime import date
@@ -195,21 +194,24 @@ def serialize_preview_rows(dataset: str, rows: list[list]) -> list[list[str | No
 
 def build_preview_response(request: ResolvedPreview, publication: Publication,
                            rows: list[list[str | None]], *, diagnostics: list[PreviewDiagnostic],
-                           codec: CursorCodec, after=None) -> PreviewResponse:
+                           codec: CursorCodec, after=None, has_more: bool | None = None) -> PreviewResponse:
     """Assemble a bounded wire page from at most limit+1 already encoded rows.
 
-    Explicit diagnostics come from a future trusted evidence reader; accepting
+    Explicit diagnostics come from the trusted evidence reader; accepting
     this argument does not prove its provenance. No publication is activated.
     """
     try:
         if type(rows) is not list or len(rows) > request.limit + 1 or after is not None and not rows:
+            raise ValueError
+        if has_more is not None and (type(has_more) is not bool or len(rows) > request.limit
+                                     or has_more and len(rows) != request.limit):
             raise ValueError
         _check_cells(request.dataset, rows)
         keys = _row_keys(request, rows, after=after)
         if any(not publication.coverage_start <= strict_date(row[0]) <= publication.coverage_end for row in rows):
             raise ValueError
         next_cursor = None
-        if len(rows) > request.limit:
+        if len(rows) > request.limit or has_more:
             next_cursor = codec.encode(request, publication.publication_event_id, keys[request.limit - 1])
         returned = rows[:request.limit]
         # Bound the complete envelope before model validation so size has its public code.
@@ -225,4 +227,23 @@ def build_preview_response(request: ResolvedPreview, publication: Publication,
     except Problem:
         raise
     except (ValueError, TypeError, KeyError, IndexError, ArithmeticError):
+        raise Problem(503, 'dependency_unavailable') from None
+
+
+def build_preview_batch_response(operation, publication, batch, *, diagnostics, codec):
+    """Reject a malformed runtime batch before signing its last returned key."""
+    try:
+        if (type(batch) is not dict or set(batch) != {'columns', 'rows', 'has_more'}
+                or type(batch['has_more']) is not bool
+                or operation.version_id != str(publication.version_id)
+                or operation.publication_event_id != str(publication.publication_event_id)
+                or batch['columns'] != [item.model_dump() for item in describe_dataset(operation.dataset).columns]):
+            raise ValueError
+        request = ResolvedPreview(operation.dataset, strict_date(operation.start), strict_date(operation.end),
+                                  operation.facility, operation.generator, operation.page_size)
+        return build_preview_response(request, publication, batch['rows'], diagnostics=diagnostics,
+                                      codec=codec, after=operation.after, has_more=batch['has_more'])
+    except Problem:
+        raise
+    except (ValueError, TypeError, KeyError):
         raise Problem(503, 'dependency_unavailable') from None

@@ -1,40 +1,39 @@
-"""Run one network-disabled, mounted query request and emit one closed result."""
+"""Dispatch one versioned operation on fixed, network-disabled mount paths."""
 import json
 from pathlib import Path
 import sys
-from uuid import UUID
 
-from trinity.contracts.queries import ValidatedQuery
+from trinity.contracts.queries import BINDING_FIELDS, MAX_REQUEST_BYTES, read_request
 from trinity.queries.runtime.engine import execute_local, QueryExecutionError
+from trinity.queries.runtime.preview import execute_preview
+
+
+def run_request(raw, directory):
+    """Validate kind/digest before execution and echo the exact request binding."""
+    request, operation = read_request(raw)
+    execute = execute_preview if request['operation_kind'] == 'preview' else execute_local
+    result = execute(operation, directory)
+    return {**{key: request[key] for key in BINDING_FIELDS}, 'result': result}
 
 
 def main():
-    """Use fixed mount paths; never initialize auth, PostgreSQL or storage clients."""
+    """Emit one bounded result or a fixed error; never accept client file paths."""
     try:
         with Path('/query/request.json').open('rb') as source:
-            raw=source.read(256*1024+1)
-        if len(raw)>256*1024:raise ValueError
-        request=json.loads(raw)
-        if (set(request)!={'request_id','version_id','policy','policy_digest'}
-                or raw!=json.dumps(request,ensure_ascii=True,sort_keys=True,separators=(',',':')).encode()):
-            raise ValueError
-        for key in ('request_id','version_id'):
-            if str(UUID(request[key]))!=request[key]:raise ValueError
-        policy=ValidatedQuery.from_bytes(json.dumps(request['policy'],ensure_ascii=True,sort_keys=True,separators=(',',':')).encode())
-        if policy.digest!=request['policy_digest']:raise ValueError
-        result=execute_local(policy,Path('/query/data'))
-        response={k:request[k] for k in ('request_id','version_id','policy_digest')}
-        response['result']=result
-        output=json.dumps(response,ensure_ascii=True,separators=(',',':'),allow_nan=False).encode()
-        if len(output)>6*1024*1024:raise QueryExecutionError('query_resource_limit')
+            raw = source.read(MAX_REQUEST_BYTES + 1)
+        response = run_request(raw, Path('/query/data'))
+        output = json.dumps(response, ensure_ascii=True, separators=(',', ':'), allow_nan=False).encode()
+        if len(output) > 6 * 1024 * 1024:
+            raise QueryExecutionError('query_resource_limit')
         sys.stdout.buffer.write(output)
         return 0
     except QueryExecutionError as error:
-        sys.stdout.write(json.dumps({'error':error.code}))
+        sys.stdout.write(json.dumps({'error': error.code}))
         return 1
     except Exception:
         sys.stdout.write('{"error":"query_failed"}')
         return 1
 
 
-if __name__=='__main__':raise SystemExit(main())
+if __name__ == '__main__':
+    raise SystemExit(main())

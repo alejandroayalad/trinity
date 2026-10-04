@@ -65,7 +65,7 @@ class StagingTests(unittest.TestCase):
     def test_all_selected_files_only_and_sealed_request(self):
         result = self.run_stage()
         self.assertEqual(len(list((result.directory / 'data').glob('*.parquet'))),2)
-        self.assertEqual(json.loads((result.directory / 'request.json').read_bytes())['policy_digest'],self.query.digest)
+        self.assertEqual(json.loads((result.directory / 'request.json').read_bytes())['operation_digest'],self.query.digest)
         self.assertEqual(len(self.client.calls),3)
         self.assertFalse(any('facility' in key or 'generator' in key for key in self.client.calls))
         self.assertTrue(all(body.closed for body in self.client.bodies))

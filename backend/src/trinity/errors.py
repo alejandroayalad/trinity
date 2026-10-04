@@ -1,6 +1,7 @@
 """Map API failures to bounded public problems without exposing raw exceptions."""
 
 import asyncio
+import re
 from http import HTTPStatus
 from uuid import uuid4
 
@@ -97,9 +98,13 @@ class SafeTransport:
                     body.extend(chunk)
                     if not message.get("more_body", False):
                         break
-            if scope.get("query_string"):
+            preview = scope['method'] == 'GET' and re.fullmatch(
+                r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
+            if len(scope.get('query_string', b'')) > 65536:
+                raise Problem(413, "request_too_large")
+            if scope.get("query_string") and not preview:
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "GET" and body:
+            if scope["method"] == "GET" and body and not preview:
                 raise Problem(422, "invalid_request")
             if scope["method"] == "POST":
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]

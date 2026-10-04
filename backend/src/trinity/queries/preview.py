@@ -1,8 +1,8 @@
 """Validate preview inputs without reading publication state or analytical files.
 
-Primitive parsing precedes the future shared rate debit. Semantic validation and
+Primitive parsing precedes the shared rate debit. Semantic validation and
 publication-based defaults follow it. These helpers never authenticate a caller
-or reserve execution capacity; the future service must enforce that ordering.
+or reserve execution capacity; the service enforces that ordering.
 """
 
 from dataclasses import dataclass, field
@@ -136,7 +136,7 @@ def parse_preview_input(pairs, *, body: bytes = b'') -> PreviewInput:
 
 
 def validate_filters(dataset: str, request: PreviewInput) -> None:
-    """Reject semantic combinations after the future service commits its debit."""
+    """Reject semantic combinations after the service commits its debit."""
     try:
         _filters(dataset, request.facility, request.generator)
         if request.start is not None and request.end is not None:

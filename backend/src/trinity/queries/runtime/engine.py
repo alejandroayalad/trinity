@@ -46,6 +46,20 @@ def _value(value):
     raise QueryExecutionError()
 
 
+def restricted_context(dataset, directory):
+    """Register one canonical mounted table with spill and information schema disabled."""
+    config = SessionConfig().with_information_schema(False)
+    for key, value in (("datafusion.sql_parser.dialect", "PostgreSQL"),
+                       ("datafusion.sql_parser.parse_float_as_decimal", "true"),
+                       ("datafusion.sql_parser.enable_ident_normalization", "false")):
+        config = config.set(key, value)
+    runtime = RuntimeEnvBuilder().with_greedy_memory_pool(768 * 1024 * 1024).with_disk_manager_disabled()
+    context = SessionContext(config, runtime)
+    definition = DATASETS[dataset]
+    context.register_parquet(definition.table_name, str(directory), schema=definition.schema)
+    return context
+
+
 def execute_local(query: ValidatedQuery, directory: Path) -> dict:
     """Revalidate policy before registering one trusted, staged dataset.
 
@@ -56,15 +70,7 @@ def execute_local(query: ValidatedQuery, directory: Path) -> dict:
         verified = validate_query(query.original_sql)
         if verified != query:
             raise QueryExecutionError()
-        config = SessionConfig().with_information_schema(False)
-        for key, value in (("datafusion.sql_parser.dialect", "PostgreSQL"),
-                           ("datafusion.sql_parser.parse_float_as_decimal", "true"),
-                           ("datafusion.sql_parser.enable_ident_normalization", "false")):
-            config = config.set(key, value)
-        runtime = RuntimeEnvBuilder().with_greedy_memory_pool(768 * 1024 * 1024).with_disk_manager_disabled()
-        context = SessionContext(config, runtime)
-        definition = DATASETS[query.dataset]
-        context.register_parquet(definition.table_name, str(directory), schema=definition.schema)
+        context = restricted_context(query.dataset, directory)
         options = SQLOptions().with_allow_ddl(False).with_allow_dml(False).with_allow_statements(False)
         frame = context.sql(query.operation, options=options)
         schema = frame.schema()

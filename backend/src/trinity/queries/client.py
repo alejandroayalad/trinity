@@ -6,6 +6,9 @@ import time
 from trinity.adapters.docker import read_frames
 from trinity.contracts.manifest import read_json
 from trinity.errors import Problem
+from trinity.contracts.queries import PreviewOperation, read_result_binding
+from trinity.publication.diagnostics import read_preview_diagnostics
+from trinity.queries.preview_schemas import build_preview_batch_response
 from trinity.queries import repository
 from trinity.queries.schemas import QueryResponse
 from trinity.queries.service import QueryDeadline
@@ -65,6 +68,10 @@ class QueryExecution:
         outcome='dependency_unavailable'
         try:
             reservation=self.change(reservation,('reserved',),'staging')
+            diagnostics = None
+            if isinstance(prepared.query, PreviewOperation):
+                diagnostics = read_preview_diagnostics(prepared.pinned, prepared.query.dataset,
+                                                       self.reader, prepared.deadline)
             stage_query(self.root,reservation['request_id'],prepared.pinned,prepared.query,self.reader,prepared.deadline)
             reservation=self.change(reservation,('staging',),'creating')
             identifier=self.docker.create(reservation)
@@ -89,14 +96,15 @@ class QueryExecution:
                 if set(body)=={'error'} and code in ('query_failed','query_resource_limit'):
                     raise Problem(422 if code=='query_failed' else 503,code)
                 raise Problem(503,'dependency_unavailable')
-            if (set(body)!={'request_id','version_id','policy_digest','result'}
-                    or body['request_id']!=str(reservation['request_id'])
-                    or body['version_id']!=str(prepared.pinned.publication.version_id)
-                    or body['policy_digest']!=prepared.query.digest):
-                raise Problem(503,'dependency_unavailable')
-            data={**body['result'],'publication':prepared.pinned.publication,
-                  'execution_ms':int((time.monotonic()-prepared.started)*1000)}
-            response=QueryResponse.model_validate(data)
+            result = read_result_binding(body, reservation['request_id'],
+                                         prepared.pinned.publication.version_id, prepared.query)
+            if isinstance(prepared.query, PreviewOperation):
+                response = build_preview_batch_response(prepared.query, prepared.pinned.publication,
+                                                        result, diagnostics=diagnostics, codec=prepared.codec)
+            else:
+                data = {**result, 'publication': prepared.pinned.publication,
+                        'execution_ms': int((time.monotonic() - prepared.started) * 1000)}
+                response = QueryResponse.model_validate(data)
             if len(response.model_dump_json().encode())>5*1024*1024:raise Problem(503,'query_resource_limit')
             prepared.deadline.remaining()
             outcome='succeeded'
@@ -106,9 +114,14 @@ class QueryExecution:
         except Exception:
             raise Problem(503,'dependency_unavailable') from None
         finally:
-            if attached is not None:attached.close()
-            try:self.cleanup(reservation,outcome)
-            finally:self.close()
+            try:
+                if attached is not None:
+                    attached.close()
+            finally:
+                try:
+                    self.cleanup(reservation, outcome)
+                finally:
+                    self.close()
         return response
 
     def recover_one(self):

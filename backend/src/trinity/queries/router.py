@@ -4,6 +4,7 @@ import threading
 from fastapi import APIRouter, Depends, Request
 from trinity.auth.dependencies import bearer_token
 from trinity.queries.schemas import QueryRequest, QueryResponse
+from trinity.queries.preview_schemas import PreviewResponse
 
 router=APIRouter(prefix='/api/v1',tags=['queries'])
 
@@ -17,8 +18,13 @@ async def run_query(body: QueryRequest,request: Request,token: str=Depends(beare
         from trinity.queries.service import QueryService
         database=request.app.state.auth.database
         service=QueryService(database,lambda:execution_factory(database))
+    return await supervised_call(request, service.execute, token, body.sql)
+
+
+async def supervised_call(request, execute, *args, **kwargs):
+    """Propagate disconnect/cancellation while the execution owner retains cleanup."""
     cancelled=threading.Event()
-    task=asyncio.create_task(asyncio.to_thread(service.execute,token,body.sql,cancelled=cancelled))
+    task=asyncio.create_task(asyncio.to_thread(execute,*args,**kwargs,cancelled=cancelled))
     try:
         while not task.done():
             await asyncio.wait({task},timeout=.1)
@@ -29,3 +35,17 @@ async def run_query(body: QueryRequest,request: Request,token: str=Depends(beare
             cancelled.set()
             try:await asyncio.shield(task)
             except Exception:pass
+
+
+@router.get('/datasets/{dataset_key}/preview', response_model=PreviewResponse)
+async def preview_dataset(dataset_key: str, request: Request, token: str = Depends(bearer_token)):
+    """Preserve duplicate query parameters for identity-first strict validation."""
+    service = request.app.state.preview_service
+    if service is None:
+        from trinity.queries.config import preview_execution_factory
+        from trinity.queries.service import PreviewService
+        database = request.app.state.auth.database
+        service = PreviewService(database, lambda: preview_execution_factory(
+            database, enabled=request.app.state.preview_enabled))
+    return await supervised_call(request, service.execute, token, dataset_key,
+                                 request.query_params.multi_items(), body=await request.body())

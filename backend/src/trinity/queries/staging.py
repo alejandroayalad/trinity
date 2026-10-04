@@ -16,6 +16,7 @@ from trinity.adapters.s3 import MAX_OBJECT_BYTES, StorageError, _error_kind
 from trinity.contracts.datasets import DATASETS
 from trinity.contracts.manifest import read_manifest, safe_relative_path
 from trinity.errors import Problem
+from trinity.contracts.queries import request_message, canonical_message, PreviewOperation
 
 MANIFEST_BYTES = 4 * 1024 * 1024
 MAX_FILES = 1024
@@ -100,6 +101,9 @@ def stage_query(root: Path, request_id, pinned, query, reader: PublishedReader, 
     try:
         data = io.BytesIO()
         publication = pinned.publication
+        if isinstance(query, PreviewOperation) and (query.version_id != str(publication.version_id)
+                or query.publication_event_id != str(publication.publication_event_id)):
+            raise Problem(503, 'dependency_unavailable')
         reader.read_into(publication.version_id, 'manifest.json', data, deadline=deadline,
                          max_bytes=MANIFEST_BYTES, digest=pinned.manifest_sha256)
         manifest = read_manifest(data.getvalue(), pinned.manifest_sha256)
@@ -140,9 +144,8 @@ def stage_query(root: Path, request_id, pinned, query, reader: PublishedReader, 
             descriptor = os.open('request.json', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                                  0o444, dir_fd=request_fd)
             with os.fdopen(descriptor, 'wb') as stream:
-                message = {"request_id": request_id, "version_id": str(publication.version_id),
-                           "policy": json.loads(query.to_bytes()), "policy_digest": query.digest}
-                stream.write(json.dumps(message,ensure_ascii=True,sort_keys=True,separators=(",", ":")).encode())
+                message = request_message(request_id, publication.version_id, query)
+                stream.write(canonical_message(message))
                 stream.flush(); os.fsync(stream.fileno())
         finally:
             os.close(request_fd)

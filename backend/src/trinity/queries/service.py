@@ -81,3 +81,85 @@ class QueryService:
         """Return only a complete, stopped and cleaned query result."""
         prepared, execution = self.prepare(token, sql, cancelled=cancelled)
         return execution.execute(prepared)
+
+
+@dataclass(frozen=True)
+class PreparedPreview(PreparedQuery):
+    """Retain signing authority in the API; never send it to the runtime."""
+    codec: object
+
+
+class PreviewService:
+    """Authorize and debit a page, then pin its publication and shared capacity."""
+    def __init__(self, database, execution_factory, *, codec_factory=None):
+        from trinity.queries.cursors import CursorCodec, load_cursor_keys
+        self.database = database
+        self.execution_factory = execution_factory
+        self.codec_factory = codec_factory or (lambda: CursorCodec(load_cursor_keys()))
+
+    def prepare(self, token, dataset_key, pairs, *, body=b'', cancelled=None):
+        """Commit one debit after identity/shape checks, even if later checks fail.
+
+        Reauthorize before pinning the active version and its frozen evidence.
+        Close metadata transactions before any storage or engine work. Start the
+        analytical budget immediately before capacity admission; preflight uses
+        a separate bounded deadline. No rejection changes publication state.
+        """
+        from trinity.contracts.queries import PreviewOperation
+        from trinity.publication.repository import read_preview_publication
+        from trinity.queries.cursors import resolve_continuation
+        from trinity.queries.preview import (
+            authorize_preview, parse_preview_input, resolve_preview, validate_filters,
+        )
+        preflight = QueryDeadline(15)
+        preflight.cancelled = cancelled
+        with self.database.transaction(preflight, readonly=True) as connection:
+            first = resolve_session(connection, token)
+            dataset = authorize_preview(first, dataset_key)
+        request = parse_preview_input(pairs, body=body)
+        with self.database.transaction(preflight, error_code='dependency_unavailable') as connection:
+            retry = repository.reserve_rate(connection, first.user_id)
+        if retry is not None:
+            raise Problem(429, 'rate_limited', retry_after=retry)
+        validate_filters(dataset, request)
+        codec = self.codec_factory()
+        position = codec.decode(request.cursor) if request.cursor is not None else None
+        if position is not None and position.request.dataset != dataset:
+            raise Problem(422, 'invalid_cursor')
+        with self.database.transaction(preflight, readonly=True, error_code='dependency_unavailable') as connection:
+            second = resolve_session(connection, token)
+            authorize_preview(second, dataset_key)
+            if first.user_id != second.user_id or first.session_id != second.session_id:
+                raise Problem(401, 'invalid_session')
+            pinned = read_pinned_publication(connection)
+            if position is not None:
+                resolved = resolve_continuation(position, dataset, request, pinned.publication if pinned else None)
+            elif pinned is None:
+                raise Problem(409, 'data_unavailable')
+            else:
+                resolved = resolve_preview(dataset, request, pinned.publication.latest_observation_date)
+            pinned = read_preview_publication(connection, pinned)
+        operation = PreviewOperation(dataset, str(pinned.publication.publication_event_id),
+                                     str(pinned.publication.version_id), resolved.start.isoformat(),
+                                     resolved.end.isoformat(), resolved.facility, resolved.generator,
+                                     resolved.limit, position.after if position is not None else None)
+        execution = self.execution_factory()
+        try:
+            preflight.remaining()
+            started = time.monotonic()
+            deadline = QueryDeadline(30)
+            deadline.cancelled = cancelled
+            with self.database.transaction(deadline, error_code='dependency_unavailable') as connection:
+                reservation = repository.reserve_capacity(connection, second.user_id, pinned,
+                                    execution.deployment_id, execution.daemon_id, deadline.remaining())
+            if reservation is None:
+                raise Problem(429, 'rate_limited', retry_after=1)
+        except Exception:
+            execution.close()
+            raise
+        return PreparedPreview(operation, pinned, reservation, deadline, started, codec), execution
+
+    def execute(self, token, dataset_key, pairs, *, body=b'', cancelled=None):
+        """Return the page only after the shared supervisor confirms cleanup."""
+        prepared, execution = self.prepare(token, dataset_key, pairs, body=body, cancelled=cancelled)
+        return execution.execute(prepared)
