@@ -1,0 +1,744 @@
+{
+  "input_manifest": {
+    "format_version": 1,
+    "window": {
+      "start": "2024-10-02",
+      "end": "2026-10-02"
+    },
+    "source": "EIA nuclear-outages API v2; saved exports and sanitized diagnostic responses collected 2026-10-02",
+    "files": [
+      {
+        "file": "us_20241002_20261002.csv",
+        "role": "us",
+        "bytes": 25468,
+        "sha256": "1343f11770911318b2abd7c584680f27b920e55e974457e252775d28683e43f6"
+      },
+      {
+        "file": "facility_20241002_20261002.csv",
+        "role": "facility",
+        "bytes": 1945402,
+        "sha256": "eb33c5fc92f37a44ffc7c0a0e3d4a893ea9b67dcf16eb8625fc2fe76d337920a"
+      },
+      {
+        "file": "generator_20241002_20261002.csv",
+        "role": "generator",
+        "bytes": 3440293,
+        "sha256": "a9cadb00591d9be74538e36b235e19e02ad77b40e0136067bcafe9501a4dd172"
+      },
+      {
+        "file": "facility_browns_ferry.json",
+        "role": "facility_browns_ferry",
+        "bytes": 1500,
+        "sha256": "c63a69e651c3d674e1cd38d2bd7e733831717c488d31e8e97e346cdc95a1cc55"
+      },
+      {
+        "file": "facility_one_day.json",
+        "role": "facility_one_day",
+        "bytes": 18762,
+        "sha256": "3aa9529f9ebf8ce34327c2ae5da63a4d560fe931be0a0705848462a7c34825ed"
+      },
+      {
+        "file": "facility_one_day_after_last.json",
+        "role": "facility_one_day_after_last",
+        "bytes": 1352,
+        "sha256": "4ccb4f9151bd51adc564e65bfefe5c5847f848fa49337c0bad5954a509c2fc40"
+      },
+      {
+        "file": "facility_two_years_after_last.json",
+        "role": "facility_two_years_after_last",
+        "bytes": 1358,
+        "sha256": "a58c6b944e415e9d2dc574c465d5fbcd8e363896a94fcb6964040dda8bd505f4"
+      },
+      {
+        "file": "generator_browns_ferry.json",
+        "role": "generator_browns_ferry",
+        "bytes": 2313,
+        "sha256": "1926124d75c52523217b3504416c72b7a1849ece17df24591b1ca43388d5baac"
+      },
+      {
+        "file": "generator_one_day.json",
+        "role": "generator_one_day",
+        "bytes": 34008,
+        "sha256": "09bafdf4fd1abb2988e082c6a5c7df407d837ef0e994bbcdbeb0776e57e32a77"
+      },
+      {
+        "file": "metadata_facility.json",
+        "role": "metadata_facility",
+        "bytes": 1141,
+        "sha256": "088f811022bc784ccd1a3445f153c3f777f4cfc1c1570bce6e547aa0fbee47c6"
+      },
+      {
+        "file": "metadata_generator.json",
+        "role": "metadata_generator",
+        "bytes": 1245,
+        "sha256": "bce15f8a636786492c72e7528768673354aa8cc9a11b80c21887250d45b3226a"
+      },
+      {
+        "file": "metadata_us.json",
+        "role": "metadata_us",
+        "bytes": 1027,
+        "sha256": "16ffba30806766814eb9a17c5e0900e7a2b85bcf3b3ae178a17b4b67431c38a6"
+      }
+    ]
+  },
+  "scope": {
+    "us": {
+      "rows": 731,
+      "days": 731,
+      "first": "2024-10-02",
+      "last": "2026-10-02",
+      "unique_keys": 731,
+      "missing_dates": [],
+      "outside_window": []
+    },
+    "facility": {
+      "rows": 39863,
+      "days": 731,
+      "first": "2024-10-02",
+      "last": "2026-10-02",
+      "unique_keys": 39863,
+      "missing_dates": [],
+      "outside_window": []
+    },
+    "generator": {
+      "rows": 69103,
+      "days": 731,
+      "first": "2024-10-02",
+      "last": "2026-10-02",
+      "unique_keys": 69103,
+      "missing_dates": [],
+      "outside_window": []
+    }
+  },
+  "reconciliation": {
+    "comparisons": 82650,
+    "nonmatching": 0,
+    "max_absolute_difference_mw": "0.0",
+    "details": "reconciliation.csv",
+    "sha256": "0c584060960cd7d37623c056e107bf7022f32e583ab0b82764fb7ddd1ee5b5c7"
+  },
+  "AN01": {
+    "available": true,
+    "before": "2026-09-30",
+    "after": "2026-10-01",
+    "national_before_mw": "97620.5",
+    "national_after_mw": "100056.7",
+    "national_difference_mw": "2436.2",
+    "facility_total_difference_mw": "2436.2",
+    "facilities_before": 55,
+    "facilities_after": 55,
+    "added": [],
+    "removed": [],
+    "increased": 47,
+    "decreased": 0,
+    "unchanged": 8,
+    "facilities": [
+      {
+        "facility": "1715",
+        "name": "Palisades",
+        "before_mw": "768.5",
+        "after_mw": "815.6",
+        "difference_mw": "47.1"
+      },
+      {
+        "facility": "1729",
+        "name": "Fermi",
+        "before_mw": "1141.0",
+        "after_mw": "1161.0",
+        "difference_mw": "20.0"
+      },
+      {
+        "facility": "1922",
+        "name": "Monticello",
+        "before_mw": "617.0",
+        "after_mw": "646.0",
+        "difference_mw": "29.0"
+      },
+      {
+        "facility": "1925",
+        "name": "Prairie Island",
+        "before_mw": "1040.0",
+        "after_mw": "1092.0",
+        "difference_mw": "52.0"
+      },
+      {
+        "facility": "204",
+        "name": "Clinton Power Station",
+        "before_mw": "1082.9",
+        "after_mw": "1107.1",
+        "difference_mw": "24.2"
+      },
+      {
+        "facility": "210",
+        "name": "Wolf Creek Generating Station",
+        "before_mw": "1176.7",
+        "after_mw": "1255.0",
+        "difference_mw": "78.3"
+      },
+      {
+        "facility": "2410",
+        "name": "PSEG Salem Generating Station",
+        "before_mw": "2284.7",
+        "after_mw": "2284.7",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "2589",
+        "name": "Nine Mile Point Nuclear Station",
+        "before_mw": "1903.1",
+        "after_mw": "1926.2",
+        "difference_mw": "23.1"
+      },
+      {
+        "facility": "3166",
+        "name": "Peach Bottom",
+        "before_mw": "2549.4",
+        "after_mw": "2694.1",
+        "difference_mw": "144.7"
+      },
+      {
+        "facility": "3251",
+        "name": "H B Robinson",
+        "before_mw": "759.0",
+        "after_mw": "792.9",
+        "difference_mw": "33.9"
+      },
+      {
+        "facility": "3265",
+        "name": "Oconee",
+        "before_mw": "2599.9",
+        "after_mw": "2688.0",
+        "difference_mw": "88.1"
+      },
+      {
+        "facility": "371",
+        "name": "Columbia Generating Station",
+        "before_mw": "1151.0",
+        "after_mw": "1172.0",
+        "difference_mw": "21.0"
+      },
+      {
+        "facility": "3806",
+        "name": "Surry",
+        "before_mw": "1676.0",
+        "after_mw": "1750.0",
+        "difference_mw": "74.0"
+      },
+      {
+        "facility": "4046",
+        "name": "Point Beach",
+        "before_mw": "1189.5",
+        "after_mw": "1203.4",
+        "difference_mw": "13.9"
+      },
+      {
+        "facility": "4270",
+        "name": "Waterford 3",
+        "before_mw": "1086.9",
+        "after_mw": "1097.1",
+        "difference_mw": "10.2"
+      },
+      {
+        "facility": "46",
+        "name": "Browns Ferry",
+        "before_mw": "3661.7",
+        "after_mw": "3755.8",
+        "difference_mw": "94.1"
+      },
+      {
+        "facility": "566",
+        "name": "Millstone",
+        "before_mw": "2108.4",
+        "after_mw": "2120.8",
+        "difference_mw": "12.4"
+      },
+      {
+        "facility": "6000",
+        "name": "Donald C Cook",
+        "before_mw": "2177.0",
+        "after_mw": "2278.0",
+        "difference_mw": "101.0"
+      },
+      {
+        "facility": "6001",
+        "name": "Joseph M Farley",
+        "before_mw": "1791.0",
+        "after_mw": "1791.0",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "6008",
+        "name": "Palo Verde",
+        "before_mw": "3937.0",
+        "after_mw": "4003.0",
+        "difference_mw": "66.0"
+      },
+      {
+        "facility": "6011",
+        "name": "Calvert Cliffs Nuclear Power Plant",
+        "before_mw": "1745.2",
+        "after_mw": "1806.0",
+        "difference_mw": "60.8"
+      },
+      {
+        "facility": "6014",
+        "name": "Brunswick",
+        "before_mw": "1870.0",
+        "after_mw": "1928.0",
+        "difference_mw": "58.0"
+      },
+      {
+        "facility": "6015",
+        "name": "Harris",
+        "before_mw": "964.0",
+        "after_mw": "1009.0",
+        "difference_mw": "45.0"
+      },
+      {
+        "facility": "6020",
+        "name": "Perry",
+        "before_mw": "1240.0",
+        "after_mw": "1268.0",
+        "difference_mw": "28.0"
+      },
+      {
+        "facility": "6022",
+        "name": "Braidwood Generation Station",
+        "before_mw": "2332.3",
+        "after_mw": "2405.5",
+        "difference_mw": "73.2"
+      },
+      {
+        "facility": "6023",
+        "name": "Byron Generating Station",
+        "before_mw": "2300.0",
+        "after_mw": "2387.1",
+        "difference_mw": "87.1"
+      },
+      {
+        "facility": "6026",
+        "name": "LaSalle Generating Station",
+        "before_mw": "2264.4",
+        "after_mw": "2342.5",
+        "difference_mw": "78.1"
+      },
+      {
+        "facility": "6036",
+        "name": "Catawba",
+        "before_mw": "2310.1",
+        "after_mw": "2378.5",
+        "difference_mw": "68.4"
+      },
+      {
+        "facility": "6038",
+        "name": "McGuire",
+        "before_mw": "2315.6",
+        "after_mw": "2386.2",
+        "difference_mw": "70.6"
+      },
+      {
+        "facility": "6040",
+        "name": "Beaver Valley",
+        "before_mw": "1808.0",
+        "after_mw": "1872.0",
+        "difference_mw": "64.0"
+      },
+      {
+        "facility": "6045",
+        "name": "St Lucie",
+        "before_mw": "1968.0",
+        "after_mw": "1990.0",
+        "difference_mw": "22.0"
+      },
+      {
+        "facility": "6051",
+        "name": "Edwin I Hatch",
+        "before_mw": "1759.0",
+        "after_mw": "1759.0",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "6072",
+        "name": "Grand Gulf",
+        "before_mw": "1396.7",
+        "after_mw": "1412.5",
+        "difference_mw": "15.8"
+      },
+      {
+        "facility": "6099",
+        "name": "Diablo Canyon",
+        "before_mw": "2240.0",
+        "after_mw": "2240.0",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "6103",
+        "name": "PPL Susquehanna",
+        "before_mw": "2494.0",
+        "after_mw": "2494.0",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "6105",
+        "name": "Limerick",
+        "before_mw": "2241.8",
+        "after_mw": "2374.3",
+        "difference_mw": "132.5"
+      },
+      {
+        "facility": "6110",
+        "name": "James A Fitzpatrick",
+        "before_mw": "844.0",
+        "after_mw": "854.5",
+        "difference_mw": "10.5"
+      },
+      {
+        "facility": "6115",
+        "name": "Seabrook",
+        "before_mw": "1247.0",
+        "after_mw": "1248.0",
+        "difference_mw": "1.0"
+      },
+      {
+        "facility": "6118",
+        "name": "PSEG Hope Creek Generating Station",
+        "before_mw": "1174.2",
+        "after_mw": "1174.2",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "6122",
+        "name": "R. E. Ginna Nuclear Power Plant",
+        "before_mw": "578.8",
+        "after_mw": "581.1",
+        "difference_mw": "2.3"
+      },
+      {
+        "facility": "6127",
+        "name": "V C Summer",
+        "before_mw": "977.2",
+        "after_mw": "999.3",
+        "difference_mw": "22.1"
+      },
+      {
+        "facility": "6145",
+        "name": "Comanche Peak",
+        "before_mw": "2400.0",
+        "after_mw": "2460.0",
+        "difference_mw": "60.0"
+      },
+      {
+        "facility": "6149",
+        "name": "Davis Besse",
+        "before_mw": "894.0",
+        "after_mw": "908.0",
+        "difference_mw": "14.0"
+      },
+      {
+        "facility": "6152",
+        "name": "Sequoyah",
+        "before_mw": "2277.7",
+        "after_mw": "2332.5",
+        "difference_mw": "54.8"
+      },
+      {
+        "facility": "6153",
+        "name": "Callaway",
+        "before_mw": "1190.0",
+        "after_mw": "1236.0",
+        "difference_mw": "46.0"
+      },
+      {
+        "facility": "6168",
+        "name": "North Anna",
+        "before_mw": "1892.0",
+        "after_mw": "1958.0",
+        "difference_mw": "66.0"
+      },
+      {
+        "facility": "621",
+        "name": "Turkey Point",
+        "before_mw": "1681.0",
+        "after_mw": "1725.0",
+        "difference_mw": "44.0"
+      },
+      {
+        "facility": "6251",
+        "name": "South Texas Project",
+        "before_mw": "2580.0",
+        "after_mw": "2660.0",
+        "difference_mw": "80.0"
+      },
+      {
+        "facility": "6462",
+        "name": "River Bend Station",
+        "before_mw": "968.3",
+        "after_mw": "985.4",
+        "difference_mw": "17.1"
+      },
+      {
+        "facility": "649",
+        "name": "Vogtle",
+        "before_mw": "4530.0",
+        "after_mw": "4530.0",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "7722",
+        "name": "Watts Bar Nuclear Plant",
+        "before_mw": "2245.0",
+        "after_mw": "2343.0",
+        "difference_mw": "98.0"
+      },
+      {
+        "facility": "8036",
+        "name": "Cooper",
+        "before_mw": "768.5",
+        "after_mw": "768.5",
+        "difference_mw": "0.0"
+      },
+      {
+        "facility": "8055",
+        "name": "Arkansas Nuclear One",
+        "before_mw": "1807.0",
+        "after_mw": "1840.7",
+        "difference_mw": "33.7"
+      },
+      {
+        "facility": "869",
+        "name": "Dresden Generating Station",
+        "before_mw": "1797.0",
+        "after_mw": "1881.2",
+        "difference_mw": "84.2"
+      },
+      {
+        "facility": "880",
+        "name": "Quad Cities Generating Station",
+        "before_mw": "1819.0",
+        "after_mw": "1885.0",
+        "difference_mw": "66.0"
+      }
+    ]
+  },
+  "AN02": {
+    "available": true,
+    "first": {
+      "period": "2025-09-09",
+      "capacity": "768.5",
+      "outage": "768.5",
+      "percentOutage": "100.0"
+    },
+    "last": {
+      "period": "2026-10-02",
+      "capacity": "815.6",
+      "outage": "815.6",
+      "percentOutage": "100.0"
+    },
+    "records": 389,
+    "missing_dates": [],
+    "full_offline_records": 389,
+    "longest_full_offline_days": 389,
+    "longest_run_start": "2025-09-09",
+    "longest_run_end": "2026-10-02",
+    "generator_1_matches": true,
+    "facility_membership_changes": [
+      {
+        "before": "2025-09-08",
+        "after": "2025-09-09",
+        "change": "added",
+        "facility": "1715"
+      }
+    ],
+    "facilities_present_every_day": 54,
+    "entry_capacity_change": {
+      "available": true,
+      "before": "2025-09-08",
+      "after": "2025-09-09",
+      "national_before_mw": "96880.2",
+      "national_after_mw": "97648.7",
+      "national_difference_mw": "768.5",
+      "facility_total_difference_mw": "768.5",
+      "facilities_before": 54,
+      "facilities_after": 55,
+      "added": [
+        "1715"
+      ],
+      "removed": [],
+      "increased": 0,
+      "decreased": 0,
+      "unchanged": 54
+    }
+  },
+  "AN03": {
+    "facility_one_day": {
+      "route": "facility-nuclear-outages",
+      "start": "2026-10-01",
+      "end": "2026-10-01",
+      "facility": null,
+      "offset": 0,
+      "requested_length": 5000,
+      "advertised_total": 95,
+      "returned_rows": 55,
+      "csv_rows_in_scope": 55,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:24.946195+00:00",
+      "api_version": "2.1.14"
+    },
+    "facility_one_day_after_last": {
+      "route": "facility-nuclear-outages",
+      "start": "2026-10-01",
+      "end": "2026-10-01",
+      "facility": null,
+      "offset": 55,
+      "requested_length": 5,
+      "advertised_total": 95,
+      "returned_rows": 0,
+      "csv_rows_in_scope": 55,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:26.386982+00:00",
+      "api_version": "2.1.14"
+    },
+    "generator_one_day": {
+      "route": "generator-nuclear-outages",
+      "start": "2026-10-01",
+      "end": "2026-10-01",
+      "facility": null,
+      "offset": 0,
+      "requested_length": 5000,
+      "advertised_total": 95,
+      "returned_rows": 95,
+      "csv_rows_in_scope": 95,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:29.505937+00:00",
+      "api_version": "2.1.14"
+    },
+    "facility_browns_ferry": {
+      "route": "facility-nuclear-outages",
+      "start": "2026-10-01",
+      "end": "2026-10-01",
+      "facility": "46",
+      "offset": 0,
+      "requested_length": 5000,
+      "advertised_total": 3,
+      "returned_rows": 1,
+      "csv_rows_in_scope": 1,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:32.627787+00:00",
+      "api_version": "2.1.14"
+    },
+    "generator_browns_ferry": {
+      "route": "generator-nuclear-outages",
+      "start": "2026-10-01",
+      "end": "2026-10-01",
+      "facility": "46",
+      "offset": 0,
+      "requested_length": 5000,
+      "advertised_total": 3,
+      "returned_rows": 3,
+      "csv_rows_in_scope": 3,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:33.792029+00:00",
+      "api_version": "2.1.14"
+    },
+    "facility_two_years_after_last": {
+      "route": "facility-nuclear-outages",
+      "start": "2024-10-02",
+      "end": "2026-10-02",
+      "facility": null,
+      "offset": 39863,
+      "requested_length": 1,
+      "advertised_total": 69103,
+      "returned_rows": 0,
+      "csv_rows_in_scope": 39863,
+      "agrees_with_saved_csv": true,
+      "checked_at_utc": "2026-10-02T18:26:35.251083+00:00",
+      "api_version": "2.1.14"
+    },
+    "one_day_exhaustion_confirmed": true
+  },
+  "F1": {
+    "available": true,
+    "period": "2026-08-04",
+    "facility": "566",
+    "capacity_mw": "2108.4",
+    "outage_mw": "863.4",
+    "weighted_percent": "40.9504837791690381331815594763801935116676152532726237905521",
+    "display_percent": "40.95",
+    "ratio_reason": null,
+    "simple_mean_percent": "50.0",
+    "facility_source_percent": "40.95",
+    "units": [
+      {
+        "generator": "2",
+        "capacity": "863.4",
+        "outage": "863.4",
+        "percentOutage": "100.0"
+      },
+      {
+        "generator": "3",
+        "capacity": "1245.0",
+        "outage": "0.0",
+        "percentOutage": "0.0"
+      }
+    ]
+  },
+  "original_findings_window": {
+    "us": {
+      "rows": 640,
+      "days": 640,
+      "first": "2025-01-01",
+      "last": "2026-10-02",
+      "unique_keys": 640,
+      "missing_dates": [],
+      "outside_window": []
+    },
+    "facility": {
+      "rows": 34949,
+      "days": 640,
+      "first": "2025-01-01",
+      "last": "2026-10-02",
+      "unique_keys": 34949,
+      "missing_dates": [],
+      "outside_window": []
+    },
+    "generator": {
+      "rows": 60549,
+      "days": 640,
+      "first": "2025-01-01",
+      "last": "2026-10-02",
+      "unique_keys": 60549,
+      "missing_dates": [],
+      "outside_window": []
+    }
+  },
+  "F2": {
+    "period": "2026-09-15",
+    "generator": "1",
+    "distinct_facilities": 47
+  },
+  "historical_claim_checks": {
+    "at_least_30_days": true,
+    "daily_coverage_and_keys": true,
+    "exact_reconciliation": true,
+    "AN01_capacity_step": true,
+    "AN01_same_55_facilities": true,
+    "AN02_first_and_last": true,
+    "AN02_389_full_days": true,
+    "AN02_generator_agreement": true,
+    "AN02_only_facility_addition": true,
+    "AN02_entry_capacity": true,
+    "AN03_probes_match_csv": true,
+    "AN03_one_day_counts": true,
+    "AN03_browns_ferry": true,
+    "AN03_final_empty_probes": true,
+    "F1_weighted_example": true,
+    "F2_generator_1_reused": true
+  },
+  "historical_claims_reproduced": true,
+  "evidence_limits": [
+    "Saved observations only; no current EIA query or proof of source completeness.",
+    "API probes are selected responses, not every original download page.",
+    "Seasonal cause and EIA internal counting method are not measured here.",
+    "No S3 protection, live preparation, or application publication is verified."
+  ]
+}

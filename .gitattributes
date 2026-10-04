@@ -1,0 +1,5 @@
+# Keep checksum-pinned evidence byte-identical across Git checkout settings.
+/evidence/findings/inputs/* -text
+/evidence/findings/inputs/*.csv whitespace=cr-at-eol
+/evidence/findings/expected-report.json -text
+/evidence/findings/REPORT.md -text

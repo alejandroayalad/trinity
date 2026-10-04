@@ -1,0 +1,80 @@
+{
+  "checked_at_utc": "2026-10-02T18:26:32.627787+00:00",
+  "route": "facility-nuclear-outages",
+  "metadata": false,
+  "parameters": [
+    [
+      "frequency",
+      "daily"
+    ],
+    [
+      "start",
+      "2026-10-01"
+    ],
+    [
+      "end",
+      "2026-10-01"
+    ],
+    [
+      "offset",
+      0
+    ],
+    [
+      "length",
+      5000
+    ],
+    [
+      "data[0]",
+      "capacity"
+    ],
+    [
+      "data[1]",
+      "outage"
+    ],
+    [
+      "data[2]",
+      "percentOutage"
+    ],
+    [
+      "sort[0][column]",
+      "period"
+    ],
+    [
+      "sort[0][direction]",
+      "asc"
+    ],
+    [
+      "sort[1][column]",
+      "facility"
+    ],
+    [
+      "sort[1][direction]",
+      "asc"
+    ],
+    [
+      "facets[facility][]",
+      "46"
+    ]
+  ],
+  "response": {
+    "total": "3",
+    "dateFormat": "YYYY-MM-DD",
+    "frequency": "daily",
+    "data": [
+      {
+        "period": "2026-10-01",
+        "facility": "46",
+        "facilityName": "Browns Ferry",
+        "capacity": "3755.8",
+        "outage": "1254.8",
+        "percentOutage": "33.41",
+        "capacity-units": "megawatts",
+        "outage-units": "megawatts",
+        "percentOutage-units": "percent"
+      }
+    ],
+    "description": "Facility level nuclear outages with capacity, outages, and percent outage.  \n        Source:   Nuclear Regulatory Commission's Power Reactor Status Report.  \n        Interactive data report:  Daily Status of Nuclear Reactors."
+  },
+  "api_version": "2.1.14",
+  "warnings": []
+}

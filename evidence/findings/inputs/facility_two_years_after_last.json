@@ -1,0 +1,69 @@
+{
+  "checked_at_utc": "2026-10-02T18:26:35.251083+00:00",
+  "route": "facility-nuclear-outages",
+  "metadata": false,
+  "parameters": [
+    [
+      "frequency",
+      "daily"
+    ],
+    [
+      "start",
+      "2024-10-02"
+    ],
+    [
+      "end",
+      "2026-10-02"
+    ],
+    [
+      "offset",
+      39863
+    ],
+    [
+      "length",
+      1
+    ],
+    [
+      "data[0]",
+      "capacity"
+    ],
+    [
+      "data[1]",
+      "outage"
+    ],
+    [
+      "data[2]",
+      "percentOutage"
+    ],
+    [
+      "sort[0][column]",
+      "period"
+    ],
+    [
+      "sort[0][direction]",
+      "asc"
+    ],
+    [
+      "sort[1][column]",
+      "facility"
+    ],
+    [
+      "sort[1][direction]",
+      "asc"
+    ]
+  ],
+  "response": {
+    "total": "69103",
+    "dateFormat": "YYYY-MM-DD",
+    "frequency": "daily",
+    "data": [],
+    "description": "Facility level nuclear outages with capacity, outages, and percent outage.  \n        Source:   Nuclear Regulatory Commission's Power Reactor Status Report.  \n        Interactive data report:  Daily Status of Nuclear Reactors."
+  },
+  "api_version": "2.1.14",
+  "warnings": [
+    {
+      "warning": "incomplete return",
+      "description": "The API can only return 5000 rows in JSON format.  Please consider constraining your request with facet, start, or end, or using offset to paginate results."
+    }
+  ]
+}
