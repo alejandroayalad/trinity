@@ -146,6 +146,8 @@ This expands F5. Alayala selected it as an anomaly; AI checked the plant values 
 
 **Why does it happen?** The reported total matches the generator count in our examples. EIA appears to count generators instead of plants. The mismatch is confirmed; the internal cause is still an inference.
 
+**Rechecked October 3, 2026.** The connector's live extraction for October 1, 2026 again returned 55 facility rows against an advertised total of 95. See the [evidence brief](evidence/2026-10-03-first-live-eia-run.md).
+
 **How should Trinity handle it?** Send the downloaded version to validation. If its counts and required checks pass, it is ready for publication without a user-facing warning about this known EIA count issue. If validation fails, the version stays unpublished. See [A5 in DECISIONS.md](DECISIONS.md#a5--validation-decides-whether-data-is-ready-closed) for the accepted rule and its relationship to Admin approval. The checks still need implementation.
 
 **How can someone check it?** The original responses are saved in `data/api_evidence_20261002/` in the data workspace. The [supporting checks](ai/sessions/2026-10-02-palisades-pagination-and-metadata.md#repeat-the-local-checks) verify their counts, and the same session includes requests for a live rerun. Alayala selected this as the third anomaly; AI reproduced the mismatch and wrote the explanation.

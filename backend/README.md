@@ -65,7 +65,7 @@ After exporting `EIA_API_KEY`, run this explicit live gate from `backend/`:
 uv run --locked python tests/live_eia.py -v
 ```
 
-It checks one page and then paginated extraction for each route on October 1, 2026. The paginated check uses a page size of 50, at most 25 page fetches and a 120-second deadline per route. Each page fetch can make up to three attempts. It compares local page/row counts and supplied totals under the route-specific rules below. This live gate has not run here because the environment has no EIA key. It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
+It checks one page and then paginated extraction for each route on October 1, 2026. The paginated check uses a page size of 50, at most 25 page fetches and a 120-second deadline per route. Each page fetch can make up to three attempts. It compares local page/row counts and supplied totals under the route-specific rules below. This live gate passed on October 3, 2026 ([evidence](../evidence/2026-10-03-first-live-eia-run.md)). It is excluded from default test discovery. The routine tests use HTTPX MockTransport and synthetic data.
 
 ### Fetch all pages for a route
 
@@ -148,7 +148,7 @@ uv run --locked python -m unittest discover -s tests -v
 uv build
 ```
 
-Verified on CPython 3.14.8 with uv 0.12.23: 59 health, configuration, mocked EIA client/pagination/retry, retrieval and command tests pass. Retry tests assert three-attempt exhaustion, exact backoff calls, permanent-error rejection, unchanged parameters, deadline handling and cancellation. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. External-service integration and live EIA credentials have not been tested.
+Verified on CPython 3.14.8 with uv 0.12.23: 59 health, configuration, mocked EIA client/pagination/retry, retrieval and command tests pass. Retry tests assert three-attempt exhaustion, exact backoff calls, permanent-error rejection, unchanged parameters, deadline handling and cancellation. Earlier dependency resolution, locked installation, package compatibility checks and backend-module imports passed. The initial scaffold also passed source/wheel builds. Starlette still emits the existing HTTPX test-client deprecation warning. The live gate and the fixed-window extraction command passed against the EIA API on October 3, 2026. Other external-service integrations have not been tested.
 
 ## Layout and next slice
 
