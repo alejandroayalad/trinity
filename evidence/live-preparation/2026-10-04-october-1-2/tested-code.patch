@@ -1,0 +1,90 @@
+diff --git a/backend/src/trinity/connector/normalize.py b/backend/src/trinity/connector/normalize.py
+index 77bfbf3..16ede66 100644
+--- a/backend/src/trinity/connector/normalize.py
++++ b/backend/src/trinity/connector/normalize.py
+@@ -16,9 +16,9 @@ from trinity.contracts.datasets import DATASETS
+ # Require ASCII digits and fixed widths: YYYY-MM-DD.
+ # The date parser below checks whether that date exists in the calendar.
+ _DATE_TEXT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
+-# Allow an optional sign, integer digits, and an optional decimal fraction.
++# EIA can omit the leading zero in a decimal fraction, such as ".5".
+ # Reject exponents, separators, spaces, and special values such as NaN.
+-_DECIMAL_TEXT = re.compile(r"[+-]?[0-9]+(?:\.[0-9]+)?")
++_DECIMAL_TEXT = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]+)?|\.[0-9]+)")
+ # This type alias lists the possible output types. None represents a null.
+ # Type hints describe values; the functions below perform the actual checks.
+ ParsedValue = date | str | Decimal | None
+diff --git a/backend/tests/test_normalize.py b/backend/tests/test_normalize.py
+index 8bc5a2c..486af94 100644
+--- a/backend/tests/test_normalize.py
++++ b/backend/tests/test_normalize.py
+@@ -152,6 +152,35 @@ class NormalizationTests(unittest.TestCase):
+                 with self.subTest(field=name, value=value), self.assertRaises(NormalizationError):
+                     normalize_row("facility", row)
+ 
++    def test_live_facility_leading_decimal_percentage_is_exact(self) -> None:
++        row = source_row("facility")
++        row.update(period="2026-10-02", facility="869", capacity="1881.2",
++                   outage="9.412", percentOutage=".5")
++        before = deepcopy(row)
++        result = normalize_row("facility", row)
++        self.assertEqual(result.values["percentOutage"], Decimal("0.5"))
++        self.assertEqual(result.diagnostic_codes, ())
++        self.assertEqual(row, before)
++
++    def test_leading_decimal_measurements_preserve_sign_and_scale_limits(self) -> None:
++        for field in ("capacity", "outage", "percentOutage"):
++            for text in (".5", "+.5", ".000001000", "-.0"):
++                with self.subTest(field=field, value=text):
++                    row = source_row(); row[field] = text
++                    self.assertEqual(normalize_row("national", row).values[field], Decimal(text))
++            row = source_row(); row[field] = ".0000001"
++            with self.assertRaises(NormalizationError) as caught:
++                normalize_row("national", row)
++            self.assertEqual(caught.exception.code, "decimal_scale")
++        row = source_row(); row["capacity"] = "-.5"
++        with self.assertRaises(NormalizationError) as caught:
++            normalize_row("national", row)
++        self.assertEqual(caught.exception.code, "negative_capacity")
++        row = source_row(); row.update(outage="-.5", percentOutage="-.5")
++        result = normalize_row("national", row)
++        self.assertEqual(result.values["outage"], Decimal("-0.5"))
++        self.assertEqual(result.values["percentOutage"], Decimal("-0.5"))
++
+     def test_trailing_zeros_survive_parsing_even_with_low_decimal_precision(self) -> None:
+         samples = (
+             "863.4000000", "999999999999999999.9999990000", "0.0000010000",
+@@ -208,7 +237,7 @@ class NormalizationTests(unittest.TestCase):
+         # Decimal accepts some forms that this source contract rejects.
+         # Check spelling rules as well as whether a value could be converted.
+         for text in ("NaN", "sNaN", "Infinity", "-Infinity", "1e2", "1_000", "1,000",
+-                     ".5", "1.", " 1", "1 ", "1\n", "１２", "++1", "abc"):
++                     ".", "+.", "-.", "1.", " 1", "1 ", "1\n", "１２", "++1", "abc"):
+             for name in ("capacity", "outage", "percentOutage"):
+                 row = source_row(); row[name] = text
+                 with self.subTest(field=name, value=text), self.assertRaises(NormalizationError) as caught:
+diff --git a/backend/tests/test_parquet.py b/backend/tests/test_parquet.py
+index 1ee99a3..d0b7762 100644
+--- a/backend/tests/test_parquet.py
++++ b/backend/tests/test_parquet.py
+@@ -103,6 +103,20 @@ class FileFixture(unittest.TestCase):
+ class FreezeFilesTests(FileFixture):
+     """Check real temporary Parquet writes, evidence and no-overwrite behavior."""
+ 
++    def test_live_leading_decimal_percentage_survives_saved_parquet(self) -> None:
++        rows = {key: [source_row(key)] for key in DATASETS}
++        rows["facility"] = [source_row(
++            "facility", period="2026-10-02", facility="869", capacity="1881.2",
++            outage="9.412", percentOutage=".5",
++        )]
++        result = self.freeze(evidence(rows))
++        saved = pq.read_table(result.root / "data/facility.parquet").to_pylist()
++        self.assertEqual(saved[0]["percentOutage"], Decimal("0.500000"))
++        source = json.loads((result.root / "source-evidence.json").read_text())
++        facility = next(item for item in source["routes"] if item["dataset"] == "facility")
++        original = json.loads(facility["attempts"][0]["sanitized_response"])
++        self.assertEqual(original["response"]["data"][0]["percentOutage"], ".5")
++
+     def test_s01_all_schemas_survive_all_null_optional_columns(self) -> None:
+         rows = {key: [source_row(key, facilityName=None, percentOutage=None)]
+                 for key in DATASETS}
