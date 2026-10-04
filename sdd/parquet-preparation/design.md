@@ -1,12 +1,12 @@
 # Design: typed Parquet candidate preparation
 
 Date: 2026-10-03
-Status: Steps 1–4 delivered. Step 5 command integration is implemented for review; actual checks and remaining live gates are recorded in [tasks.md](tasks.md). The mechanisms below retain the staged design.
+Status: Steps 1–5 implemented and offline-tested; alayala authorized delivery and session closure on October 4. Actual checks and remaining live gates are recorded in [tasks.md](tasks.md). The mechanisms below retain the staged design.
 Basis: [proposal](proposal.md), [specification](spec.md), [canonical contract](../../docs/schema.md) and [A15 module boundaries](../../docs/backend.md).
 
 ## Human
 
-Use the existing extraction flow, then five small implementation steps: exact parsing, frozen files, saved-file validation, immutable storage, and command integration. Each step has its own offline tests before the next step starts. These are proposed mechanisms for review, not new accepted decisions.
+Use the existing extraction flow, then five small implementation steps: exact parsing, frozen files, saved-file validation, immutable storage, and command integration. Each step has its own offline tests before the next step starts. These mechanisms are implemented within this slice; they do not add or change accepted product decisions.
 
 Input: one explicit date window and trusted storage configuration. Output: an identified, verified S3 candidate with its validation and warning evidence, still unpublished. A changed file, incomplete check or unverified upload fails preparation and retains available evidence.
 
@@ -33,7 +33,7 @@ Reserve `<output-root>/<version_uuid>/` with exclusive directory creation, owner
 
 Build explicit Arrow fields in R02 order; use `date32`, strings and `decimal128(24,6)` with specified nullability. Decimal text uses ASCII `[+-]?[0-9]+(\.[0-9]+)?`; reject surrounding whitespace, exponents, separators and nonfinite forms. Optional all-blank percentages become null. Check representability from the text without Decimal context arithmetic; return `Decimal(original_text)` so insignificant trailing zeros remain exactly preserved. Arrow's scale-six representation must retain the exact numeric value; the caller's unchanged sanitized evidence retains original spelling. Later aggregation uses integer millionths without rounding.
 
-Write one file per dataset, rows ordered by its daily key without deduplication. Propose Parquet 2.6, Snappy, stored Arrow schema and row groups of at most 50,000 rows; explicitly verify their behavior against the pinned PyArrow. Reopen files for measurement. Writer settings do not promise identical Parquet bytes across dependency versions; SHA-256 identifies the actual saved bytes. [Arrow writer options](https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_table.html) document these controls.
+Write one file per dataset, rows ordered by its daily key without deduplication. Use Parquet 2.6, Snappy, stored Arrow schema and row groups of at most 50,000 rows; tests verify their behavior against the pinned PyArrow. Reopen files for measurement. Writer settings do not promise identical Parquet bytes across dependency versions; SHA-256 identifies the actual saved bytes. [Arrow writer options](https://arrow.apache.org/docs/python/generated/pyarrow.parquet.write_table.html) document these controls.
 
 Define one internal canonical JSON encoder: UTF-8, `ensure_ascii=True`, sorted object keys, separators `(',', ':')`, no newline, no NaN/floats; dates are ISO strings, decimal values are exact fixed-six strings, and counters are integers. Preserve Unicode strings without normalization. Readers reject duplicate JSON keys and unsupported format versions.
 
@@ -67,7 +67,7 @@ Require a private prefix, enforced conditional writes and no delete/version-dele
 
 Retain the current route-completion JSONL sink with flush/fsync before normalization. Add durable stage-start/stage-end events and safe failure records. A hard kill may lose the in-flight route; mark the preparation incomplete rather than claim full evidence. Local evidence survives storage failure. Keep the execution journal local; immutable uploaded evidence snapshots contain only completed records. Output/error paths never include credentials or raw SDK exceptions.
 
-Proposed command budgets: 300 seconds per extraction route, 1,000 pages per route including exhaustion probes; 120 seconds for parsing/file writing, 120 for validation/diagnostics and 300 for storage including readback. All stages share an overall 1,440-second ceiling. These are preparation defaults for review, not production-refresh service limits. The supervisor stops the trusted child process on a stage/overall timeout (terminate, then kill after five seconds), waits for exit and records incompletion. It never marks a timed-out run successful. Test hard termination and delayed I/O explicitly; cooperative checks alone cannot interrupt blocked native work.
+Implemented command budgets: 300 seconds per extraction route, 1,000 pages per route including exhaustion probes; 120 seconds for parsing/file writing, 120 for validation/diagnostics and 300 for storage including readback. All stages share an overall 1,440-second ceiling. These are preparation-command defaults, not production-refresh service limits. The supervisor stops the trusted child process on a stage/overall timeout (terminate, then kill after five seconds), waits for exit and records incompletion. It never marks a timed-out run successful. Test hard termination and delayed I/O explicitly; cooperative checks alone cannot interrupt blocked native work.
 
 Return `0` only for the complete verified stored candidate, including completed warning-bearing candidates; `1` for stage failure/incompletion, `2` for input/configuration errors and `130` for cancellation. Only the supervisor writes the final local result after confirmed successful child completion and verification of its receipt. Failure to persist that result is failure. Output includes version/manifest/attempt, check set, warnings and `published=false`. Partial remote objects remain private and identifiable; no automated deletion or publication is added.
 
@@ -85,4 +85,4 @@ Maintain data evidence — ongoing. Record actual new source observations throug
 
 Each step first runs its focused unittest module, then relevant existing tests. The completed slice runs `uv run --locked python -m unittest discover -s tests -v`. Step 1's actual commands/results are in [tasks.md](tasks.md); its in-memory Arrow checks do not prove saved-Parquet behavior. S3 policy checks and new live extraction remain pending.
 
-Current gate: human diff review of Step 5, plus separate configured-storage and live-preparation verification. Historical Step 1 checks alone did not prove the later validation or storage behavior; see [tasks.md](tasks.md) for each step's evidence.
+Current gate: alayala configures S3; real storage protection and live preparation require separate verification. Historical Step 1 checks alone did not prove the later validation or storage behavior; see [tasks.md](tasks.md) for each step's evidence.

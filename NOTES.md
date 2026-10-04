@@ -1,6 +1,6 @@
 # Engineering Notes — Trinity
 
-Status: data analysis and documentation, October 2, 2026. Application implementation has not started in this discussion. This is the Engineering Notes document required by Arkham. It must grow with actual code and verification evidence.
+Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions
 
@@ -234,3 +234,16 @@ Status: implementation and human review complete; session closed. Local/live ext
 ## First live EIA run — October 3, 2026
 
 [ME] Alayala supplied his EIA key and asked AI to run the EIA workflow, record it in an `evidence/` folder and commit and push to `main`. [YOU] AI ran the offline suite (59 passed), the live gate (2 passed) and the fixed-window extraction for October 1, 2026 (exit 0; national 1, facility 55 of advertised 95, generator 95 rows). The facility result reproduces AN-03. The key was not found in any output. See the [evidence brief](evidence/2026-10-03-first-live-eia-run.md) and [session](ai/sessions/2026-10-03-first-live-eia-run.md). Normalization, Parquet and full-window validation remain pending.
+
+
+## Parquet preparation Steps 2–5 and session close — October 4, 2026
+
+[ME] Alayala authorized each subsequent step, the implementation commits/pushes, and finally session closure with these notes. He will configure S3. His closure request supersedes the earlier session-note exclusion; no live EIA/S3 work or merge was requested. Authorization to deliver is recorded without claiming an observed code walkthrough or retained understanding.
+
+[YOU] AI implemented exact saved Parquet and manifest identities (`3330093`), complete saved-file validation and retained attempt evidence (`ba4dd9e`), verified conditional storage (`1d3c377`), and supervised command integration (`4e6d395`). AI wrote the synthetic tests and explanatory comments, reviewed diffs, ran checks and performed authorized Git operations. Alayala's original EIA analysis remains his contribution; these fixtures are not new findings.
+
+At closure, 18 focused command tests and all 185 offline tests passed in the existing CPython 3.14.8 environment. Command help also passed. The tests use synthetic HTTP/storage, real Parquet and spawned processes; they cover failure retention and termination without proving deployed S3 protection. No new dependencies, live calls, PostgreSQL/publication changes or cloud configuration occurred. The existing Starlette/HTTPX warning remains. Package builds and a fresh locked install were not rerun because packaging/dependencies did not change.
+
+The Step 2 handoff records a corrected settings-keyword mistake in a test fixture. Closure also corrected stale current-status text that still described Step 1 or pending Parquet. Historical session statements remain historical. Decisions and findings are unchanged. Detailed flow, Git revisions, verification limits and the S3 handoff are in the [session close](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md).
+
+Done: five implementation steps and offline verification. Pending: S3 configuration and real protection/live-preparation evidence. Blocker: real-storage acceptance remains open. Next: [ME] read the S3 requirements in `backend/README.md` before configuration.

@@ -1,8 +1,8 @@
 # Proposal: typed Parquet candidate preparation
 
 Date: 2026-10-03
-Status: Approved by alayala. Step 1 schemas/exact parsing implemented and offline-tested; human diff review required before Step 2.
-Approval record: “proposal reviewed and agreed continue with spec please”. Approval covers scope and direction; design details remain open.
+Status: Approved by alayala. Steps 1–5 are implemented and offline-tested; session closure authorized October 4. Real S3 protection and live preparation remain unverified. See [tasks.md](tasks.md) and the [closure record](../../ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md).
+Approval record: “proposal reviewed and agreed continue with spec please”. That approval covered scope and direction; subsequent design and implementation authorization are recorded in tasks.md.
 Branch: `feat/parquet-preparation`
 
 Canonical requirements: [data contract v1](../../docs/schema.md), [decisions](../../DECISIONS.md) A5/A9/A13–A17/A19, and [backend structure](../../docs/backend.md).
@@ -12,7 +12,7 @@ Discovery and authorship: [session record](../../ai/sessions/2026-10-03-parquet-
 
 ### Why this change is needed
 
-The connector can retrieve the national, facility and generator routes for one fixed date window and save sanitized retrieval evidence. It does not yet produce the typed files that Trinity will query, prove that their totals agree, or store a complete immutable candidate in S3.
+At proposal creation, the connector could retrieve the national, facility and generator routes for one fixed date window and save sanitized retrieval evidence. It did not yet produce the typed files that Trinity will query, prove that their totals agree, or store a complete immutable candidate in S3.
 
 ### Proposed outcome
 

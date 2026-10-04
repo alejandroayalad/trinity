@@ -2,7 +2,7 @@
 
 Date: 2026-10-03
 Basis: [specification](spec.md) and the five steps in [design](design.md).
-Current authorization: the user requested committing and pushing Step 4, then continuing with Step 5 on `feat/parquet-preparation`. Step 5 covers command integration and offline verification. Publication remains outside this change. No live EIA/S3 calls or session notes.
+Current authorization, October 4: the user requested committing and pushing Step 5 and closing the session with `ai/sessions/` and `NOTES.md`. Alayala will configure S3. This supersedes the earlier session-note exclusion. No live EIA/S3 calls or application publication are authorized by this close.
 
 Maintain data evidence — ongoing. Preserve actual source evidence; synthetic tests are not new anomaly findings.
 
@@ -48,7 +48,7 @@ Gate: successful exact-file validation; real writes require authorization and co
 - [x] Connect existing extraction to the approved stages, durable journals, bounded execution and truthful exits/output.
 - [x] Test offline S31–S38 boundaries, failed-evidence retention and existing extraction regressions; warning-bearing storage success remains unpublished.
 - [x] Run the relevant full offline suite and document implemented setup/commands; record live EIA/S3 checks separately.
-- [ ] Human reviews the Step 5 diff. Real storage protection and live preparation remain unverified.
+- [x] User authorizes committing/pushing Step 5 and closing this implementation session. This records delivery authorization, not an observed code walkthrough or live acceptance.
 
 Gate: prior stages verified. Active publication, application-state integration and unrelated product features remain outside this slice.
 
@@ -158,4 +158,17 @@ Results: help exited successfully; **18 focused command tests passed; 185 full o
 
 Diff and whitespace reviewed, including new command/tests. The existing Starlette/HTTPX deprecation warning remains. No formatter, linter or type checker is configured. A fresh locked install and source/wheel builds were not rerun; package configuration and dependencies did not change. No live preparation, full-window EIA result or deployed S3 policy proof is claimed. Actual private/conditional/no-delete storage protection still requires a separately authorized configured-storage check.
 
-Next: [ME] review `main` and `supervise` in `backend/src/trinity/connector/prepare.py`.
+Historical next action: review `main` and `supervise`. The user subsequently authorized delivery and session closure; see the closure record below.
+
+
+## Session close — October 4, 2026
+
+The user authorized Step 5 commit/push and closure documentation, and will configure S3. Step 5 is committed as `4e6d395`; the separate documentation commit records the handoff. Earlier uncommitted/no-session-note statements above describe their original review stages, not this closure.
+
+Closure reran `.venv/bin/python -m unittest discover -s tests -p test_prepare.py -q` (**18 passed**), `.venv/bin/python -m unittest discover -s tests -q` (**185 passed**) and preparation `--help` (**exit 0**) from `backend/`. Diff/whitespace and closure documentation checks are recorded in the [session close](../../ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). No production code changed after these checks.
+
+Done: Steps 1–5 implemented and offline-tested; delivery and closure authorized.
+Pending: alayala's S3 configuration, real protection verification and separately authorized live preparation.
+Blocker: no configured-storage/live-pipeline proof; Step 4's real-storage checkbox remains open.
+
+Next: [ME] read `backend/README.md` at “Immutable storage library — Step 4” before configuring S3.

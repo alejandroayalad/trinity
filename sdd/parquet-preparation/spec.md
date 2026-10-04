@@ -1,7 +1,7 @@
 # Specification: typed Parquet candidate preparation
 
 Date: 2026-10-03
-Status: Approved by alayala, with full-window coverage confirmed. Offline implementation checks are recorded in [tasks.md](tasks.md). Step 5 awaits human review; real storage protection and live preparation remain unverified.
+Status: Approved by alayala, with full-window coverage confirmed. Offline implementation checks are recorded in [tasks.md](tasks.md). Alayala authorized Step 5 delivery and session closure on October 4; real storage protection and live preparation remain unverified.
 Branch: `feat/parquet-preparation`
 Basis: [approved proposal](proposal.md), [data contract v1](../../docs/schema.md), and [A15 backend boundaries](../../docs/backend.md).
 
@@ -31,7 +31,7 @@ Facility `"001a"` and generator `"01B"` keep their exact identifiers. Capacity `
 
 ### Review boundary
 
-The proposal and specification are approved. Alayala's supplied October 1–3 example confirms that both detail datasets omitting October 2 MUST fail, retaining R07/S12 and canonical V04/V07. Each dataset must cover every requested day; individual entities need not appear every day. The [design draft](design.md) is ready for review. Authentication, SQL execution, application-state migrations, workers, approval endpoints and publication remain outside this slice.
+The proposal and specification are approved. Alayala's supplied October 1–3 example confirms that both detail datasets omitting October 2 MUST fail, retaining R07/S12 and canonical V04/V07. Each dataset must cover every requested day; individual entities need not appear every day. The [design](design.md) now has all five implementation steps and offline evidence in [tasks.md](tasks.md). Authentication, SQL execution, application-state migrations, workers, approval endpoints and publication remain outside this slice.
 
 ## LLM
 
@@ -249,4 +249,4 @@ Keep `design.md` minimal: resolve the mechanisms below without repeating the spe
 | Failure persistence and budgets | Retained sanitized evidence, detectable incompletion, finite stage/retry budgets and no false success after hard termination. |
 | S3 protocol and handoff | Write-time overwrite prevention, verified stored bytes, safe collision/retry behavior and canonical results consumable by later refresh persistence. |
 
-R01–R14 and S01–S38 remain the acceptance contract. [tasks.md](tasks.md) tracks each step's implementation, delivery and actual checks. Steps 1–4 are delivered; Step 5 is implemented for human diff review. Offline checks do not prove real S3 protection or live full-window preparation. No cloud operations or application publication were performed for these implementation slices.
+R01–R14 and S01–S38 remain the acceptance contract. [tasks.md](tasks.md) tracks each step's implementation, delivery and actual checks. Steps 1–5 are implemented; alayala authorized delivery and session closure. Offline checks do not prove real S3 protection or live full-window preparation. No cloud operations or application publication were performed for these implementation slices.
