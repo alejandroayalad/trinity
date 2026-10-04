@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. It also records route/attempt evidence and provides one extraction command. Product routes, authentication, Parquet, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
+The backend exposes process liveness at `GET /health` and a shared EIA client with one-page methods, pagination and bounded retries for all three routes. It also records route/attempt evidence and provides one extraction command. Step 1 adds standalone analytical schemas and exact row parsing; these are not yet integrated into extraction. Product routes, authentication, Parquet files, PostgreSQL, S3, Redis/BullMQ, workers and query isolation remain pending.
 
 ## Setup
 
@@ -133,6 +133,16 @@ JSON response bodies are sanitized before serialization and hashing. `sanitized_
 
 Evidence remains in memory until a route finishes, then the command flushes and syncs its line. Disk failure or a hard process kill can leave an incomplete output file; this command is not a durable worker/recovery system. A graceful cancellation records interrupted/skipped routes when output remains writable. Invalid command syntax stops before retrieval begins.
 
+## Schemas and exact row parsing — Step 1
+
+Delivery boundary: the implementation and new tests described here remain local and uncommitted for human review. This documentation-only commit does not include those files; the 17/76-test results below describe that local working tree.
+
+`trinity.contracts.datasets.DATASETS` defines the three Arrow schemas, table names and daily keys. `trinity.connector.normalize.normalize_row(dataset, row)` accepts an already sanitized source row and returns typed `values` and D01/D02 observation codes. It performs no I/O or readiness decision. Preserve the original sanitized row/retrieval evidence: parsing does not alter it, including on failure, and unknown fields stay there rather than becoming analytical columns.
+
+The parser preserves identifiers and labels, validates dates/units, and parses decimal strings exactly. `863.4000000` retains its trailing zeros in the returned Decimal; Arrow scale-six conversion preserves the numeric value. `863.4000001`, overflow, numeric JSON measurements and invalid text fail with a safe `NormalizationError` containing field/code only. Missing optional labels/percentages become null. D06 and complete diagnostic evaluation remain Step 3.
+
+From `backend/`, run focused offline checks with `.venv/bin/python -m unittest discover -s tests -p test_normalize.py -v`. Step 1 passed 17 focused tests and 76 total offline tests using the existing CPython 3.14.8/PyArrow 25.0.1 environment. `uv` was unavailable on that shell's PATH; the existing environment was used directly without dependency changes. These checks include in-memory Arrow conversion, not Parquet file round trips. See [tasks and the human-review gate](../sdd/parquet-preparation/tasks.md).
+
 ## Start the API
 
 ```bash
@@ -154,4 +164,4 @@ Verified on CPython 3.14.8 with uv 0.12.23: 59 health, configuration, mocked EIA
 
 `src/trinity/main.py` creates the FastAPI application. `src/trinity/__init__.py` has no infrastructure initialization. `tests/` contains standard-library unittest tests, so no additional test framework is required.
 
-Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. The next slice is numeric normalization, data validation and the typed Parquet pipeline. The lock now includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.
+Follow A15's feature layout in [backend architecture](../docs/backend.md) as behavior is added. Standalone schemas/exact parsing are implemented; human diff review is required before Step 2's Parquet files and frozen manifests. Data validation and the remaining pipeline stay pending. The lock includes the selected API, environment configuration, HTTP, PostgreSQL, migration, PyArrow/DataFusion/SQLGlot, Redis/BullMQ and S3 libraries. HTTPX is a runtime dependency for the connector. Clerk is omitted because alayala selected local login; authentication implementation and contract reconciliation remain pending. The build uses uv_build 0.12.23. Installing these libraries does not implement their features or verify their external services.

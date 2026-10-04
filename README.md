@@ -85,6 +85,7 @@ Clerk is deferred production work behind `auth/service.py`; the challenge does n
 | [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
 | [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
 | [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
+| [Parquet preparation proposal](sdd/parquet-preparation/proposal.md), [specification](sdd/parquet-preparation/spec.md), [design](sdd/parquet-preparation/design.md) and [tasks](sdd/parquet-preparation/tasks.md) | Preparation documents published separately from Step 1's local, uncommitted implementation. Local checks passed 17 focused and 76 total offline tests. Human diff review is required before committing implementation or starting Step 2. |
 | [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
 | [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |
 | [docs/security-contract.md](docs/security-contract.md) | Accepted A19 roles, SQL policy, container/S3 boundaries, admission, limits, retry rules and required verification. |
