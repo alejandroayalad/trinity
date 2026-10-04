@@ -37,7 +37,7 @@ class SingleStatementTests(unittest.TestCase):
             validate_single_statement(CASES["B03"]["sql"])
 
     def test_empty_and_comment_only_inputs_are_rejected(self):
-        for sql in ("", " \n\t", "-- comment", "/* comment */", ";"):
+        for sql in ("", " \n\t", "-- comment", "/* comment */", ";", "; -- comment"):
             with self.subTest(sql=sql), self.assertRaises(SQLValidationError):
                 validate_single_statement(sql)
 
@@ -48,7 +48,8 @@ class SingleStatementTests(unittest.TestCase):
                 validate_single_statement(sql)
 
     def test_syntax_and_token_errors_do_not_expose_sql(self):
-        for sql in ("SELECT private_marker FROM", "SELECT 'private_marker"):
+        for sql in ("SELECT private_marker FROM", "SELECT 'private_marker",
+                    "SELECT outage FROM national_outages; /* private_marker"):
             with self.subTest(sql=sql):
                 try:
                     validate_single_statement(sql)
@@ -65,10 +66,38 @@ class SingleStatementTests(unittest.TestCase):
         )
         self.assertIsInstance(statement, exp.Select)
 
-    def test_a24_trailing_comment_is_a_known_gap_in_the_strict_count_check(self):
-        # SQLGlot emits an extra Semicolon node; A24 still needs paired review.
-        with self.assertRaises(SQLValidationError):
-            validate_single_statement(CASES["A24"]["sql"])
+    def test_a24_trailing_comment_passes_and_comments_are_preserved(self):
+        statement = validate_single_statement(CASES["A24"]["sql"])
+        self.assertIsInstance(statement, exp.Select)
+        self.assertIn(" ordinary comment ", statement.comments)
+        self.assertIn(" done", statement.comments)
+
+    def test_terminal_semicolon_accepts_only_whitespace_and_comments_after_it(self):
+        suffixes = (" \n\t", " -- done", " /* done */", " -- ; SELECT 2\n /* ; */",
+                    " /* outer /* nested ; */ done */ -- final\n")
+        for suffix in suffixes:
+            with self.subTest(suffix=suffix):
+                statement = validate_single_statement("SELECT outage FROM national_outages;" + suffix)
+                self.assertIsInstance(statement, exp.Select)
+
+    def test_second_semicolon_or_statement_after_comments_is_rejected(self):
+        suffixes = (";", " /* comment */ ;", " -- comment\n;", " /* comment */ SELECT 1",
+                    " -- comment\n DELETE FROM national_outages", " /* comment */ outage")
+        for suffix in suffixes:
+            with self.subTest(suffix=suffix), self.assertRaises(SQLValidationError):
+                validate_single_statement("SELECT outage FROM national_outages;" + suffix)
+
+    def test_leading_semicolon_is_not_a_terminal_semicolon(self):
+        for sql in ("; SELECT 1", "/* comment */ ; SELECT 1;"):
+            with self.subTest(sql=sql), self.assertRaises(SQLValidationError):
+                validate_single_statement(sql)
+
+    def test_quoted_semicolons_do_not_count_as_terminators(self):
+        for sql in ("SELECT ';' FROM national_outages; -- done",
+                    'SELECT outage AS "semi;colon" FROM national_outages;',
+                    "SELECT $$; SELECT 2$$ FROM national_outages; /* done */"):
+            with self.subTest(sql=sql):
+                self.assertIsInstance(validate_single_statement(sql), exp.Select)
 
     def test_single_select_is_not_full_policy_authorization(self):
         for case_id in ("B04", "B05", "B09", "B19"):

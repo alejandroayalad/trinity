@@ -317,3 +317,9 @@ AI inspected installed SQLGlot/DataFusion signatures and official documentation;
 [ME] Alayala supplied the whole-input/count/nonempty/Select flow and restricted this step to it. He then restated the later physical-table, DATE/CAST, function-spelling and null-order comparisons; this is not recorded as completed human review or permission to implement all of them.
 
 [YOU] Implemented only `validate_single_statement` and a local `SQLValidationError`, with ten passing focused tests and seven passing parser characterizations. One trailing semicolon passes; the original B03 double semicolon fails. Inspection exposed A24's extra Semicolon node after a trailing comment, so the strict supplied flow currently rejects that approved form. [Pairing evidence](ai/sessions/2026-10-04-sql-single-statement-pairing.md) records this gap and the stop point. No full policy, execution, endpoint, download, dependency or role/UI change was made. Existing catalog/Docker work is preserved.
+
+## SQL terminal-comment pairing — October 4, 2026
+
+[ME] Alayala clarified exactly one real SELECT, optionally followed by one terminal semicolon, then only whitespace/comments. A second semicolon or statement must fail.
+
+[YOU] Added whole-input token boundary checks and narrowly handled SQLGlot's terminal comment-only Semicolon node, preserving its comments on the returned Select. A24 now passes; the original B03, extra statements and malformed trailing comments fail. Fourteen focused tests and seven parser characterizations passed. [Evidence](ai/sessions/2026-10-04-sql-terminal-comment-pairing.md) records the correction to the earlier A24 limitation. Full policy, execution and HTTP remain pending; no unrelated files or dependencies changed.

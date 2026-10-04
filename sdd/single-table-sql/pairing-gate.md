@@ -8,9 +8,9 @@ Authority: alayala's explicit pair-programming instruction supersedes autonomous
 
 ### Current paired step — whole input only
 
-Alayala supplied the `validate_single_statement` flow and authorized only this first check. [Implementation evidence](../../ai/sessions/2026-10-04-sql-single-statement-pairing.md) records ten passing focused tests and seven unchanged parser characterizations. A01 passes; B01/B02 and the original B03 (`;;`) fail. The latest single-`;` example passes. Table checks and comparisons 2–5 remain later paired steps.
+Alayala supplied the `validate_single_statement` flow and authorized only this first check. [Implementation evidence](../../ai/sessions/2026-10-04-sql-single-statement-pairing.md) records the initial ten focused tests and seven parser characterizations; the [terminal-comment follow-up](../../ai/sessions/2026-10-04-sql-terminal-comment-pairing.md) records fourteen focused tests and seven parser characterizations passing after the correction. A01 passes; B01/B02 and the original B03 (`;;`) fail. The latest single-`;` example passes. Table checks and comparisons 2–5 remain later paired steps.
 
-The strict length check currently rejects A24: SQLGlot emits an extra Semicolon node for a comment after the terminal semicolon. This is a known gap against the approved comment grammar, not a newly accepted restriction. Review its handling before completing the whole-input policy. A passing Select root does not authorize downloads or execution.
+A24 now passes. Alayala clarified that one optional terminal semicolon may be followed by whitespace/comments, but never a second semicolon or statement. The check tokenizes the complete input, requires any real semicolon to be the final token, then parses the complete input. Only the verified terminator's comment-only Semicolon node is folded into the returned Select comments; None entries are never filtered. A passing Select root does not authorize downloads or execution.
 
 ### Start with these five comparisons
 
@@ -210,8 +210,8 @@ One scope detail to resolve during review: A19 excludes URLs/external readers, w
 
 ### Stop point
 
-Done: first paired single-statement check; ten focused tests and seven parser characterizations passed.
-Pending: A24 comment handling review, then paired table/token checks; full policy and engine acceptance remain unimplemented.
-Blocker: the strict count check rejects the approved A24 form.
+Done: clarified single-statement/terminal-comment check; fourteen focused tests and seven parser characterizations passed.
+Pending: paired physical-table and remaining token checks; full policy and engine acceptance remain unimplemented.
+Blocker: none for this boundary; A24 now passes.
 
-Next: [ME] review the A24 parser result before expanding this check.
+Next: [ME] review A04 against B10/B11 before the physical-table check.
