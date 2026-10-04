@@ -105,4 +105,4 @@ Done: catalog implementation, offline regression, disposable PostgreSQL/HTTP acc
 Pending: no remaining catalog backend delivery tasks; S24 belongs to later frontend work.
 Blocker: none for the catalog operator check; all three personas passed on the running Docker API.
 
-Next: [ME] continue with preview tasks Step 2; preview implementation has not started.
+Next: [ME] take up Step 5, Refresh and publication, as selected under A16. Preview planning remains preserved.

@@ -10,7 +10,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Authentication](#authentication) | 5 |
 | [Data evidence and findings](#data-evidence-and-findings) | 5 |
 | [Connector, Parquet and storage](#connector-parquet-and-storage) | 8 |
-| [Architecture and contracts](#architecture-and-contracts) | 12 |
+| [Architecture and contracts](#architecture-and-contracts) | 13 |
 | [SQL implementation](#sql-implementation) | 9 |
 | [Dataset previews](#dataset-previews) | 3 |
 | [Delivery and working practices](#delivery-and-working-practices) | 7 |
@@ -54,6 +54,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Architecture and contracts
 
+- [2026-10-04 — Next slice: Refresh and publication](2026-10-04-refresh-publication-next-slice.md)
 - [2026-10-02 — Session log — A4: application state and outage queries](2026-10-02-a4-state-and-outage-queries.md)
 - [2026-10-02 — Session — Data contract v1](2026-10-02-data-contract-v1.md)
 - [2026-10-02 — Session log — Redis, BullMQ, and the outbox data contract](2026-10-02-redis-bullmq-outbox-data-contract.md)

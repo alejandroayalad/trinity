@@ -398,3 +398,7 @@ The [implementation session](ai/sessions/2026-10-04-catalog-permissions-implemen
 ## Slice task status correction — October 4, 2026
 
 [ME] Alayala confirmed catalog completion and identified SQL's stale unchecked tasks and preview's plan-only state. [YOU] Reconciled the three checklists with current source and recorded evidence, marking completed SQL work while separating unfinished acceptance checks. The [status correction](ai/sessions/2026-10-04-slice-task-status-correction.md) records verification and scope. Documentation checks passed; no runtime code changed or runtime tests reran.
+
+## Next slice: Refresh and publication — October 4, 2026
+
+[ME] Alayala selected Step 5, Refresh and publication: persist the candidate and validation evidence, publish automatically without review warnings, require Admin approval for warning-bearing candidates, and switch active publication atomically. [YOU] Recorded the sequence under A16, retained A9's failed/incomplete-check and atomic-reader guarantees, and updated current handoffs. The [supporting record](ai/sessions/2026-10-04-refresh-publication-next-slice.md) distinguishes this accepted decision from future implementation. No publication, code, migration or live operation was performed.

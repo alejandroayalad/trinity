@@ -5,6 +5,8 @@ Status: Plan only. Proposal/specification are approved and design/tasks are draf
 Branch: `feat/catalog-permissions`; catalog and SQL histories are reconciled here. See the [continuation record](../../ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md). Shared execution changes must preserve the existing SQL contracts.
 Basis: [approved specification](spec.md), [design](design.md), A9/A15/A16/A19–A21, and [design/tasks evidence](../../ai/sessions/2026-10-04-dataset-preview-design-tasks.md).
 
+Sequencing: alayala selected Step 5, Refresh and publication, as the next slice under [A16](../../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). This preview plan remains available; its real-data delivery requires that publication lifecycle and complete frozen diagnostic provenance.
+
 ## Human
 
 The slice adds one preview endpoint for role-permitted published rows. It reuses SQL's shared analytical counter, capacity, trusted staging and isolated runner. It adds strict filters, authenticated cursors, a typed runtime operation and an exact preview response. It does not implement a second executor or a SQL grammar change.

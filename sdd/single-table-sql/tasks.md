@@ -78,4 +78,4 @@ Done: SQL backend implementation, the recorded policy/engine/storage/admission/c
 Pending: T15-V, T16-V, T18-V, T20-V and later frontend T20-UI; T04 remains an ongoing duty.
 Blocker: none for acknowledging completed implementation or beginning preview groundwork. The unchecked items remain real verification work.
 
-Next: [ME] continue with [preview tasks Step 2](../dataset-preview/tasks.md#step-2--strict-request-cursor-and-response-groundwork); preview currently contains planning only.
+Next: [ME] take up Step 5, Refresh and publication, under the [accepted sequencing decision](../../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). Preview remains plan-only; publication activation is a separate implementation dependency, not a SQL test task.
