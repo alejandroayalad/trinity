@@ -251,3 +251,17 @@ At closure, 18 focused command tests and all 185 offline tests passed in the exi
 The Step 2 handoff records a corrected settings-keyword mistake in a test fixture. Closure also corrected stale current-status text that still described Step 1 or pending Parquet. Historical session statements remain historical. Decisions and findings are unchanged. Detailed flow, Git revisions, verification limits and the S3 handoff are in the [session close](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md).
 
 Done: five implementation steps and offline verification. Pending: S3 configuration and real protection/live-preparation evidence. Blocker: real-storage acceptance remains open. Next: [ME] read the S3 requirements in `backend/README.md` before configuration.
+
+## FastAPI and local login SDD — October 4, 2026
+
+[ME] Alayala requested proposal, specification, design and tasks for the FastAPI/login slice, corrected Clerk to local authentication, and requested a new branch. This explicitly authorizes drafting all four artifacts together; it does not authorize implementation or delivery to the remote.
+
+[YOU] AI inspected current code, A20 and the canonical contracts, then created `feat/fastapi-local-auth` in a separate worktree from `17864ee` to preserve unrelated uncommitted findings work. AI drafted the [SDD package](sdd/fastapi-local-auth/proposal.md), including proposed implementation defaults, 13 requirements, 24 acceptance scenarios and bounded tasks. Read-only settings provides a real Admin access check; test-only analytical guards are explicitly distinct from future full-product route verification. The [session](ai/sessions/2026-10-04-fastapi-local-auth-sdd.md) records sources, checks, scope and the next gate. No usable personas, migrations or endpoints were created.
+
+## FastAPI/local login implementation — October 4, 2026
+
+[ME] Alayala authorized complete implementation, commit and push of the local-login slice. That supersedes the earlier staged authorization gates; it does not claim an observed human code walkthrough or authorize a PR/merge.
+
+[YOU] AI implemented local credentials/sessions, bounded scrypt work, shared login throttling, PostgreSQL migrations and seeded personas, role/dataset guards, `/me`, read-only Admin settings and safe HTTP errors. AI added synthetic regressions and real PostgreSQL/loopback HTTP acceptance, including commit failure and cross-process throttle checks. A21 attributes exact defaults to AI completion under this request. The original main worktree's unrelated findings work is preserved.
+
+Acceptance passed: 43 auth checks (25 real PostgreSQL plus 18 offline), with the full backend run passing 203 tests and skipping those 25 opt-in checks, which were run separately. Errors found and corrected include token-check order, the Homebrew version suffix, a health-test setup assumption and transaction teardown timing. No password library/lockfile change or real EIA/S3 operation occurred. Homebrew installed native PostgreSQL 17.11 and its formula dependencies for isolated tests; Docker is absent and Compose remains unexecuted. Exact evidence, delivery status and remaining human checks are in the [implementation session](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md).

@@ -1,6 +1,6 @@
 # Backend architecture — Trinity
 
-Status: structure and responsibility boundaries accepted by alayala on October 3, 2026, under [A15](../DECISIONS.md#a15--backend-structure-and-responsibility-boundaries-closed). Implementation pending. The tree below describes the files to implement; it is not a claim that they exist or run.
+Status: structure and responsibility boundaries accepted by alayala on October 3, 2026, under [A15](../DECISIONS.md#a15--backend-structure-and-responsibility-boundaries-closed). Connector/preparation and the [A21 local-login slice](../ai/sessions/2026-10-04-fastapi-local-auth-implementation.md) are implemented; the remaining feature tree is still a roadmap. The tree below describes the files to implement; it is not a claim that they exist or run.
 
 [DECISIONS.md](../DECISIONS.md) is the decision record. [Data contract v1](schema.md) remains authoritative for analytical fields, application models, validation, and publication invariants. This document maps those responsibilities to the accepted backend structure. [A16 API contract](api-contract.md) and [OpenAPI schemas](openapi.json) now define HTTP behavior. [A19 security contract](security-contract.md) selects current local session/role verification under A20, SQL functions, per-query containers, shared query admission and limits; implementation details and runtime verification remain pending.
 
@@ -115,6 +115,8 @@ Routers validate HTTP input and call authenticated feature services. Services ow
 
 ## Local authentication
 
+Implementation scope and tested defaults are recorded in [A21](../DECISIONS.md#a21--local-auth-implementation-settings). `auth/passwords.py` owns bounded scrypt work and `auth/check.py` provides the secret-safe operator HTTP check. `/me` remains in the auth router and coordinates feature read repositories; settings reads use their own router/service.
+
 A20 replaces the Clerk adapter with local login/logout behind `auth/service.py`. The service verifies seeded credentials, issues/revokes sessions and resolves current server-side roles through `auth/repository.py`. The seed entrypoint creates the three personas without silently overwriting existing accounts. Actor IDs come from the authenticated local user; request-supplied roles/actors are rejected. See the [security contract](security-contract.md#authentication-and-trusted-roles) and [API login contract](api-contract.md#local-login-and-logout). Clerk is future production work, not a challenge adapter.
 
 ## Query and preview flow
@@ -143,7 +145,7 @@ Provisional limits: 1,000 SQL output rows, 5 MiB response, 30 seconds including 
 
 | Owner | Canonical application models |
 |---|---|
-| `auth/repository.py` | `local_users`, `local_sessions`; credentials and sessions never enter analytical registration |
+| `auth/repository.py` | `local_users`, `local_sessions`, `auth_login_limits`; credentials and sessions never enter analytical registration |
 | `settings/repository.py` | `shared_settings` |
 | `refresh/repository.py` | `refresh_runs`, `refresh_steps`, `data_versions`, `dataset_artifacts`, `validation_results`, `refresh_control`, `failure_warnings`, `api_commands` |
 | `publication/repository.py` | `approvals`, `publication_events`, `active_publication` |

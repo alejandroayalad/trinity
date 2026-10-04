@@ -525,7 +525,7 @@ Source: alayala's explicit security and documentation instructions; [session evi
 
 Category: **Technical / code**.
 
-Status: accepted by alayala on October 3, 2026. Documentation only; authentication and seeded accounts are not implemented or tested.
+Status: accepted by alayala on October 3, 2026. The original record was documentation only. The October 4 [implementation slice](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md) now implements local credentials, sessions, seeding, `/me` and settings reads; A21 records defaults and remaining verification limits.
 
 **Choice:** Roll back A8's Clerk selection for the challenge. Use local seeded Viewer, Analyst and Admin accounts with credential verification and server-issued sessions. Preserve A19's server-side roles, permission checks before protected reads, current session/role checks, denied unknown roles, and server-derived actor attribution. No Clerk account, key or network call is required for challenge authentication. Clerk is future production work, not a second challenge mode or automatic fallback.
 
@@ -574,9 +574,27 @@ Status: finalized by AI on October 2, 2026, under alayala's instruction, “fina
 
 Supporting record: [data-contract session](ai/sessions/2026-10-02-data-contract-v1.md).
 
+### A21 — Local-auth implementation settings
+
+Category: **Technical / code**.
+
+Status: implemented October 4, 2026 under alayala's request to complete, commit and push the local-login slice. Exact defaults are AI-authored implementation completion; no separate human review of each default or evaluator walkthrough is claimed. A20 remains the authentication direction; A19/A16 permissions and workflow are unchanged.
+
+**Choice and reason:** Use Python scrypt (N=131072, r=8, p=1, 16-byte random salt, 64-byte output, 256 MiB maxmem) without a new password dependency. Verify credentials in disposable spawned processes, at most two per API process, with a 15-second overall authentication budget and termination/reaping before releasing capacity. Tokens use 32 random bytes, SHA-256 digests and an absolute eight-hour lifetime. Roles and session status are read on each request.
+
+Use native PostgreSQL 17.11 for verified local acceptance and `postgres:17.11-bookworm` for the supplied database-only Compose configuration. Use synchronous Psycopg work in FastAPI's thread workers, a lazy pool of zero to four connections per API process, five-second connection/acquisition/statement/lock/transaction bounds within the operation budget, and repeatable-read app-entry snapshots. Child termination has a one-second grace before kill; measured normal verification was 0.54 seconds, not a general performance guarantee.
+
+Login throttling is atomic in PostgreSQL, with 60-second windows of five attempts per username, 30 per direct peer and 60 globally. Ignore forwarded peer headers. Counters store digested keys and expire through bounded cleanup. The complete slice runs one API process locally; shared-counter tests also use multiple processes. This login counter does not replace future A19 analytical admission/rate accounting.
+
+**Alternative and tradeoff:** A new Argon2id dependency remains an alternative if measured scrypt behavior is unsuitable; no silent downgrade is allowed. JWT role snapshots and process-only login counters would lose immediate current-role/revocation checks or shared limits. Scrypt consumes roughly 128 MiB per active verification plus process overhead; two simultaneous checks bound that per-process cost. Fixed windows allow boundary bursts. Browser storage, public ingress and authentication recovery flows remain outside this slice.
+
+**Flow and failure case:** login reserves a shared attempt → verifies full-cost credentials → locks and rechecks the user → commits a session digest → returns a token. A deferred database constraint that fails at commit yields `503 auth_unavailable` with no returned token and no committed session. `/me` joins the active publication in the identity transaction; a missing singleton or failed read returns 503 instead of a false waiting state.
+
+**Evidence:** [implementation session](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md), [design](sdd/fastapi-local-auth/design.md), [backend setup](backend/README.md#local-api-and-three-personas). Native PostgreSQL/HTTP and offline tests passed. Docker/Compose startup, a new locked install and evaluator-owned execution remain unverified. Full analytical and refresh routes are separate slices. Reference: [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Python hashlib](https://docs.python.org/3/library/hashlib.html#hashlib.scrypt), [official PostgreSQL image](https://hub.docker.com/_/postgres).
+
 ## Proposed decisions
 
-A16 accepts the API flow and A19 accepts the security design. Remaining implementation details are listed in [the security contract](docs/security-contract.md#remaining-implementation-details); PostgreSQL pooling/sync-async defaults remain proposals in [backend architecture](docs/backend.md#proposed-database-execution-model). This heading is retained for historical links.
+A16 accepts the API flow and A19 accepts the security design. Remaining implementation details are listed in [the security contract](docs/security-contract.md#remaining-implementation-details); A21 now records the implemented local API pooling/synchronous execution defaults; other remaining details stay in [backend architecture](docs/backend.md#proposed-database-execution-model). This heading is retained for historical links.
 
 ## Arkham decision topics still to complete
 
