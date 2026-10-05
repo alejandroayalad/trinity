@@ -1,5 +1,11 @@
 # Engineering Notes — Trinity
 
+## Schedule settings specification and design — October 5, 2026
+
+[ME] Alayala chose to complete each pending proposal on its own branch, starting with Schedule settings. He did not merge the `frontend` branch into it. [YOU] Claude (OpenCode) traced the settings, refresh admission, migration, transport and worker code and drafted the [specification](sdd/schedule-settings/spec.md).
+
+[ME] Alayala accepted D01 (300-second due window) and D03 (PostgreSQL clock; secret-free `scheduler` role). He rejected the AI's D02 recommendation and set the no-op save rule: check `If-Match` first, so a stale client never gets `200`; identical values then return the current record without a write. [YOU] Recorded D01–D03 under A16/A19 and in the API contract, then drafted the [design](sdd/schedule-settings/design.md) and [tasks](sdd/schedule-settings/tasks.md). The [session](ai/sessions/2026-10-05-schedule-settings-specification.md) has the evidence. Planning only; no code or test was run.
+
 ## Pending endpoint proposals — October 5, 2026
 
 [ME] Alayala requested a main-based `pending-endpoints-frontend` branch, one commit per proposal and a push; he clarified planning only. [YOU] Codex cherry-picked the dashboard proposal and drafted [Schedule settings](sdd/schedule-settings/proposal.md) from the current API and admission flow. The [delivery session](ai/sessions/2026-10-05-pending-endpoints-proposals-delivery.md) records scope and checks. Endpoint code and runtime behavior remain unchanged.
