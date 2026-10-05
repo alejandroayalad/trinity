@@ -2855,7 +2855,7 @@
         "tags": [
           "analyst"
         ],
-        "description": "Only facility_outages or generator_outages. Distinct exact facility IDs present in range, ordered by facility. Use latest non-null name in range; ties must be deterministic. Search matches case-insensitive ID/name literal substring, not SQL wildcards. No unpublished inventory.",
+        "description": "Only facility_outages or generator_outages. Distinct exact facility IDs present in range, ordered by facility. Use latest non-null name in range; same-date ties use binary ascending name order. Search matches a literal Unicode case-folded substring of ID or displayed latest name, without Unicode normalization or SQL wildcards. Older labels do not match. No unpublished inventory.",
         "x-minimum-role": "analyst",
         "parameters": [
           {

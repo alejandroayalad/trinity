@@ -684,3 +684,49 @@ Set `TRINITY_TEST_QUERY_IMAGE` to the existing immutable `sha256:...` image ID a
 Without them, container tests skip and do not establish that gate. The service runner
 owns only its temporary PostgreSQL cluster and disposable Redis container. Synthetic
 storage fixtures establish no new EIA finding or live S3 protection claim.
+
+
+## Plant and generator filter choices
+
+Analyst/Admin can use `GET /api/v1/datasets/{dataset_key}/facilities` for
+`facility_outages` or `generator_outages`. The generator route is
+`GET /api/v1/datasets/generator_outages/generators?facility=0046`; the source ID
+is exact, so `0046` and `46` are different values. Viewer and unsupported
+dataset/route combinations receive `404 dataset_not_found` before file access.
+
+Both routes accept `start`, `end`, `limit` and `cursor`. Dates use preview's
+30-day defaults and maximum 366-day inclusive range. Page size defaults to 50
+and caps at 100. Facilities also accept `search`; generators require `facility`
+and reject `search`. Duplicate, empty and unsupported parameters are rejected.
+
+Choices come from all matching published observations before page slicing.
+Facilities display the latest non-null name in the range, using binary ascending
+name order for same-date ties. Search matches the ID or that displayed name by
+literal Unicode case folding, with no normalization. `%` and `_` are ordinary
+characters. Earlier names do not match. Generator IDs are distinct within the
+selected Plant. Empty results return `items: []` and `next_cursor: null`.
+
+Repeat the same effective inputs with `next_cursor` to continue. A changed
+publication returns `409 publication_changed`; restart from the first page.
+Changing range, search, page size or parent invalidates a cursor. These choices
+never modify submitted SQL. The frontend must clear an obsolete generator
+selection when its parent Plant changes.
+
+The API reuses `enable_preview`, its configured cursor key ring, published S3
+reader, query image, staging volume and network-disabled execution supervisor.
+Execution remains disabled by default; a current API and matching query image
+plus an active publication are required. No dependency or migration is added.
+
+From `backend`, use the repository's locked Python environment:
+
+```bash
+uv run --locked python -m unittest discover -s tests -p 'test_choice*.py' -v
+uv run --locked python tests/run_local_sql_checks.py --choices
+```
+
+The second command always creates a disposable PostgreSQL cluster. Set the
+existing `TRINITY_TEST_QUERY_IMAGE` to an immutable image ID built from this
+source and `TRINITY_TEST_DOCKER_SOCKET` to the local socket to include the real
+container checks. `--all` also includes choices with SQL, preview, national,
+auth and catalog regression checks. Skipped runtime tests are not acceptance.
+See [measured evidence](../ai/sessions/2026-10-05-plant-filter-implementation.md).

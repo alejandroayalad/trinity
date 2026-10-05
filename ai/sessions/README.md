@@ -87,6 +87,8 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Dataset previews
 
+- [2026-10-05 — Plant and generator choices — implementation and delivery](2026-10-05-plant-filter-implementation.md)
+
 - [2026-10-04 — Dataset preview Step 5: operator tooling and delivery handoff](2026-10-04-dataset-preview-step-5-handoff.md)
 
 - [2026-10-04 — Dataset preview Step 4: automated acceptance passed](2026-10-04-dataset-preview-step-4-acceptance.md)

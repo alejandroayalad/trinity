@@ -76,5 +76,3 @@ def matches_search(identifier: str, label: str | None, search: str | None) -> bo
     """Treat %, _, quotes and Unicode as literal text, without normalization."""
     return search is None or any(search.casefold() in value.casefold()
                                  for value in (identifier, label or ''))
-
-
