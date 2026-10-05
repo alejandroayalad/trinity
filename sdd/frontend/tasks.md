@@ -29,16 +29,18 @@ Rules for every step:
 
 Scope: R01–R06, R15, R17, R19, R21, R59. Requires the approved package list.
 
-- [ ] [YOU] Create `frontend/` with Vite + React + TypeScript (strict). Pin the approved versions, add `.nvmrc` and `engines`, and commit `package-lock.json`. Run `npm ci` and `npm audit`; record the results and any peer warnings.
-- [ ] [YOU] Add the `/api` proxy to `127.0.0.1:8000`, ESLint config (including the `parseFloat`/`Number(` ban outside tests), and scripts: `dev`, `build`, `typecheck`, `lint`, `test`, `e2e`.
-- [ ] [YOU] Add `tokens.css` with every handoff token, `base.css` (focus outline, reduced motion), Google Fonts link and the four logo images from the handoff copy.
-- [ ] [YOU] Add `lib/decimal.ts`, `lib/dates.ts`, `lib/ids.ts` with unit tests: S06, S09, half-up rounding, negative values, zero capacity, invalid strings.
-- [ ] [YOU] Add `api/types.ts` from `docs/openapi.json`, plus a test that compares its enums with the OpenAPI file.
-- [ ] [YOU] Add `api/client.ts` with problem parsing, ETag capture, `Retry-After` and idempotency keys, with unit tests for each error class in the API contract table.
-- [ ] [YOU] Add the base components (Button, StatusBadge, Segmented, Tabs, Dialog with a focus trap, Toast, MissingChip, ShortId, Callout, Field, Switch), with component tests for keyboard use and focus.
+- [x] [YOU] Create `frontend/` with Vite + React + TypeScript (strict). Pin the approved versions, add `.nvmrc` and `engines`, and commit `package-lock.json`. Run `npm ci` and `npm audit`; record the results and any peer warnings. Done with the official Node.js 24.21.0 build (SHA-256 checked): 240 packages, `npm audit` found 0 vulnerabilities, no peer warnings. npm 11.19 reported that `fsevents@2.3.3` has an install script not covered by `allowScripts`; it was not approved or run.
+- [x] [YOU] Add the `/api` proxy to `127.0.0.1:8000`, ESLint config (including the `parseFloat`/`Number(` ban outside tests), and scripts: `dev`, `build`, `typecheck`, `lint`, `test`, `e2e`. The ban also covers `Number.parseFloat` and unary `+`; only `src/lib/**/*.test.ts` is exempt. `TRINITY_API_TARGET` can point the proxy at a disposable test API; the default stays `127.0.0.1:8000`.
+- [x] [YOU] Add `tokens.css` with every handoff token, `base.css` (focus outline, reduced motion), Google Fonts link and the four logo images from the handoff copy. The images match the PROVENANCE SHA-256 values.
+- [x] [YOU] Add `lib/decimal.ts`, `lib/dates.ts`, `lib/ids.ts` with unit tests: S06, S09, half-up rounding, negative values, zero capacity, invalid strings.
+- [x] [YOU] Add `api/types.ts` from `docs/openapi.json`, plus a test that compares its enums with the OpenAPI file.
+- [x] [YOU] Add `api/client.ts` with problem parsing, ETag capture, `Retry-After` and idempotency keys, with unit tests for each error class in the API contract table.
+- [x] [YOU] Add the base components (Button, StatusBadge, Segmented, Tabs, Dialog with a focus trap, Toast, MissingChip, ShortId, Callout, Field, Switch), with component tests for keyboard use and focus.
 - [ ] [ME] Review the token file against the handoff token table. The first visual check is in step 3.
 
 Gate: `typecheck`, `lint`, `test` and `build` pass. The build output has no fixture or secret (S26 search).
+
+Result (October 5): passed. `npm ci`, `npm audit` (0 vulnerabilities), `typecheck`, `lint`, `test` (51 tests in 7 files, O evidence) and `build` with `scripts/check-build.mjs` all passed on Node.js 24.21.0. A lint test proves that `Number(`, `parseFloat`, `Number.parseFloat` and unary `+` fail lint in application code. The [ME] token review is pending.
 
 ### Step 3 — Sign-in, session and shell (F2)
 

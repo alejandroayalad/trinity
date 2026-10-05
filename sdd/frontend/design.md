@@ -90,8 +90,9 @@ frontend/
     session/session.ts       sessionStorage, expiry timer
     session/SessionProvider.tsx
     session/capabilities.ts  route → capability map
-    components/              Button, StatusBadge, Segmented, Tabs, Dialog,
-                             Toast, MissingChip, ShortId, Callout, Field, Switch
+    components/controls/     Button, Segmented, Tabs, Switch, Field, ShortId
+    components/feedback/     StatusBadge, MissingChip, Callout, Toast, states
+    components/overlay/      Dialog, focus trap
     shell/                   AppShell, Sidebar, ContextBar, Drawer
     pages/signin/  pages/unavailable/  pages/dashboard/  pages/catalog/
     pages/sql/     pages/refresh/      pages/settings/

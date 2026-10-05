@@ -1,0 +1,97 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 14px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-field-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--color-slate);
+  color: var(--color-ink);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary {
+  border-color: var(--color-orange-border);
+  background: var(--color-orange);
+  font-weight: 600;
+}
+
+.primary:hover:not(:disabled) {
+  border-color: var(--color-orange-border);
+  background: var(--color-orange-hover);
+}
+
+.destructive {
+  color: var(--color-error-fg);
+}
+
+.destructive:hover:not(:disabled) {
+  border-color: var(--color-error-fg);
+  color: var(--color-error-fg);
+}
+
+.destructiveSolid {
+  border-color: var(--color-error-fg);
+  background: var(--color-error-fg);
+  color: var(--color-on-dark);
+  font-weight: 600;
+}
+
+.destructiveSolid:hover:not(:disabled) {
+  border-color: var(--color-error-text);
+  background: var(--color-error-text);
+  color: var(--color-on-dark);
+}
+
+.compact {
+  height: var(--filter-height);
+  padding: 0 12px;
+  font-size: var(--text-sm);
+}
+
+.small {
+  height: var(--control-small);
+  padding: 0 8px;
+  font-size: var(--text-label);
+}
+
+.full {
+  width: 100%;
+  height: var(--input-height);
+}
+
+/* Text-style link button: underlined slate text, used for "← Refresh" and table links. */
+.link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-slate);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: var(--transition-control);
+}
+
+.link:hover {
+  color: var(--color-ink);
+}
