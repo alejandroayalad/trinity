@@ -614,3 +614,7 @@ login setup failures and does not claim their cause was fixed. Synthetic data is
 `main`. [YOU] separated test infrastructure from acceptance documentation for
 reviewable commits and preserved history without squashing. Deployment remains
 outside this Git delivery.
+
+## Failed-run recovery specification — October 5, 2026
+
+[ME] Selected recovery next after settings and authorized proposal/specification commit and push. [YOU] updated the proposal priority and drafted the two-command specification with 12 requirements and 12 acceptance scenarios, based on current code and A16/A19/A20/A23/A24. P01 (current-settings snapshot for a new run) is a recommendation awaiting review, not an accepted decision. Design, implementation and runtime acceptance remain pending. See the [delivery record](ai/sessions/2026-10-05-failed-run-recovery-specification-delivery.md).
