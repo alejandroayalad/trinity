@@ -44,9 +44,8 @@ class WriteFailureDatabase:
             raise Problem(503,'dependency_unavailable')
 
 
-@unittest.skipUnless(DSN, 'Use the disposable PostgreSQL runner with --refresh')
-class RecoveryPostgresTests(PostgresFixture, unittest.TestCase):
-    """Check actual constraints, linkage and all-or-nothing database effects."""
+class RecoveryFixture(PostgresFixture):
+    """Share stopped-state inputs and snapshots without inheriting test cases."""
 
     def failure(self, *, candidate=True):
         """Produce terminal failure through the real fenced service, with no child.
@@ -89,6 +88,11 @@ class RecoveryPostgresTests(PostgresFixture, unittest.TestCase):
         return {table:self.sql(f'SELECT * FROM {table} ORDER BY id') for table in (
             'refresh_runs','data_versions','failure_warnings','refresh_control',
             'job_outbox','api_commands','active_publication','shared_settings')}
+
+
+@unittest.skipUnless(DSN, 'Use the disposable PostgreSQL runner with --refresh')
+class RecoveryPostgresTests(RecoveryFixture, unittest.TestCase):
+    """Check actual constraints and all-or-nothing database effects."""
 
     def test_rerun_preserves_old_snapshot_and_admits_current_revision(self):
         self.failure()
