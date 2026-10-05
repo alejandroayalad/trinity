@@ -26,11 +26,11 @@ def main():
     args = parser.parse_args()
     patterns = ['test_sql_postgres.py']
     if args.preview or args.all:
-        patterns.extend(('test_preview_postgres.py', 'test_preview_runtime.py'))
+        patterns.extend(('test_preview_postgres.py', 'test_preview_runtime.py', 'test_query_guarantees.py'))
     if args.all:
         patterns.extend(('test_auth_postgres.py', 'test_catalog_postgres.py'))
     if args.runtime_only:
-        patterns = ['test_preview_runtime.py']
+        patterns = ['test_preview_runtime.py', 'test_query_guarantees.py']
     if args.refresh:
         patterns = ['test_refresh_postgres.py', 'test_refresh_admission.py', 'test_refresh_dispatch.py', 'test_refresh_worker.py', 'test_refresh_candidates.py', 'test_publication*.py']
     if args.publication:
