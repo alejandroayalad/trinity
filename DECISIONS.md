@@ -29,6 +29,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A20 | Technical / code | Seeded local authentication for the challenge; unchanged server-side permissions; Clerk deferred to future production work. |
 | A24 | Technical / code | Publication first delivery: one worker host, executable operator reconciliation and separate Admin same-candidate retry; automatic crash recovery deferred. |
 | A25 | Product / business | Alayala's Figma mockups and the ChatGPT-created Trinity brand are the inputs for the planned Claude design handoff, with separate authorship records. |
+| A26 | Technical / code | React, TypeScript and Vite for the web frontend in `frontend/`; other packages need separate approval; exact versions under A17. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -771,9 +772,25 @@ Status: selected by alayala on October 4, 2026 through his supplied mockups, bra
 
 **Reason and alternatives:** Preserve the human interface design and make the use of AI visible to the evaluator. Do not describe the entire design as AI-generated or the brand as entirely handmade. No competing brand or frontend framework was selected in this request.
 
-**Boundary and precedence:** A9/A16/A19/A20 and the current API, data and security contracts govern behavior. The references do not change roles, field names, missing-value handling, SQL scope or publication gates. Reconcile any mismatch before implementation. Final styling and frontend technology remain open; mock values and visible states do not prove runtime behavior.
+**Boundary and precedence:** A9/A16/A19/A20 and the current API, data and security contracts govern behavior. The references do not change roles, field names, missing-value handling, SQL scope or publication gates. Reconcile any mismatch before implementation. Final styling and frontend technology remain open; mock values and visible states do not prove runtime behavior. Later refinement: [A26](#a26--frontend-stack) selects the frontend technology on October 4, 2026; final styling remains open.
 
 **Evidence and validation:** [Engineering Notes](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026) and the [reference inventory](ai/sessions/2026-10-04-figma-brand-handoff.md) separate alayala's authorship statement from the supplied screenshots. The native Figma file and earlier ChatGPT conversation were not inspected. Claude's adaptation, asset exports and frontend behavior remain unverified.
+
+**Explorer handoff package — authorship pending, October 5, 2026:** alayala supplied a second package, `design_handoff_trinity_explorer/` (`Trinity.dc.html`, its README, 18 screenshots and 4 logo images), now copied to [docs/design-reference/2026-10-04-explorer-handoff/](docs/design-reference/2026-10-04-explorer-handoff/PROVENANCE.md) without `support.js`. The author of `Trinity.dc.html` and its README is **pending confirmation**. Do not attribute these files to a person or tool without evidence. Alayala reported that design images and design prompts were generated in a Codex chat; that chat was not inspected.
+
+### A26 — Frontend stack
+
+Category: **Technical / code**.
+
+Status: selected by alayala on October 4, 2026, when he answered proposal Q1 ("yes, go with React + TypeScript + Vite") and requested the frontend specification. This is a technology choice, not implementation approval.
+
+**Choice:** Build the web frontend in `frontend/` with React, TypeScript and Vite. On October 5, 2026 alayala confirmed that this approval covers only those three technologies. Every other package, including those the proposal recommends (React Router, TanStack Query, test and lint tools), is listed for separate approval in the [specification](sdd/frontend/spec.md#dependencies-pending-approval). The development server proxies `/api` to the local API, so local work needs no CORS change.
+
+**Reason and alternatives:** The design handoff assumes a React (Vite) codebase, and its prototype is written as React components. No competing framework was proposed.
+
+**Boundary:** A17 governs exact versions and the lockfile. A9/A16/A19/A20 and the current contracts govern data, roles and errors (A25). Spec D01 (accepted October 5): the browser keeps the session token in `sessionStorage`, sends it only in `Authorization: Bearer`, never in a URL, and clears it on sign-out, `401` and expiry. Alayala first answered "memory only" and then corrected it to `sessionStorage`. D02–D04 are accepted in the specification.
+
+**Evidence:** [frontend proposal](sdd/frontend/proposal.md) and [session record](ai/sessions/2026-10-04-frontend-plan-and-spec.md). No frontend code exists or has been tested.
 
 ## Proposed decisions
 
