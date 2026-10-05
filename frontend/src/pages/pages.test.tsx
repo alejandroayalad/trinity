@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router'
 import { afterEach, expect, test, vi } from 'vitest'
@@ -164,3 +164,106 @@ test('an explicit facility link overrides filters retained from an earlier visit
   expect(request?.search.get('facility')).toBe('001a')
   expect(request?.search.has('start')).toBe(false)
 })
+
+// These page tests cross the API client boundary with synthetic responses.
+// The command must cause the state change before a subsequent GET can show it.
+for (const action of [
+  { name: 'rerun', label: 'Run again', method: 'POST', suffix: 'rerun', target: 'replacement' },
+  { name: 'delete_warning', label: 'Resolve warning', method: 'DELETE', suffix: 'warning', target: 'failed-run' },
+]) {
+  test(`enabled recovery ${action.name} sends the command and displays the resulting run`, async () => {
+    const admin = { ...me, role: 'admin', capabilities: [...me.capabilities, 'refresh:read', 'refresh:recover'] }
+    const run = { run_id: 'failed-run', run_seq: '4', revision: '7', requested_at: publication.published_at, status: 'failed', candidate: null, warning: null, actions: [{ action: action.name, enabled: true, reason_code: null }], steps: [], next_steps_cursor: null, poll_after_seconds: null }
+    let accepted = false
+    const commandPath = `/api/v1/refresh-runs/failed-run/${action.suffix}`
+    const { calls } = stubFetch({
+      'GET /api/v1/me': json(200, admin),
+      'GET /api/v1/refresh-runs/failed-run': () => json(200, accepted ? { ...run, revision: '8', actions: [] } : run, { ETag: accepted ? '"run-8"' : '"run-7"' }),
+      'GET /api/v1/refresh-runs/replacement': () => {
+        expect(accepted).toBe(true)
+        return json(200, { ...run, run_id: 'replacement', run_seq: '5', status: 'requested', actions: [] })
+      },
+      [`${action.method} ${commandPath}`]: () => {
+        accepted = true
+        return json(202, { operation_id: 'operation', action: action.name, accepted_at: publication.published_at, run_id: action.target, version_id: null, status_url: `/api/v1/refresh-runs/${action.target}`, result: action.name === 'rerun' ? 'queued' : 'warning_resolved', replayed: false })
+      },
+    })
+    mount('/refresh/failed-run')
+    const button = await screen.findByRole('button', { name: action.label })
+    expect(screen.getByText('Refresh failed')).toBeInTheDocument()
+    fireEvent.click(button)
+    expect(calls.filter((call) => call.method !== 'GET')).toHaveLength(0)
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: action.label }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    // Resolving a warning preserves the failed run in history. Its actions
+    // disappear after the refreshed response; rerun opens a different run.
+    await waitFor(() => expect(screen.queryByRole('button', { name: action.label })).not.toBeInTheDocument())
+    await screen.findByText(action.name === 'rerun' ? 'Running' : 'Failed', { exact: true })
+    expect(screen.getByRole('heading', { name: action.name === 'rerun' ? 'Run #5' : 'Run #4' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: action.label })).not.toBeInTheDocument()
+    const commands = calls.filter((call) => call.method !== 'GET')
+    expect(commands).toHaveLength(1)
+    expect(commands[0]).toMatchObject({ method: action.method, path: commandPath, body: action.method === 'POST' ? {} : undefined })
+    expect(commands[0].headers.get('If-Match')).toBe('"run-7"')
+    expect(commands[0].headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/)
+    const commandIndex = calls.indexOf(commands[0])
+    expect(calls.slice(commandIndex + 1).some((call) => call.method === 'GET' && call.path === `/api/v1/refresh-runs/${action.target}`)).toBe(true)
+    expect(calls.slice(commandIndex + 1).some((call) => call.path === '/api/v1/me')).toBe(true)
+  })
+}
+
+for (const setup of [false, true]) {
+  test(`Admin ${setup ? 'setup completes and opens Refresh' : 'opens Schedule and saves all edited values'}`, async () => {
+    const admin = { ...me, role: 'admin', landing_screen: setup ? 'setup' : 'waiting', capabilities: [...me.capabilities, 'settings:read', 'settings:write', 'refresh:read'] }
+    const settings = { setup_completed_at: setup ? null : publication.published_at, schedule_enabled: true, daily_time: '06:15', timezone: 'America/Merida', revision: '3', updated_at: publication.published_at, updated_by: 'test' }
+    const edited = { schedule_enabled: false, daily_time: '08:45', timezone: 'UTC' }
+    const { calls } = stubFetch({
+      'GET /api/v1/me': json(200, admin),
+      'GET /api/v1/settings': json(200, settings, { ETag: '"settings-3"' }),
+      'GET /api/v1/settings/schedule-status': [json(200, { next_check_local: '2026-10-05T06:15:00', timezone: settings.timezone, blocker: null }), json(200, { next_check_local: null, blocker: { message: 'Schedule is disabled.' } })],
+      'PUT /api/v1/settings': json(200, { ...settings, ...edited, setup_completed_at: publication.published_at, revision: '4' }, { ETag: '"settings-4"' }),
+      'GET /api/v1/refresh-runs': json(200, { items: [], actions: [], active_run: null, blocker: null, unresolved_warning: null, next_cursor: null }),
+    })
+    mount('/')
+    if (!setup) fireEvent.click(await screen.findByRole('link', { name: 'Schedule' }))
+    await screen.findByRole('heading', { name: setup ? 'Set up Trinity' : 'Schedule' })
+    expect(screen.getByRole('switch', { name: 'Schedule enabled' })).toBeChecked()
+    expect(screen.getByLabelText('Time', { exact: true })).toHaveValue('06:15')
+    expect(screen.getByLabelText('Timezone')).toHaveValue('America/Merida')
+    const save = screen.getByRole('button', { name: setup ? 'Complete setup' : 'Save schedule' })
+    if (setup) expect(save).toBeEnabled()
+    else expect(save).toBeDisabled()
+    fireEvent.click(screen.getByRole('switch', { name: 'Schedule enabled' }))
+    fireEvent.change(screen.getByLabelText('Time', { exact: true }), { target: { value: edited.daily_time } })
+    fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: edited.timezone } })
+    expect(save).toBeEnabled()
+    fireEvent.click(save)
+    if (setup) await screen.findByRole('heading', { name: 'Refresh' })
+    else {
+      await screen.findByText('Schedule saved.')
+      expect(screen.getByRole('switch', { name: 'Schedule enabled' })).not.toBeChecked()
+      expect(screen.getByLabelText('Time', { exact: true })).toHaveValue(edited.daily_time)
+      expect(screen.getByLabelText('Timezone')).toHaveValue(edited.timezone)
+      expect(screen.getByRole('button', { name: 'Save schedule' })).toBeDisabled()
+      await screen.findByText('Schedule is disabled.')
+    }
+    const writes = calls.filter((call) => call.method !== 'GET')
+    expect(writes).toHaveLength(1)
+    expect(writes[0]).toMatchObject({ method: 'PUT', path: '/api/v1/settings', body: edited })
+    expect(writes[0].headers.get('If-Match')).toBe('"settings-3"')
+  })
+}
+
+for (const role of ['viewer', 'analyst']) {
+  for (const path of ['/setup', '/settings']) {
+    test(`${role} cannot open ${path} or request settings`, async () => {
+      const { calls } = stubFetch({ 'GET /api/v1/me': json(200, { ...me, role, landing_screen: 'waiting', capabilities: role === 'viewer' ? ['national:read'] : me.capabilities }) })
+      mount(path)
+      await screen.findByRole('heading', { name: 'Nothing to show yet' })
+      expect(screen.queryByRole('link', { name: 'Schedule' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('switch', { name: 'Schedule enabled' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Save schedule|Complete setup/ })).not.toBeInTheDocument()
+      expect(calls.every((call) => call.method === 'GET' && call.path === '/api/v1/me')).toBe(true)
+    })
+  }
+}

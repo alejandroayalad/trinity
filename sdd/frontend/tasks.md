@@ -112,7 +112,7 @@ Gate: backend tests, O and R checks pass.
 Scope: `PUT /settings`, `GET /settings/schedule-status`; R55–R58.
 
 - [x] [YOU] Record the bounded backend design and implement settings with tests for compare-and-swap, one-time setup and blocker order. See the continuation note and measured results below.
-- [ ] [YOU] Schedule and setup pages; S21 component and R checks.
+- [ ] [YOU] Schedule and setup pages; S21 component and R checks. Positive component coverage now verifies navigation, initial values, all saved fields, saved UI state, setup-to-Refresh and non-admin guards; existing 412 coverage remains. Extended real-browser schedule editing is pending.
 - [ ] [ME] Compare with handoff screenshot 16.
 
 Gate: backend tests, O and R checks pass.
@@ -123,7 +123,7 @@ Scope: facility and generator choice endpoints, rerun, delete warning; R35, R53.
 
 - [x] [YOU] Record the bounded backend design and implement choice/recovery endpoints with offline, PostgreSQL and isolated-runtime tests.
 - [x] [YOU] Replace the exact-ID input with the searchable facility list. Add the "Run again" and "Resolve warning" actions.
-- [ ] [YOU] Component and R checks for S14 and S20.
+- [ ] [YOU] Component and R checks for S14 and S20. S14 browser assertions already cover exact `001a` and Generator gating. S20 now has positive component tests for both recovery commands, ETag/idempotency headers and refreshed UI; real-browser recovery remains pending. See [focused evidence](../../ai/sessions/2026-10-05-recovery-schedule-component-coverage.md).
 
 Gate: backend tests, O and R checks pass.
 

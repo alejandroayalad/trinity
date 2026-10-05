@@ -626,3 +626,12 @@ This is Codex implementation work, separate from the earlier Claude scaffold and
 alayala's original Figma design. Preserve the
 [canonical design attribution](#figma-mockups-brand-and-claude-handoff--october-4-2026)
 and A25. No later AI contribution changes the authorship of the original mockups.
+
+
+### Recovery and schedule component coverage — October 5, 2026
+
+[ME] Prioritized positive recovery and basic schedule behavior.
+[YOU] Added eight component tests; the full frontend suite passed 77 tests.
+See [scope, corrections and evidence limits](ai/sessions/2026-10-05-recovery-schedule-component-coverage.md).
+This is synthetic API/component evidence. Real-browser recovery and extended
+schedule editing remain open; original design attribution is unchanged.
