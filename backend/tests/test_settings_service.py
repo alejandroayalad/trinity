@@ -305,5 +305,100 @@ class HttpTests(unittest.TestCase):
                 self.assertEqual(self.client.get("/api/v1/settings/schedule-status", headers=HEADERS).status_code, 403)
 
 
+class OperatorScheduleCheckTests(unittest.TestCase):
+    """Check the --schedule operator mode against a scripted HTTP server.
+
+    httpx.MockTransport answers each request from the handler below. It
+    keeps a small settings state, so the checker sees revisions and ETags
+    change as the real API would. run_count lets a test simulate a run that
+    appears during the check.
+    """
+
+    def server(self, *, revision=0, saved=None, run_count=(0, 0)):
+        from trinity.auth.check import ScheduleCheck
+        import httpx
+        state = {"revision": revision, "saved": saved, "runs": list(run_count), "calls": []}
+
+        def settings_body():
+            values = state["saved"] or {"schedule_enabled": False, "daily_time": None, "timezone": None}
+            return {**values, "revision": str(state["revision"]), "updated_at": "2026-10-05T12:00:00Z",
+                    "updated_by": "admin" if state["saved"] else None,
+                    "setup_completed_at": "2026-10-05T12:00:00Z" if state["saved"] else None}
+
+        def handler(request):
+            path, method = request.url.path, request.method
+            state["calls"].append((method, path, request.headers.get("if-match")))
+            tag = {"etag": f'"settings-{state["revision"]}"'}
+            if path.endswith("/settings") and method == "GET":
+                return httpx.Response(200, json=settings_body(), headers=tag)
+            if path.endswith("/settings") and method == "PUT":
+                if request.headers["if-match"] != tag["etag"]:
+                    return httpx.Response(412, json={"code": "revision_mismatch"})
+                body = json.loads(request.content)
+                if body != state["saved"]:
+                    state["saved"], state["revision"] = body, state["revision"] + 1
+                return httpx.Response(200, json=settings_body(), headers={"etag": f'"settings-{state["revision"]}"'})
+            if path.endswith("/schedule-status"):
+                return httpx.Response(200, json={
+                    "settings_revision": str(state["revision"]), "schedule_enabled": True,
+                    "next_check_at": "2026-10-06T10:15:00Z", "next_check_local": "2026-10-06T06:15:00-04:00",
+                    "timezone": "America/New_York", "evaluated_at": "2026-10-05T12:00:00.123456Z",
+                    "eligible_now": True, "blocker": None})
+            if path.endswith("/refresh-runs"):
+                count = state["runs"].pop(0)
+                return httpx.Response(200, json={"items": [{}] * count, "active_run": None})
+            raise AssertionError(path)
+
+        client = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://test")
+        return client, state, ScheduleCheck("06:15", "America/New_York")
+
+    def test_first_save_reports_safe_summary_and_checks_stale_tag(self):
+        from trinity.auth.check import check_schedule
+        client, state, schedule = self.server()
+        with client:
+            check_schedule(client, HEADERS, "admin", schedule)
+        self.assertEqual(schedule.summary, "revision 0->1; next check 2026-10-06T06:15:00-04:00; "
+                                           "blocker none; refresh runs unchanged (0)")
+        # The second PUT repeats the old tag and must be refused with 412.
+        puts = [call[2] for call in state["calls"] if call[0] == "PUT"]
+        self.assertEqual(puts, ['"settings-0"', '"settings-0"'])
+
+    def test_identical_values_are_reported_as_no_op(self):
+        from trinity.auth.check import check_schedule
+        client, state, schedule = self.server(revision=2, saved=dict(BODY))
+        with client:
+            check_schedule(client, HEADERS, "admin", schedule)
+        self.assertTrue(schedule.summary.startswith("revision 2->2 (no-op);"))
+        self.assertEqual([call[2] for call in state["calls"] if call[0] == "PUT"], ['"settings-2"'])
+
+    def test_a_new_run_fails_the_check(self):
+        from trinity.auth.check import CheckFailed, check_schedule
+        client, _, schedule = self.server(run_count=(0, 1))
+        with client, self.assertRaises(CheckFailed) as caught:
+            check_schedule(client, HEADERS, "admin", schedule)
+        self.assertEqual(str(caught.exception), "No-run check failed: run history changed")
+        self.assertIsNone(schedule.summary)
+
+    def test_non_admin_must_be_denied_and_saves_nothing(self):
+        from trinity.auth.check import CheckFailed, check_schedule
+        import httpx
+        for status, fails in ((403, False), (200, True)):
+            calls = []
+
+            def handler(request):
+                calls.append(request.method)
+                return httpx.Response(status, json={})
+
+            with httpx.Client(transport=httpx.MockTransport(handler), base_url="http://test") as client:
+                schedule = self.server()[2]
+                if fails:
+                    with self.assertRaises(CheckFailed):
+                        check_schedule(client, HEADERS, "viewer", schedule)
+                else:
+                    check_schedule(client, HEADERS, "viewer", schedule)
+            self.assertEqual(calls, ["PUT", "GET"])
+            self.assertIsNone(schedule.summary)
+
+
 if __name__ == "__main__":
     unittest.main()

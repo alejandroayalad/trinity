@@ -5,14 +5,24 @@ and sets TRINITY_TEST_DATABASE_URL. Never point this variable at retained
 data: every test truncates the application tables.
 """
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 import json
+import os
+from pathlib import Path
+import socket
+import subprocess
+import sys
 import time
 import unittest
 from unittest.mock import patch
+from urllib.parse import urlsplit, urlunsplit
 
+from alembic import command
+import httpx
 import psycopg
 
 from postgres_fixture import DSN, PostgresFixture
+from trinity.auth.check import ScheduleCheck, check_persona
 from trinity.errors import Problem
 from trinity.settings import service as settings_service
 from trinity.settings.service import SettingsService
@@ -171,6 +181,86 @@ class SettingsPostgresTests(PostgresFixture, unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path, headers=admin).status_code, 503)
 
+    @contextmanager
+    def http(self, dsn):
+        """Run the real API with uvicorn on a free loopback port and yield a client."""
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            port = sock.getsockname()[1]
+        backend = Path(__file__).resolve().parents[1]
+        environment = {**os.environ, "TRINITY_DATABASE_URL": dsn, "PYTHONPATH": str(backend / "src")}
+        process = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "trinity.main:app", "--host", "127.0.0.1", "--port", str(port),
+             "--no-access-log", "--no-proxy-headers", "--log-level", "critical"],
+            env=environment, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            with httpx.Client(base_url=f"http://127.0.0.1:{port}", timeout=20, trust_env=False) as client:
+                deadline = time.monotonic() + 15
+                while True:
+                    try:
+                        if client.get("/health").status_code == 200:
+                            break
+                    except httpx.TransportError:
+                        pass
+                    if time.monotonic() > deadline:
+                        self.fail("HTTP server did not become ready")
+                    time.sleep(0.1)
+                yield client
+        finally:
+            process.terminate()
+            process.wait(timeout=10)
+
+    def operator_check(self, client):
+        """Run the --schedule checker for all personas, as the operator would."""
+        schedule = ScheduleCheck("06:15", "America/New_York")
+        landings = {role: check_persona(client, role, self.passwords[role], schedule=schedule)
+                    for role in ("viewer", "analyst", "admin")}
+        return landings, schedule.summary
+
+    def test_operator_schedule_check_over_real_http(self):
+        # S20 rehearsal with synthetic accounts. First run: first save.
+        # Second run: identical values, so a no-op save.
+        with self.http(DSN) as client:
+            landings, summary = self.operator_check(client)
+            self.assertEqual(landings, {"viewer": "waiting", "analyst": "waiting", "admin": "refresh_runs"})
+            self.assertRegex(summary, r"^revision 0->1; next check 2026-\d\d-\d\dT06:15:00-0[45]:00; "
+                                      r"blocker none; refresh runs unchanged \(0\)$")
+            _, again = self.operator_check(client)
+            self.assertTrue(again.startswith("revision 1->1 (no-op);"), again)
+        self.assertEqual(self.counts()["refresh_runs"], 0)
+
+    def test_operator_schedule_check_on_a_database_at_migration_0002(self):
+        # The retained Compose database is at 0002_app_entry. Rehearse S20 on
+        # a separate disposable database at that revision: the save, status
+        # and run-history routes must work there without a migration.
+        name = "trinity_test_at_0002"
+        parts = urlsplit(DSN)
+        dsn = urlunsplit(parts._replace(path="/" + name))
+        with psycopg.connect(DSN, autocommit=True) as admin:
+            admin.execute(f"DROP DATABASE IF EXISTS {name}")
+            admin.execute(f"CREATE DATABASE {name}")
+        try:
+            with patch.dict(os.environ, {"TRINITY_DATABASE_URL": dsn}):
+                command.upgrade(self.migration, "0002_app_entry")
+            with psycopg.connect(dsn, autocommit=True) as connection:
+                for role in self.passwords:
+                    connection.execute("INSERT INTO local_users(id,username,password_hash,role) VALUES (%s,%s,%s,%s)",
+                                       ("test_" + role, role, self.hashes[role], role))
+                # Migration 0002 already inserts the singleton rows. Require
+                # them, as the retained database has them.
+                for table in ("shared_settings", "active_publication", "refresh_control"):
+                    self.assertEqual(connection.execute(f"SELECT count(*) FROM {table}").fetchone()[0], 1)
+            with self.http(dsn) as client:
+                landings, summary = self.operator_check(client)
+            self.assertEqual(landings["admin"], "refresh_runs")
+            self.assertTrue(summary.startswith("revision 0->1;") and summary.endswith("unchanged (0)"), summary)
+            with psycopg.connect(dsn) as connection:
+                version = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
+                runs = connection.execute("SELECT count(*) FROM refresh_runs").fetchone()[0]
+            self.assertEqual((version, runs), ("0002_app_entry", 0))
+        finally:
+            with psycopg.connect(DSN, autocommit=True) as admin:
+                admin.execute(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)")
 
 
 if __name__ == "__main__":
