@@ -103,11 +103,16 @@ class SafeTransport:
                 r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
             refresh = scope['method'] == 'GET' and re.fullmatch(
                 r'/api/v1/refresh-runs(?:/[^/]+)?', scope.get('path', '')) is not None
+            # These exact paths validate pairs and bodies after session checks.
+            # Keep transport size limits here and reject all other query paths.
+            national = scope['method'] == 'GET' and scope.get('path', '') in (
+                '/api/v1/dashboard/national', '/api/v1/metrics/offline-share',
+            )
             if len(scope.get('query_string', b'')) > 65536:
                 raise Problem(413, "request_too_large")
-            if scope.get("query_string") and not (preview or refresh):
+            if scope.get("query_string") and not (preview or refresh or national):
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "GET" and body and not (preview or refresh):
+            if scope["method"] == "GET" and body and not (preview or refresh or national):
                 raise Problem(422, "invalid_request")
             if scope["method"] == "POST":
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]

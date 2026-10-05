@@ -20,6 +20,7 @@ class HealthTests(unittest.TestCase):
             response = client.get("/api/v1/me")
         self.assertEqual(set(paths), {"/health", "/api/v1/auth/login", "/api/v1/auth/logout",
                                      "/api/v1/me", "/api/v1/settings", "/api/v1/queries", "/api/v1/catalog",
+                                     "/api/v1/dashboard/national", "/api/v1/metrics/offline-share",
                                      "/api/v1/datasets/{dataset_key}/preview",
                                      "/api/v1/refresh-runs", "/api/v1/refresh-runs/{run_id}",
                                      "/api/v1/candidates/{version_id}",

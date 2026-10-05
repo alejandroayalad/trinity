@@ -13,6 +13,7 @@ from trinity.adapters.postgres import Database
 from trinity.auth.router import router
 from trinity.auth.service import AuthService
 from trinity.catalog.router import router as catalog_router
+from trinity.dashboard.router import router as dashboard_router
 from trinity.config import load_api_settings
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
@@ -26,8 +27,9 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
-def create_app(*, settings=None, service=None, query_service=None, preview_service=None, refresh_service=None, enable_preview=False) -> FastAPI:
-    """Return the API with auth, catalog, SQL and a delivery-gated preview route.
+def create_app(*, settings=None, service=None, query_service=None, preview_service=None,
+               refresh_service=None, national_service=None, enable_preview=False) -> FastAPI:
+    """Return the API with auth, catalog, SQL and delivery-gated national/preview reads.
 
     Register startup and shutdown hooks without opening a database here.
     Startup loads the supplied or environment settings and opens the database pool.
@@ -50,6 +52,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
             application.state.auth = service
         application.state.query_service = query_service
         application.state.preview_service = preview_service
+        application.state.national_service = national_service
         application.state.refresh_service = refresh_service
         application.state.preview_enabled = enable_preview
         try:
@@ -65,6 +68,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
     application.include_router(settings_router)
     application.include_router(queries_router)
     application.include_router(catalog_router)
+    application.include_router(dashboard_router)
     application.include_router(refresh_router)
     application.include_router(candidates_router)
 
