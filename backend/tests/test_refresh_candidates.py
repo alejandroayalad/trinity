@@ -158,7 +158,9 @@ class CandidateTests(PostgresFixture, unittest.TestCase):
     def test_crash_before_registration_recovers_same_identity_and_budget(self):
         before = self.crash()
         version = self.version_row()
-        steps = self.sql('SELECT id,deadline_at,attempt FROM refresh_steps WHERE run_id=%s',(self.run_id,))
+        # Row storage order can change after recovery updates the selected step.
+        # Compare the durable sequence, not PostgreSQL's unspecified scan order.
+        steps = self.sql('SELECT id,deadline_at,attempt FROM refresh_steps WHERE run_id=%s ORDER BY step_seq',(self.run_id,))
         self.expire_lease()
         self.assertEqual(self.recovery().once(),'publishing')
         after = self.run_row()
@@ -168,7 +170,7 @@ class CandidateTests(PostgresFixture, unittest.TestCase):
         self.assertEqual(after['worker_execution_ref']['operation_count'],before['worker_execution_ref']['operation_count'])
         self.assertEqual(self.version_row()['id'],version['id'])
         self.assertEqual(self.version_row()['preparation_receipt_sha256'],before['worker_execution_ref']['receipt_sha256'])
-        self.assertEqual(self.sql('SELECT id,deadline_at,attempt FROM refresh_steps WHERE run_id=%s',(self.run_id,)),steps)
+        self.assertEqual(self.sql('SELECT id,deadline_at,attempt FROM refresh_steps WHERE run_id=%s ORDER BY step_seq',(self.run_id,)),steps)
         self.assert_routed('publishing')
         self.assertEqual(self.worker().execute(self.payload),'ignored')
 

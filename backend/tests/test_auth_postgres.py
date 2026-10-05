@@ -197,7 +197,8 @@ class PostgresAuthTests(PostgresFixture, unittest.TestCase):
         headers=self.login('admin')
         data=self.client.get('/api/v1/me',headers=headers).json()['admin_context']
         actions={a['action']:a['enabled'] for a in data['actions']}
-        self.assertTrue(actions['approve']); self.assertTrue(actions['discard']); self.assertFalse(actions['start_refresh'])
+        # Legacy metadata without registered evidence must not enable approval.
+        self.assertFalse(actions['approve']); self.assertTrue(actions['discard']); self.assertFalse(actions['start_refresh'])
         self.sql("UPDATE refresh_runs SET status='publishing' WHERE id=%s",(run,))
         data=self.client.get('/api/v1/me',headers=headers).json()['admin_context']
         self.assertFalse(any(a['enabled'] for a in data['actions']))
@@ -307,14 +308,15 @@ class PostgresAuthTests(PostgresFixture, unittest.TestCase):
             response=self.client.get('/api/v1/me',headers=headers)
             self.assertEqual(response.status_code,200)
             return {a['action']:a['enabled'] for a in response.json()['admin_context']['actions']}
-        self.assertTrue(actions()['publication_retry'])
+        # This legacy fixture has no registered proof or stopped publish step.
+        self.assertFalse(actions()['publication_retry'])
         self.sql("UPDATE approvals SET manifest_sha256=%s WHERE id=%s",('c'*64,approval))
         self.assertFalse(actions()['publication_retry'])
         self.sql("UPDATE approvals SET manifest_sha256=%s WHERE id=%s",('b'*64,approval))
         self.sql("UPDATE failure_warnings SET code='artifact_integrity'")
         self.assertFalse(actions()['publication_retry'])
-        self.assertTrue(actions()['rerun'])
-        self.assertTrue(actions()['discard'])
+        self.assertFalse(actions()['rerun'])
+        self.assertFalse(actions()['discard'])
 
     def test_peer_and_global_throttle_bound_new_key_creation(self):
         for i in range(30):
