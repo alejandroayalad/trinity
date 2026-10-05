@@ -117,7 +117,7 @@ Why it holds:
 | Clock skew | Both steps use PostgreSQL time (D03). |
 | No-op save | `updated_at` is unchanged, so `T > updated_at` still holds (D02). |
 
-Known limit: manual runs use the client `Idempotency-Key` as `request_key`. An Admin could send a key equal to a future occurrence key. The scheduled insert would then fail on the unique constraint; the transaction rolls back and logs `error`, and that occurrence is skipped. Only an Admin can do this, and the same Admin can turn the schedule off. Accepted as a documented limit; no migration is proposed for it.
+Known limit: manual runs use the client `Idempotency-Key` as `request_key`. An Admin could send a key equal to a future occurrence key. Scheduler step 3 then finds that manual run and returns `duplicate`, so that occurrence is skipped. (Correction found in Step 4: the original text said the insert fails on the unique constraint and logs `error`; the key check runs first. The unique constraint remains the final guard.) Only an Admin can do this, and the same Admin can turn the schedule off. Accepted as a documented limit; no migration is proposed for it.
 
 ### Test clock
 
@@ -137,6 +137,6 @@ Known limit: manual runs use the client `Idempotency-Key` as `request_key`. An A
 ## Review gate
 
 Done: draft design with no migration and no dependency; one shared run-insert path; lock order and scheduler outcomes defined.
-Pending: Steps 3–5, each separately authorized. Step 2 results are in the [tasks](tasks.md).
+Pending: Step 5, separately authorized. Step 2–4 results are in the [tasks](tasks.md).
 Blocker: none.
 Next: [ME] Step 2 explanation, then authorize Step 3.
