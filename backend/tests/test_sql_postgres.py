@@ -28,7 +28,8 @@ def rate_attempt(dsn):
 @unittest.skipUnless(DSN, 'Disposable PostgreSQL required')
 class QueryPostgresTests(PostgresFixture, unittest.TestCase):
     def setUp(self):
-        self.sql('''TRUNCATE query_reservations,analytical_rate_limits,failure_warnings,refresh_control,
+        self.sql('''TRUNCATE validation_results,dataset_artifacts,api_commands,job_outbox,
+            query_reservations,analytical_rate_limits,failure_warnings,refresh_control,
             active_publication,publication_events,approvals,data_versions,refresh_steps,refresh_runs,
             shared_settings,local_sessions,local_users,auth_login_limits RESTART IDENTITY''')
         for role in self.passwords:
