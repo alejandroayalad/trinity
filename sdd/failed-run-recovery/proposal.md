@@ -74,4 +74,8 @@ Resolve the precise lock order across session/user, admission, run, candidate, w
 | Races | Rerun versus delete-warning, discard, publication retry, publication commit, manual start, due scheduler, role change and logout; one winner; late worker/outbox delivery cannot revive abandoned work. |
 | Output/runtime | Correct statuses/receipt targets, new run linked to old, read-side actions refresh, no immediate work for warning deletion, old publication and schedule preserved, real outbox dispatch for rerun. |
 
-Done: source-grounded proposal. Pending: design/tasks and locking details. Blocker: none for planning. No implementation or live recovery was performed.
+Done: source-grounded proposal. Pending: review of [design](design.md) and [tasks](tasks.md), including lock and stop-proof verification. Blocker: none for planning. No implementation or live recovery was performed.
+
+**Implementation continuation — October 5:** Alayala accepted the design and asked to start tasks. Step 2 parsing/eligibility is implemented locally and offline-tested; see [evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-2.md). This supersedes the earlier no-implementation status for Step 2 only. Step 3 mutations and runtime acceptance remain pending.
+
+**Step 3 continuation — October 5:** After the observed lease/fence explanation, Alayala explicitly authorized Step 3. Both recovery routes, atomic service orchestration and shared Admin projections are implemented locally; see [implementation evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). This supersedes the earlier Step 3-pending status. Step 4 runtime proof remains pending.

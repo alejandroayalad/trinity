@@ -79,4 +79,8 @@ Run focused offline checks, then disposable PostgreSQL transaction/race tests an
 
 Current source evidence: `refresh.router` exposes start/list/detail; `refresh.service.admin_context` disables both new actions; `refresh.repository.accept_run` hard-codes manual trigger and receipt semantics. `PublicationCommands.command` and `publication.checks.stopped_failure` supply existing receipt and stop patterns. Design must reconcile their locks and migration constraints. No new dependency is specified.
 
-Done: specification and P01 accepted for design. Pending: design/tasks and their review. Blocker: none for planning.
+Done: specification and P01 accepted for design. Pending: review of the drafted [design](design.md) and [tasks](tasks.md). Blocker: none for planning.
+
+**Implementation continuation — October 5:** Alayala accepted the design and asked to start tasks. Step 2 parsing/eligibility is implemented locally and offline-tested; see [evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-2.md). This supersedes the earlier no-implementation status for Step 2 only. Step 3 mutations and runtime acceptance remain pending.
+
+**Step 3 continuation — October 5:** After the observed lease/fence explanation, Alayala explicitly authorized Step 3. Both recovery routes, atomic service orchestration and shared Admin projections are implemented locally; see [implementation evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). This supersedes the earlier Step 3-pending status. Step 4 runtime proof remains pending.
