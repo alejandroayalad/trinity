@@ -14,6 +14,10 @@
 
 [ME] Alayala rejected the AI's latest-card recommendation and selected range-end cards, citing the A16 `summary` rule. [YOU] Verified that rule in the API contract and recorded the choice in the proposal and session. No API change.
 
+[ME] Alayala asked to begin the dashboard specification. [YOU] Drafted the [specification](sdd/national-dashboard/spec.md) from the traced preview, publication and catalog code. D01–D03 (input order, rounding of negative values, diagnostics scope) await his decision. Planning only.
+
+[ME] Alayala accepted D01–D03. [YOU] Recorded them under A16/A19 and in the API contract, and marked the specification approved. No runtime or implementation claim.
+
 Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions

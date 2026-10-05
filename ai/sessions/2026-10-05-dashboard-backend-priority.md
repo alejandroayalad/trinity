@@ -39,3 +39,21 @@ Next action: [ME] Review the latest-card recommendation in the proposal.
 [YOU] Verified that `docs/api-contract.md` defines `summary` as the requested range's end date, equal to the last day point. The choice needs no API change and no new decision entry; it applies A16. Updated the proposal's card section. Documentation only; no tests were run because no code changed.
 
 Next action: [ME] Approve writing the dashboard specification.
+
+## Dashboard specification draft
+
+[ME] Alayala authorized the commit of the card decision (`37a8a27`) and asked to begin the specification. [YOU] Traced `PreviewService.prepare`, `PreviewOperation`, `execute_preview`, `read_pinned_publication`, `read_preview_publication`, `get_catalog`, `describe_metric` and the `national:read` capability, and checked both OpenAPI operations and the `NationalDay`, `MetricValue`, `DashboardResponse` and `MetricResponse` schemas. Drafted the [specification](../../sdd/national-dashboard/spec.md): 23 requirements, 21 scenarios.
+
+Three refinements are proposed, not accepted: D01 reuses preview input and rate-debit order; D02 selects symmetric half-up rounding and `0.00` for negative zero; D03 uses publication-wide national diagnostics and same-snapshot freshness. The contract says "half-up" but does not define negative values; D02 makes that explicit. `schema.md` requires nonnegative capacity, so negative results come only from negative outage. Design note: a national preview read with page size above 366 may serve the dashboard without a new runtime operation kind; design must verify this.
+
+Checks: 9 local links and one anchor resolve; fences balanced; no trailing whitespace; both routes exist in OpenAPI, and every status code in the spec's error table is in their declared response sets. No tests ran because no code changed.
+
+Next action: [ME] Decide D02 (rounding).
+
+## Dashboard specification acceptance
+
+[ME] Alayala accepted D01, D02 and D03 as written in the draft and asked to finalize and commit the specification. His words: D01 — same strict input checks and shared analytical rate-limit order as Preview, one attempt per admitted request; D02 — decimal ROUND_HALF_UP to two places, halfway negatives away from zero (`-12.345 → -12.35`), rounded zero serialized as `0.00`; D03 — national diagnostics bound to the pinned publication, unchanged by date, with publication and freshness from one snapshot.
+
+[YOU] Marked the specification approved, recorded D01 inputs/D02/D03 under A16 and D01 rate accounting under A19, following the preview pattern, and added one linked paragraph to the API contract that defines "half-up" for negative values. No OpenAPI change. Documentation only; no tests ran.
+
+Next action: [ME] Request the dashboard design and tasks.
