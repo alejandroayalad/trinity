@@ -4,12 +4,27 @@ Current status: Parquet preparation Steps 1–5 implemented and offline-tested; 
 
 ## Human and AI contributions
 
+Current design attribution: see [Figma mockups, brand and Claude handoff](#figma-mockups-brand-and-claude-handoff--october-4-2026). The table below retains the original planning discussion's scope.
+
 | Contributor | Observed contribution |
 |---|---|
 | Alayala | Set the product direction, challenged the DuckDB recommendation, selected A1–A4, defined shared initial setup, corrected refresh scope, and chose Obsidian for these drafts. Fetched the EIA data, analyzed it, and wrote the original findings. Reconfirmed A4 after discussing daily data. |
 | AI | Read the brief and existing notes, checked official technical documentation during the discussion, explained alternatives, and drafted decisions, session summaries, and these documents. Formatted alayala's findings, added evidence limits, ran separate read-only CSV checks, and wrote the session handoff. |
 
 No application code was written in this discussion. There is no generated-versus-handwritten code inventory yet. Update this section with concrete files or changes once code exists. AI-drafted prose is not evidence that the author wrote code or independently debugged it.
+
+## Figma mockups, brand and Claude handoff — October 4, 2026
+
+| Contributor | Contribution and status |
+|---|---|
+| [ME] Alayala | Created the interface mockups himself in Figma. Supplied eleven screenshots covering login, no-publication, role-specific dashboards, catalog, plant preview, SQL, refresh history/review and schedule settings. Selected these mockups and the earlier brand reference for the planned Claude handoff. |
+| [YOU] ChatGPT | Contributed the earlier Trinity brand reference, as stated by alayala. The supplied board contains the symbol, wordmark, palette and nuclear imagery. This contribution is separate from alayala's Figma interface design. |
+| [YOU] Claude — planned | Will receive the mockups and brand reference to apply the brand to the interface. No completed Claude adaptation or frontend implementation is claimed in this record. |
+| [YOU] Codex — this documentation task | Recorded authorship, preserved the twelve supplied images, updated relevant current documents and added shared attribution guidance for subsequent work. |
+
+The workflow is **human Figma design → ChatGPT brand reference → planned Claude adaptation → human review**. [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) records the selected direction. Preserve alayala's layouts and flows while applying the brand; identify later AI design changes and generated code separately. Use this attribution in every document that describes the work, with links here instead of duplicate histories.
+
+Evidence: alayala's explicit authorship statement and the [twelve retained references](ai/sessions/2026-10-04-figma-brand-handoff.md#supplied-references). Each image copy matched its original by SHA-256. Native Figma history and the earlier ChatGPT conversation were not inspected. Screenshots contain illustrative data, not new EIA findings or working-application proof. Claude adaptation and human review remain pending. Documentation verification is recorded in the [session](ai/sessions/2026-10-04-figma-brand-handoff.md#corrections-and-verification).
 
 ## Concrete AI mistakes and corrections
 

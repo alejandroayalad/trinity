@@ -12,6 +12,8 @@ disabled in capability/action reads. Approval of this scope is not runtime deliv
 
 ## Human overview
 
+Visual handoff: [A25](../DECISIONS.md#a25--figma-design-and-brand-handoff) records alayala's own Figma mockups, the earlier ChatGPT-created brand and planned Claude adaptation. See the [reference inventory](../ai/sessions/2026-10-04-figma-brand-handoff.md). These design inputs do not amend this contract's field names, role permissions or publication behavior.
+
 The approved source is `trinity-api-contract-final.md`. Its six-part design is retained here, followed by exact requests, responses, errors, and recovery rules. Publication is fixed by validation and warnings; no Admin chooses a publication mode. A failed lifecycle holds new refreshes until recovery or abandonment. Your downloaded source file is unchanged.
 
 Updated October 3, 2026. All endpoints use `/api/v1` and JSON, except the bodyless logout response. A20 adds public local credential verification; all product operations and logout require a verified local session and server-side authorization.

@@ -28,6 +28,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A19 | Technical / code | Security contract: trusted server-side roles (local authentication under A20), selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
 | A20 | Technical / code | Seeded local authentication for the challenge; unchanged server-side permissions; Clerk deferred to future production work. |
 | A24 | Technical / code | Publication first delivery: one worker host, executable operator reconciliation and separate Admin same-candidate retry; automatic crash recovery deferred. |
+| A25 | Product / business | Alayala's Figma mockups and the ChatGPT-created Trinity brand are the inputs for the planned Claude design handoff, with separate authorship records. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -759,6 +760,20 @@ recovery preserves the original budget and takes a new fence. Changed/missing
 evidence or exhausted limits record failure, never publication readiness.
 Publisher, setup writes and Admin review/recovery commands remain separate.
 The [current tasks](sdd/refresh-publication/tasks.md) state the tested boundary.
+
+### A25 — Figma design and brand handoff
+
+Category: **Product / business**.
+
+Status: selected by alayala on October 4, 2026 through his supplied mockups, brand reference and request to record the workflow. This is design direction and attribution, not frontend implementation approval.
+
+**Choice:** Use alayala's self-created Figma interface mockups as the layout and flow reference. Use the earlier Trinity brand created with ChatGPT as the visual identity reference. Alayala plans to pass both to Claude to apply the brand. Credit each contribution separately in Engineering Notes, handoffs and subsequent implementation records.
+
+**Reason and alternatives:** Preserve the human interface design and make the use of AI visible to the evaluator. Do not describe the entire design as AI-generated or the brand as entirely handmade. No competing brand or frontend framework was selected in this request.
+
+**Boundary and precedence:** A9/A16/A19/A20 and the current API, data and security contracts govern behavior. The references do not change roles, field names, missing-value handling, SQL scope or publication gates. Reconcile any mismatch before implementation. Final styling and frontend technology remain open; mock values and visible states do not prove runtime behavior.
+
+**Evidence and validation:** [Engineering Notes](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026) and the [reference inventory](ai/sessions/2026-10-04-figma-brand-handoff.md) separate alayala's authorship statement from the supplied screenshots. The native Figma file and earlier ChatGPT conversation were not inspected. Claude's adaptation, asset exports and frontend behavior remain unverified.
 
 ## Proposed decisions
 
