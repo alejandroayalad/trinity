@@ -109,7 +109,8 @@ class SafeTransport:
                 raise Problem(422, "invalid_request")
             if scope["method"] == "GET" and body and not (preview or refresh):
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "POST":
+            # JSON bodies arrive only through POST commands and PUT /settings.
+            if scope["method"] in ("POST", "PUT"):
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]
                 if len(headers) != 1 or headers[0].split(b";", 1)[0].strip().lower() != b"application/json":
                     raise Problem(415, "unsupported_media_type")
