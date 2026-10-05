@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). Preview/dashboard rows and refresh workers remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). See the national dashboard acceptance and handoff section below for the implemented read routes and their retained-readiness boundary.
 
 ## Setup
 
@@ -452,6 +452,23 @@ TestClient checks; PostgreSQL/loopback HTTP/container cases skip. Use the explic
 Step 4 commands below for that separate evidence. See [Step 3 evidence](../ai/sessions/2026-10-04-dataset-preview-step-3.md).
 
 
+## National dashboard acceptance and handoff
+
+`GET /api/v1/dashboard/national` and `GET /api/v1/metrics/offline-share` are implemented in `dashboard/`. All three authenticated roles can read national data. The dashboard accepts the default 30-day range, `preset=30d|90d|1y`, or both `start` and `end`; the metric requires `period`. Dates and source decimal strings remain exact. Missing selected dates produce `not_reported`; the summary always represents the selected end date.
+
+Both routes reuse the preview execution switch. `create_app(enable_preview=False)` keeps execution disabled by default. No new environment switch or cursor key is needed for the national routes. Normal startup does not enable them automatically; retained deployment and legitimate publication setup are separate work.
+
+From the repository root, with the existing matched-image settings described below:
+
+```sh
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --dashboard --failfast
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --all --failfast
+```
+
+`--dashboard` selects real DataFusion, disposable PostgreSQL and national container/HTTP acceptance. `--all` includes these alongside SQL, preview, auth and catalog. The database runner always creates its own private Unix-socket cluster and overrides the test DSN; never replace that guard with a retained database. Container checks require `TRINITY_TEST_QUERY_IMAGE` and `TRINITY_TEST_DOCKER_SOCKET`. A run with skipped container tests is not full acceptance. Tests use synthetic stored bytes and a disposable staging bridge; they do not prove live S3 access or deployed Compose wiring.
+
+The current worktree checks use the existing sibling Python environment with `PYTHONPATH` set to this checkout's source/tests because this worktree has no `.venv`. Fresh locked installation remains unverified. See the [Step 4–5 handoff](../ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md) for actual commands, final counts, fault timings and retained-readiness observations.
+
 ## Preview acceptance — Step 4
 
 Automated acceptance passed: 432 distinct tests across offline, disposable
@@ -460,7 +477,7 @@ were covered by the explicit suites. Retained publication linkage and the
 operator check are still pending; preview execution remains disabled.
 
 The disposable SQL runner accepts `--preview` for SQL/preview acceptance and
-`--all` to include auth/catalog database regressions. `--runtime-only` selects the
+`--all` to include auth/catalog database regressions and national dashboard acceptance. `--runtime-only` selects the
 15 preview container cases (including the Step 5 checker); `--failfast` stops at the first failure. It initializes a fresh local
 PostgreSQL 17.11 cluster, migrates that temporary database through 0004, seeds
 complete synthetic producer evidence, and stops only its own cluster. It does

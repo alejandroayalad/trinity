@@ -12,6 +12,22 @@
 
 [ME] Alayala prioritized dashboard backend planning, then schedule settings, Plant filter and failed-run recovery. [YOU] Codex mapped the designed screen to the two existing national API contracts and implemented preview flow, and drafted the [dashboard proposal](sdd/national-dashboard/proposal.md). The [session](ai/sessions/2026-10-05-dashboard-backend-priority.md) records the latest-card/range-end distinction, publication consistency and verification boundaries. Concurrent frontend work is preserved. This is planning only; no endpoint implementation or runtime readiness is claimed.
 
+[ME] Alayala rejected the AI's latest-card recommendation and selected range-end cards, citing the A16 `summary` rule. [YOU] Verified that rule in the API contract and recorded the choice in the proposal and session. No API change.
+
+[ME] Alayala asked to begin the dashboard specification. [YOU] Drafted the [specification](sdd/national-dashboard/spec.md) from the traced preview, publication and catalog code. D01–D03 (input order, rounding of negative values, diagnostics scope) await his decision. Planning only.
+
+[ME] Alayala accepted D01–D03. [YOU] Recorded them under A16/A19 and in the API contract, and marked the specification approved. No runtime or implementation claim.
+
+[ME] Alayala requested push, design and tasks. [YOU] Drafted the [design](sdd/national-dashboard/design.md) and [tasks](sdd/national-dashboard/tasks.md): reuse the national preview read with no runtime or migration change, exact fraction rounding, four authorized steps. Offline design checks only; no implementation.
+
+[ME] Alayala selected a separate `dashboard/` backend folder instead of `queries/` and approved the shared preview execution switch. [YOU] Created the empty package, updated design, tasks, `docs/backend.md` and A15.
+
+[ME] Requested continuation of dashboard Steps 2–3. [YOU] Implemented pure inputs/calculation/models and service/routes with the shared preview execution path. Offline checks: 16 dashboard pure, 23 service/HTTP and 28 existing preview unit tests passed; full regression: 414 passed, 176 integration tests skipped. Two necessary additions to the original file list registered the exact transport paths and updated the health route inventory. Query/runtime/staging source and dependency pins remain unchanged. [ME] explained that two-place rounding removes the useful meaning of the negative sign for rounded zero; [YOU] confirmed this case. [ME] also explained that the summary answers for the selected end date; substituting an earlier observation would make missing data look valid. [YOU] recorded both observed explanations and completed the Step 2 understanding checkbox. Execution stays disabled by default. See the [implementation evidence and limits](ai/sessions/2026-10-05-dashboard-pure-and-service-implementation.md).
+
+[ME] Authorized dashboard Steps 4–5 and requested a handoff. [YOU] Added real engine, disposable PostgreSQL, HTTP and container acceptance and `--dashboard` runner support. The combined run passed 101 tests with zero skips, including 19 national cases. The final offline run passed 415 tests and skipped 194 opt-in cases. No production source change or image build was needed for Step 4. Read-only retained checks found no active publication and an older running API without national/preview routes or the preview switch. Stopped the operator check as not ready; no retained data or service change. [ME] Retained Viewer/Analyst actions remain unobserved. See the [runtime acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md) for precise results and remaining prerequisites.
+
+[ME] Subsequently authorized focused commits, push and merge of the dashboard work into `pending-endpoints-frontend`. [YOU] separated pure code, service/routes, real acceptance and documentation for review, and verified the clean target branch was an ancestor. This Git delivery does not activate retained execution or complete the blocked operator check.
+
 Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions

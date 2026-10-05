@@ -40,10 +40,16 @@ backend/
     │   └── permissions.py             # Admin / Analyst / Viewer access rules
     │
     ├── catalog/
-    │   ├── router.py                  # Dataset, column, and metric endpoints
+    │   ├── router.py                  # Dataset, column, and metric-definition endpoints
     │   ├── service.py                 # Role-filtered catalog and freshness
     │   ├── registry.py                # Dataset descriptions and allowed metrics
     │   └── schemas.py                 # Catalog request/response models
+    │
+    ├── dashboard/                     # A15 refinement, October 5, 2026
+    │   ├── router.py                  # National dashboard and offline-share metric endpoints
+    │   ├── service.py                 # Validation order, publication snapshot, shared execution
+    │   ├── calculation.py             # Pure ranges, daily points and exact metric rounding
+    │   └── schemas.py                 # Dashboard and metric response models
     │
     ├── queries/
     │   ├── router.py                  # SQL and preview endpoints

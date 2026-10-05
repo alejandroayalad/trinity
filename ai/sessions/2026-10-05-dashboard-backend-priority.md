@@ -31,3 +31,45 @@ Next action: [ME] Review the latest-card recommendation in the proposal.
 ## Subsequent branch delivery authorization
 
 [ME] Alayala requested `pending-endpoints-frontend` from `main`, cherry-picking this work, followed by Schedule settings, Plant filter and failed-run recovery in separate commits and a push. [YOU] verified `main` and refreshed `origin/main` both resolve to `eed2ab6`. The dashboard proposal, this session and its NOTES contribution form the focused source commit. Design references use the inspected frontend commit so the endpoint branch does not require unrelated frontend files. This Git authorization supersedes the earlier no-delivery boundary; the planning-versus-implementation scope for subsequent slices is being clarified separately.
+
+## Card date resolved on `feat/national-dashboard`
+
+[ME] Alayala requested one branch per proposal from `pending-endpoints-frontend` (`8746bb8`) and pushed `feat/national-dashboard` as the working branch. He then rejected the latest-card recommendation and selected range-end cards: for Jan 1–31, the cards show January 31 with the label “Range end: Jan 31.” He cited the A16 contract as the reason.
+
+[YOU] Verified that `docs/api-contract.md` defines `summary` as the requested range's end date, equal to the last day point. The choice needs no API change and no new decision entry; it applies A16. Updated the proposal's card section. Documentation only; no tests were run because no code changed.
+
+Next action: [ME] Approve writing the dashboard specification.
+
+## Dashboard specification draft
+
+[ME] Alayala authorized the commit of the card decision (`37a8a27`) and asked to begin the specification. [YOU] Traced `PreviewService.prepare`, `PreviewOperation`, `execute_preview`, `read_pinned_publication`, `read_preview_publication`, `get_catalog`, `describe_metric` and the `national:read` capability, and checked both OpenAPI operations and the `NationalDay`, `MetricValue`, `DashboardResponse` and `MetricResponse` schemas. Drafted the [specification](../../sdd/national-dashboard/spec.md): 23 requirements, 21 scenarios.
+
+Three refinements are proposed, not accepted: D01 reuses preview input and rate-debit order; D02 selects symmetric half-up rounding and `0.00` for negative zero; D03 uses publication-wide national diagnostics and same-snapshot freshness. The contract says "half-up" but does not define negative values; D02 makes that explicit. `schema.md` requires nonnegative capacity, so negative results come only from negative outage. Design note: a national preview read with page size above 366 may serve the dashboard without a new runtime operation kind; design must verify this.
+
+Checks: 9 local links and one anchor resolve; fences balanced; no trailing whitespace; both routes exist in OpenAPI, and every status code in the spec's error table is in their declared response sets. No tests ran because no code changed.
+
+Next action: [ME] Decide D02 (rounding).
+
+## Dashboard specification acceptance
+
+[ME] Alayala accepted D01, D02 and D03 as written in the draft and asked to finalize and commit the specification. His words: D01 — same strict input checks and shared analytical rate-limit order as Preview, one attempt per admitted request; D02 — decimal ROUND_HALF_UP to two places, halfway negatives away from zero (`-12.345 → -12.35`), rounded zero serialized as `0.00`; D03 — national diagnostics bound to the pinned publication, unchanged by date, with publication and freshness from one snapshot.
+
+[YOU] Marked the specification approved, recorded D01 inputs/D02/D03 under A16 and D01 rate accounting under A19, following the preview pattern, and added one linked paragraph to the API contract that defines "half-up" for negative values. No OpenAPI change. Documentation only; no tests ran.
+
+Next action: [ME] Request the dashboard design and tasks.
+
+## Dashboard design and tasks
+
+[ME] Alayala asked to push the branch and continue with design and tasks. [YOU] Pushed `feat/national-dashboard` (`60499b7`, local and remote equal). Traced `QueryExecution.execute`, `build_preview_batch_response`, `PreviewResponse`, `read_preview_diagnostics`, `preview_execution_factory`, `create_app`, `read_last_refresh` and the `docs/backend.md` tree. Drafted the [design](../../sdd/national-dashboard/design.md) and [tasks](../../sdd/national-dashboard/tasks.md).
+
+Main design choice: reuse a national `PreviewOperation` with `page_size` equal to the number of dates, plus a codec that refuses to sign. No runtime, contract, client, staging, migration or dependency change. The metric uses `fractions.Fraction` for exact D02 rounding. Routes go in `queries/`, although `docs/backend.md` lists metric endpoints under catalog; the design records why. The routes reuse the preview execution switch.
+
+Design checks (not acceptance tests), run with this branch's source and the sibling `trinity` worktree's environment because this worktree has no `.venv`: a 366-date national operation with `page_size=366` is valid and 367 dates are rejected; synthetic batches give 503 for duplicate dates, negative capacity and `has_more` with the refusing codec, and `not_reported` for zero rows; the fraction rounding reproduced the D02 table and matched `Decimal` in 200,000 random and targeted near-half cases.
+
+Next action: [ME] Review the design and authorize Step 2.
+
+### Folder and switch choices
+
+[ME] Alayala rejected placing the code in `queries/` and asked for a new backend folder named `dashboard`. He also approved reusing the preview execution switch. [YOU] Created `backend/src/trinity/dashboard/__init__.py` with a docstring only, so Git tracks the folder. Moved all planned files to `dashboard/` (`router.py`, `service.py`, `calculation.py`, `schemas.py`) in the design and tasks, documented the one-way import from `dashboard/` to shared `queries/` pieces, added the folder to the `docs/backend.md` tree and recorded the folder as an A15 refinement. Recorded the switch approval in the design. No other code was written.
+
+Next action: [ME] Review the updated design and tasks, then authorize the commit.
