@@ -38,3 +38,6 @@ afterEach(() => {
   window.sessionStorage.clear()
   window.localStorage.clear()
 })
+
+// jsdom has no Web Animations implementation; animation timing is a browser check.
+if (hasWindow && !Element.prototype.animate) Element.prototype.animate = (() => ({ cancel() {} })) as unknown as typeof Element.prototype.animate

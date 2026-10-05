@@ -1,14 +1,13 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { SessionProvider } from './session/SessionProvider'
+import { App } from './App'
 import './styles/tokens.css'
 import './styles/base.css'
+import './styles/app.css'
 
-// Temporary entry point for the foundations slice. Step 3 replaces it with
-// the session, router and application shell.
-createRoot(document.getElementById('root') as HTMLElement).render(
-  <StrictMode>
-    <main className="page-enter" style={{ padding: 'var(--content-padding)' }}>
-      <h1>Trinity</h1>
-    </main>
-  </StrictMode>,
-)
+// Commands never retry implicitly. Pages choose safe retries explicitly.
+const cache = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false }, mutations: { retry: false } } })
+createRoot(document.getElementById('root') as HTMLElement).render(<StrictMode><QueryClientProvider client={cache}><BrowserRouter><SessionProvider><App /></SessionProvider></BrowserRouter></QueryClientProvider></StrictMode>)

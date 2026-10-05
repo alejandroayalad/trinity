@@ -190,7 +190,8 @@ export async function request<T>(method: Method, path: string, options: RequestO
   const requestId = response.headers.get('X-Request-ID')
   if (!response.ok) {
     const error = await readProblem(response, requestId)
-    if (response.status === 401 && token !== null && !options.skipSessionEnd) unauthorizedHandler?.()
+    if (response.status === 401 && token !== null && !options.skipSessionEnd
+        && (getAccessToken() === token || getAccessToken() === null)) unauthorizedHandler?.()
     throw error
   }
 
@@ -202,7 +203,7 @@ export async function request<T>(method: Method, path: string, options: RequestO
       throw new ApiError({ status: response.status, code: 'internal_error', requestId })
     }
   }
-  reportPublication(data)
+  if (token === null || getAccessToken() === token) reportPublication(data)
   return {
     data: data as T,
     status: response.status,
