@@ -12,6 +12,7 @@ import { ApiError } from '../api/client'
 import { NationalChart } from './dashboard/NationalChart'
 import { GeneratorChoices } from './catalog/Choices'
 import { setMediaMatches } from '../test/setup'
+import { Diagnostics } from './shared'
 
 const publication: Publication = { publication_event_id: 'event', version_id: 'version', published_at: '2026-10-03T00:00:00Z', coverage_start: '2026-10-01', coverage_end: '2026-10-02', latest_observation_date: '2026-10-02' }
 const me: MeResponse = { user_id: 'test', role: 'analyst', capabilities: ['national:read', 'preview:detail', 'sql:execute', 'catalog:read'], data_ready: true, landing_screen: 'explorer', publication, admin_context: null }
@@ -267,3 +268,15 @@ for (const role of ['viewer', 'analyst']) {
     })
   }
 }
+
+test('diagnostics show only warnings that affected rows', () => {
+  // A passed warning check has affected_count '0'. Do not show it as a review warning.
+  render(<Diagnostics diagnostics={[
+    { code: 'D01', severity: 'warning', scope: 'facility', message: 'Facility label is missing.', affected_count: '0' },
+    { code: 'D03', severity: 'warning', scope: 'national', message: 'Outage is negative.', affected_count: '2' },
+    { code: 'D08', severity: 'info', scope: 'national', message: 'Info only.', affected_count: '11' },
+  ]} />)
+  expect(screen.queryByText('Facility label is missing.')).not.toBeInTheDocument()
+  expect(screen.getByText('Outage is negative.')).toBeInTheDocument()
+  expect(screen.queryByText('Info only.')).not.toBeInTheDocument()
+})

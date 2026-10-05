@@ -9,8 +9,12 @@ import { formatExact, formatFixed, isOutOfRange, offlineShare, parseDecimal } fr
 export function PageError({ error }: { error: unknown }) {
   return isApiError(error, 'data_unavailable') ? <Waiting /> : <ErrorState error={error} />
 }
+// Show only review warnings. A review warning has severity 'warning' and
+// affected_count above zero. The backend counts warnings with the same rule.
+// The candidate API also returns passed checks with affected_count '0'.
+// Counter text is canonical, so '0' is the only text for zero.
 export function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
-  return <>{diagnostics.filter((d) => d.severity === 'warning').map((d) => <Callout key={d.code + d.scope} tone="warning" title={d.code}>{d.message}</Callout>)}</>
+  return <>{diagnostics.filter((d) => d.severity === 'warning' && d.affected_count !== '0').map((d) => <Callout key={d.code + d.scope} tone="warning" title={d.code}>{d.message}</Callout>)}</>
 }
 export function Share({ outage, capacity }: { outage: Cell | undefined; capacity: Cell | undefined }) {
   if (typeof outage !== 'string' || typeof capacity !== 'string') return <MissingChip />

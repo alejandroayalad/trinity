@@ -647,3 +647,12 @@ per-role settings. `docker compose config` passed with and without the profile,
 with EIA/AWS/S3 variables unset. No container ran; no EIA or AWS access was used.
 Open: Redis persistence (A7), PostgreSQL version, Redis auth/TLS, worker restart
 policy, and the API refresh cursor keys. Runtime behavior is unverified.
+
+[ME] Ran live refreshes #1–#4 from the UI; all stopped at S3 storage with
+`storage_configuration`. Selected the fix: mount `~/.aws` writable into the S3
+workers with `AWS_PROFILE=trinity-writer`.
+[YOU] Traced the cause (an AWS config file was mounted as a credentials file) and
+changed `compose.yaml`. Fixed `Diagnostics` in `frontend/src/pages/shared.tsx`:
+it showed passed D01–D06 checks (`affected_count` 0) as review warnings. Added a
+regression test; the frontend suite (78 tests), typecheck and lint passed.
+Credential resolution in the container and a successful S3 save remain unverified.
