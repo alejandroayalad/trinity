@@ -117,3 +117,9 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [Publication implementation and acceptance](2026-10-04-publication-implementation-acceptance.md) — authorized Tasks 1–6, executable recovery and measured acceptance boundaries.
 
 - [Failed-run recovery Step 4](2026-10-05-failed-run-recovery-step-4.md) — Step 3 Git delivery, disposable SQL/HTTP/Redis/worker acceptance and remaining settings/scheduler integration.
+
+- [Schedule settings — specification and steps](2026-10-05-schedule-settings-specification.md) — D01–D03, Steps 2–5 history and understanding checks.
+
+- [Schedule settings — implementation evidence](2026-10-05-schedule-settings-implementation.md) — measured offline, PostgreSQL, Redis, image and retained S20 results.
+
+- [Retained persona password rotation](2026-10-05-retained-persona-password-rotation.md) — explicit rotation command and read-only before/after snapshots of retained state.
