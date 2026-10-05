@@ -1,0 +1,10 @@
+# Installed packages and generated output.
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Playwright output. Screenshots for evidence are copied to evidence/ on purpose.
+test-results/
+playwright-report/
+blob-report/
