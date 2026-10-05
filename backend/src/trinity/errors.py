@@ -14,11 +14,12 @@ from starlette.responses import JSONResponse
 class Problem(Exception):
     """Carry only a trusted error code and status, never an exception message."""
 
-    def __init__(self, status: int, code: str, *, retry_after: int | None = None):
+    def __init__(self, status: int, code: str, *, retry_after: int | None = None, blocker: dict | None = None):
         super().__init__(code)
         self.status = status
         self.code = code
         self.retry_after = retry_after
+        self.blocker = blocker
 
 
 def problem_response(error: Problem, request_id: str, errors: list | None = None) -> JSONResponse:
@@ -32,7 +33,7 @@ def problem_response(error: Problem, request_id: str, errors: list | None = None
     return JSONResponse({
         "type": "about:blank", "title": title, "status": error.status,
         "detail": title, "code": error.code, "request_id": request_id,
-        "errors": errors or [], "blocker": None, "current_revision": None,
+        "errors": errors or [], "blocker": error.blocker, "current_revision": None,
     }, status_code=error.status, media_type="application/problem+json", headers=headers)
 
 
@@ -100,11 +101,13 @@ class SafeTransport:
                         break
             preview = scope['method'] == 'GET' and re.fullmatch(
                 r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
+            refresh = scope['method'] == 'GET' and re.fullmatch(
+                r'/api/v1/refresh-runs(?:/[^/]+)?', scope.get('path', '')) is not None
             if len(scope.get('query_string', b'')) > 65536:
                 raise Problem(413, "request_too_large")
-            if scope.get("query_string") and not preview:
+            if scope.get("query_string") and not (preview or refresh):
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "GET" and body and not preview:
+            if scope["method"] == "GET" and body and not (preview or refresh):
                 raise Problem(422, "invalid_request")
             if scope["method"] == "POST":
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]

@@ -17,6 +17,7 @@ from trinity.config import load_api_settings
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
 from trinity.queries.router import router as queries_router
+from trinity.refresh.router import router as refresh_router
 
 
 class HealthResponse(BaseModel):
@@ -24,7 +25,7 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
 
 
-def create_app(*, settings=None, service=None, query_service=None, preview_service=None, enable_preview=False) -> FastAPI:
+def create_app(*, settings=None, service=None, query_service=None, preview_service=None, refresh_service=None, enable_preview=False) -> FastAPI:
     """Return the API with auth, catalog, SQL and a delivery-gated preview route.
 
     Register startup and shutdown hooks without opening a database here.
@@ -48,6 +49,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
             application.state.auth = service
         application.state.query_service = query_service
         application.state.preview_service = preview_service
+        application.state.refresh_service = refresh_service
         application.state.preview_enabled = enable_preview
         try:
             yield
@@ -62,6 +64,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
     application.include_router(settings_router)
     application.include_router(queries_router)
     application.include_router(catalog_router)
+    application.include_router(refresh_router)
 
     # The decorator registers this handler; the response model fixes the JSON shape.
     @application.get("/health", response_model=HealthResponse, tags=["health"])

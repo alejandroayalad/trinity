@@ -30,7 +30,7 @@ def main():
     if args.runtime_only:
         patterns = ['test_preview_runtime.py']
     if args.refresh:
-        patterns = ['test_refresh_postgres.py']
+        patterns = ['test_refresh_postgres.py', 'test_refresh_admission.py']
     binary = Path(os.environ.get("TRINITY_PG_BIN", "/opt/homebrew/opt/postgresql@17/bin"))
     version = subprocess.check_output([str(binary / "postgres"), "--version"], text=True).strip()
     if version.split()[:3] != ["postgres", "(PostgreSQL)", "17.11"]:
