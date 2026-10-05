@@ -22,6 +22,8 @@ class HealthTests(unittest.TestCase):
                                      "/api/v1/me", "/api/v1/settings", "/api/v1/queries", "/api/v1/catalog",
                                      "/api/v1/dashboard/national", "/api/v1/metrics/offline-share",
                                      "/api/v1/datasets/{dataset_key}/preview",
+                                     "/api/v1/datasets/{dataset_key}/facilities",
+                                     "/api/v1/datasets/{dataset_key}/generators",
                                      "/api/v1/refresh-runs", "/api/v1/refresh-runs/{run_id}",
                                      "/api/v1/refresh-runs/{run_id}/rerun",
                                      "/api/v1/refresh-runs/{run_id}/warning",

@@ -17,6 +17,7 @@ def main():
     """Create a temporary cluster, run checks and always stop our own server."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preview', action='store_true', help='Include preview database/HTTP acceptance')
+    parser.add_argument('--choices', action='store_true', help='Run Plant choices unit, HTTP and container acceptance')
     parser.add_argument('--dashboard', action='store_true', help='Run national engine, database and container acceptance')
     parser.add_argument('--pattern', help='Select one unittest filename pattern in the disposable database')
     parser.add_argument('--publication', action='store_true', help='Run publication acceptance')
@@ -29,6 +30,7 @@ def main():
     if args.preview or args.all:
         patterns.extend(('test_preview_postgres.py', 'test_preview_runtime.py', 'test_query_guarantees.py'))
     if args.all:
+        patterns.extend(('test_choices.py', 'test_choice_service.py', 'test_choice_runtime.py'))
         patterns.extend(('test_auth_postgres.py', 'test_catalog_postgres.py'))
         patterns.extend(('test_dashboard_engine.py', 'test_dashboard_postgres.py', 'test_dashboard_runtime.py'))
     if args.runtime_only:
@@ -39,6 +41,8 @@ def main():
         patterns = ['test_publication*.py']
     if args.dashboard:
         patterns = ['test_dashboard_engine.py', 'test_dashboard_postgres.py', 'test_dashboard_runtime.py']
+    if args.choices:
+        patterns = ['test_choices.py', 'test_choice_service.py', 'test_choice_runtime.py']
     if args.pattern:
         patterns = [args.pattern]
     binary = Path(os.environ.get("TRINITY_PG_BIN", "/opt/homebrew/opt/postgresql@17/bin"))

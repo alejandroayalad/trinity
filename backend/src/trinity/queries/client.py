@@ -7,6 +7,8 @@ from trinity.adapters.docker import read_frames
 from trinity.contracts.manifest import read_json
 from trinity.errors import Problem
 from trinity.contracts.queries import PreviewOperation, read_result_binding
+from trinity.contracts.choices import ChoiceOperation
+from trinity.queries.choice_schemas import build_choice_response
 from trinity.publication.diagnostics import read_preview_diagnostics
 from trinity.queries.preview_schemas import build_preview_batch_response
 from trinity.queries import repository
@@ -101,6 +103,9 @@ class QueryExecution:
             if isinstance(prepared.query, PreviewOperation):
                 response = build_preview_batch_response(prepared.query, prepared.pinned.publication,
                                                         result, diagnostics=diagnostics, codec=prepared.codec)
+            elif isinstance(prepared.query, ChoiceOperation):
+                response = build_choice_response(prepared.query, prepared.pinned.publication,
+                                                 result, codec=prepared.codec)
             else:
                 data = {**result, 'publication': prepared.pinned.publication,
                         'execution_ms': int((time.monotonic() - prepared.started) * 1000)}
