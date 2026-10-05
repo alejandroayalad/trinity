@@ -32,8 +32,11 @@ _TEMPORARY = (ConnectionClosedError, ConnectTimeoutError, EndpointConnectionErro
 class StorageError(RuntimeError):
     """Expose a fixed safe code, never SDK exception text or infrastructure URLs."""
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, cause: str | None = None) -> None:
         self.code = code
+        # Keep the existing outward code stable. Publication uses the internal
+        # cause to distinguish safe retry from permanent or unknown failures.
+        self.cause = cause or code
         super().__init__(f"Candidate storage failed: {code}.")
 
 
@@ -65,6 +68,8 @@ def _error_kind(error: Exception) -> str:
         code = error.response.get("Error", {}).get("Code")
         if status == 412 or code == "PreconditionFailed":
             return "exists"
+        if status == 403 or code in ("AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"):
+            return "denied"
         if code == "NoSuchKey":
             return "missing"
         if status in (409, 429, 500, 502, 503, 504) or code in (
@@ -198,7 +203,10 @@ class StorageOperation:
                 if kind == "missing" and allow_missing:
                     return False
                 if kind != "temporary" or attempt == 3:
-                    raise StorageError("object_read_failed") from None
+                    raise StorageError("object_read_failed", cause={
+                        "temporary": "storage_temporary", "missing": "evidence_missing",
+                        "denied": "storage_denied", "configuration": "storage_configuration",
+                    }.get(kind, "unknown_failure")) from None
             finally:
                 if body is not None:
                     try:

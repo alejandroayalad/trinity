@@ -12,13 +12,21 @@ import re
 import time
 from uuid import UUID
 
-from trinity.adapters.s3 import StoredArtifact
+from trinity.adapters.s3 import StoredArtifact, StorageError
 from trinity.connector import parquet
 from trinity.connector.pipeline import StoredCandidate, _read_storage_file, verify_stored_candidate
 from trinity.connector.prepare import _verify_receipt
 from trinity.connector.validate import CheckResult, ValidationReport
 from trinity.contracts.manifest import canonical_json, read_json, read_manifest, sha256
 from trinity.errors import Problem
+
+
+class EvidenceError(Problem):
+    """Retain a safe internal cause while preserving Refresh's public error."""
+
+    def __init__(self, cause):
+        super().__init__(503, "dependency_unavailable")
+        self.cause = cause
 
 
 @dataclass(frozen=True)
@@ -87,5 +95,21 @@ def load_candidate(root: Path, expected_receipt_sha256: str, storage, *, timeout
         # checks every member. Hashing the summaries above does not trust them.
         verify_stored_candidate(report, receipt, storage, timeout_seconds=verification_deadline-time.monotonic())
         return CandidateEvidence(report, receipt, expected_receipt_sha256)
+    except StorageError as error:
+        # Only positively identified operational causes permit a later retry.
+        cause = error.cause
+        if cause not in ('storage_temporary', 'storage_deadline', 'storage_denied',
+                         'storage_configuration', 'evidence_missing', 'unknown_failure'):
+            cause = 'evidence_invalid' if cause in (
+                'object_identity', 'unsafe_local_file', 'local_inventory_changed',
+                'local_artifact_changed', 'local_identity', 'receipt_identity',
+                'storage_incomplete', 'bundle_identity', 'reservation_identity',
+                'plan_identity', 'bundle_inventory', 'snapshot_validation_identity',
+                'stored_candidate_invalid', 'object_too_large') else 'unknown_failure'
+        raise EvidenceError(cause) from None
+    except FileNotFoundError:
+        raise EvidenceError('evidence_missing') from None
+    except (ValueError, TypeError, KeyError):
+        raise EvidenceError('evidence_invalid') from None
     except Exception:
-        raise Problem(503, 'dependency_unavailable') from None
+        raise EvidenceError('unknown_failure') from None

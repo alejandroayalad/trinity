@@ -55,3 +55,28 @@ class RefreshQueue:
     async def close(self):
         """Release this adapter's own Redis connection."""
         await self.queue.close()
+
+
+def publication_payload(value):
+    """Accept only version/run identities and the two nonnegative generations."""
+    keys = {'schema_version','run_id','version_id','job_kind','publication_generation','dispatch_generation'}
+    if (not isinstance(value,dict) or set(value)!=keys or type(value['schema_version']) is not int
+            or value['schema_version']!=1 or value['job_kind']!='publish_version'
+            or any(type(value[k]) is not int or value[k]<0 for k in ('publication_generation','dispatch_generation'))
+            or any(str(UUID(value[k]))!=value[k] for k in ('run_id','version_id'))):
+        raise ValueError('invalid_publication_notification')
+    return dict(value)
+
+
+class PublicationQueue(RefreshQueue):
+    """Specialize the existing bounded transport for a separate one-slot queue."""
+    def __init__(self, connection, *, name='trinity-publication', timeout=10):
+        super().__init__(connection,name=name,timeout=timeout)
+
+    async def enqueue(self, payload):
+        """Retain completed jobs; only explicit generations create a new ID."""
+        value = publication_payload(payload)
+        identity = f"publish-{value['version_id']}-{value['publication_generation']}-{value['dispatch_generation']}"
+        async with asyncio.timeout(self.timeout):
+            return await self.queue.add('publish_version',value,{'jobId':identity,'attempts':1,
+                'removeOnComplete':False,'removeOnFail':False})
