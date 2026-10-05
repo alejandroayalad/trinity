@@ -4,6 +4,8 @@
 
 [ME] Alayala requested a main-based `pending-endpoints-frontend` branch, one commit per proposal and a push; he clarified planning only. [YOU] Codex cherry-picked the dashboard proposal and drafted [Schedule settings](sdd/schedule-settings/proposal.md) from the current API and admission flow. The [delivery session](ai/sessions/2026-10-05-pending-endpoints-proposals-delivery.md) records scope and checks. Endpoint code and runtime behavior remain unchanged.
 
+[YOU] Added the separate [Plant filter proposal](sdd/plant-filter/proposal.md), covering exact facility/generator IDs, distinct published choices, label/search semantics, authenticated pagination and shared query isolation. Name tie-breaking and search details remain specification decisions.
+
 ## Dashboard backend planning — October 5, 2026
 
 [ME] Alayala prioritized dashboard backend planning, then schedule settings, Plant filter and failed-run recovery. [YOU] Codex mapped the designed screen to the two existing national API contracts and implemented preview flow, and drafted the [dashboard proposal](sdd/national-dashboard/proposal.md). The [session](ai/sessions/2026-10-05-dashboard-backend-priority.md) records the latest-card/range-end distinction, publication consistency and verification boundaries. Concurrent frontend work is preserved. This is planning only; no endpoint implementation or runtime readiness is claimed.

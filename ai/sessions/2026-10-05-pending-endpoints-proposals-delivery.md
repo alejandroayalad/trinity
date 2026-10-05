@@ -14,6 +14,12 @@
 
 Checks: source/contract tracing and document links/whitespace before each commit. No backend tests were needed because these commits change documentation only. Final verification results follow after all proposals are complete.
 
-Done: isolated branch, dashboard cherry-pick and Schedule settings proposal.
-Pending: Plant filter and failed-run recovery proposals, final checks and push.
+## Plant filter proposal
+
+[YOU] Traced preview authorization, date/ID parsing, publication pinning, typed DataFusion execution and the preview-specific cursor envelope. Compared the two OpenAPI choice routes and their distinct inputs. Drafted the [Plant filter proposal](../../sdd/plant-filter/proposal.md). The complete observation range must produce distinct IDs and current labels before paging. Same-date label tie-breaking and search-over-label semantics remain explicit open details; no new entity registry or dependency was selected.
+
+The Schedule commit passed changed-document local-link, fence and whitespace checks and alignment of all eight planned routes with OpenAPI. The same checks apply before the Plant commit. These are documentation checks, not endpoint runtime tests.
+
+Done: isolated branch, dashboard cherry-pick, Schedule settings and Plant filter proposals.
+Pending: failed-run recovery proposal, final checks and push.
 Blocker: none.
