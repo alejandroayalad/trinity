@@ -467,6 +467,8 @@ Source and contributions: [approved API completion session](ai/sessions/2026-10-
 
 **A20 amendment:** Remove `clerk-backend-api` from challenge dependencies. Its former 7.0.0 pin and compatibility notes below are historical only. No replacement password library/version is selected here; check existing runtime support before adding one. All other selected versions and the lockfile policy remain unchanged.
 
+**October 5, 2026 amendment:** Alayala approved changing the pin to `boto3[crt]==1.43.108`. Reason: the Compose S3 workers use the host `trinity-writer` profile, whose source profile uses `aws login`; botocore raised `MissingDependencyException` without `awscrt`. `uv lock` added only `awscrt` 0.36.0. The backend offline suite passed in the rebuilt image (790 ran, 258 opt-in skips). Advisory review of `awscrt` and credential resolution in the running workers remain unverified.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Exact versions selected; installation, dependency resolution, advisory review, and runtime compatibility remain unverified.
@@ -481,7 +483,7 @@ Status: accepted by alayala on October 3, 2026. Exact versions selected; install
 | Analytical execution | [pyarrow 25.0.1](https://pypi.org/project/pyarrow/25.0.1/), [datafusion 54.0.0](https://pypi.org/project/datafusion/54.0.0/), [sqlglot 30.21.0](https://pypi.org/project/sqlglot/30.21.0/) | A13 stack; install name is `datafusion`, not `datafusion-python`. |
 | Queue | [bullmq 3.3.0](https://pypi.org/project/bullmq/3.3.0/) | Python package under A6; its metadata requires `redis==7.4.1`, `msgpack==1.2.3`, `semver==3.1.0`, and `croniter==2.0.7`. These are package versions, not the Redis server version. |
 | External HTTP | [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Reuse HTTPX for EIA HTTP and bounded timeouts. A20 removes clerk-backend-api from the challenge dependency set. |
-| Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. |
+| Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) with `crt` extra | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. The `crt` extra adds `awscrt` (locked at 0.36.0), which botocore requires to read `aws login` credentials. |
 
 Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server version is separate from BullMQ's `redis` Python client version. Exact deployment images/digests, frontend packages, and cloud resources remain outside this selection.
 

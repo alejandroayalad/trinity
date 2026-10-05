@@ -740,3 +740,9 @@ and recovery was replaced by main's versions from PR #13. Its frontend-only back
 tests (`test_frontend_*`) and modules were removed; the browser runner hook was kept.
 Frontend code was then checked against main's API. Measured checks are in the
 merge commit; nothing was pushed.
+
+[ME] Approved adding `boto3[crt]` after workers failed with
+`MissingDependencyException` for the `aws login` provider. [YOU] Changed the pin,
+ran `uv lock` in a container (only `awscrt` 0.36.0 added) and recorded the A17
+amendment. A check image imported `awscrt` and the backend offline suite passed
+(790 ran, 258 skips). Worker credential resolution remains unverified.
