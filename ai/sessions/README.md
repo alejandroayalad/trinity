@@ -115,3 +115,5 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-04 — Refresh Task 5 receipt routing and recovery](2026-10-04-refresh-task5-receipt-routing.md)
 
 - [Publication implementation and acceptance](2026-10-04-publication-implementation-acceptance.md) — authorized Tasks 1–6, executable recovery and measured acceptance boundaries.
+
+- [Failed-run recovery Step 4](2026-10-05-failed-run-recovery-step-4.md) — Step 3 Git delivery, disposable SQL/HTTP/Redis/worker acceptance and remaining settings/scheduler integration.

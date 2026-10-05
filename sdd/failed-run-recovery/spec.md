@@ -1,7 +1,7 @@
 # Specification: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Accepted for design/tasks on October 5, 2026, including P01. Acceptance commit/push authorized on `pending-endpoints-frontend`; implementation and runtime recovery remain unauthorized.
+Status: Accepted and implemented through Step 3; delivered as `bff8446` and `da8be15`. Step 4 available automated acceptance passed and is delivered as `2812ab9`; settings/scheduler integration remains open. See [runtime evidence and remaining integration](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md). Retained operator acceptance remains pending.
 Basis: [Proposal](proposal.md), A9/A16/A19/A20/A22–A24 in [DECISIONS](../../DECISIONS.md), [API command contract](../../docs/api-contract.md#commands-and-concurrency), [OpenAPI](../../docs/openapi.json), [security contract](../../docs/security-contract.md) and [schema](../../docs/schema.md).
 
 ## Human
@@ -84,3 +84,5 @@ Done: specification and P01 accepted for design. Pending: review of the drafted 
 **Implementation continuation — October 5:** Alayala accepted the design and asked to start tasks. Step 2 parsing/eligibility is implemented locally and offline-tested; see [evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-2.md). This supersedes the earlier no-implementation status for Step 2 only. Step 3 mutations and runtime acceptance remain pending.
 
 **Step 3 continuation — October 5:** After the observed lease/fence explanation, Alayala explicitly authorized Step 3. Both recovery routes, atomic service orchestration and shared Admin projections are implemented locally; see [implementation evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). This supersedes the earlier Step 3-pending status. Step 4 runtime proof remains pending.
+
+**Step 4 continuation — October 5:** The user authorized Step 3 delivery and disposable acceptance. Step 3 is pushed; 75 focused recovery checks and 25 PostgreSQL auth checks passed. This supersedes the earlier unexecuted-runtime statements for those cases. Full settings/scheduler integration and retained operator acceptance remain open. See the [Step 4 evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md) for exact scope, broader results and limitations.

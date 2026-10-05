@@ -1,7 +1,7 @@
 # Tasks: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Steps 2–3 authorized and implemented locally October 5, 2026. Step 2 understanding check passed; Step 3 offline results and runtime boundaries are in the [implementation record](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). Step 4 is now authorized and in progress.
+Status: Steps 2–3 authorized and implemented locally October 5, 2026. Step 2 understanding check passed; Step 3 offline results and runtime boundaries are in the [implementation record](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). Step 3 is pushed as `bff8446` and `da8be15`. Step 4 disposable acceptance is authorized; current evidence and remaining integration are in the [Step 4 record](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md).
 Basis: [specification](spec.md), [design](design.md), [proposal](proposal.md), A16/P01 and A15/A19/A20/A23/A24 in [DECISIONS](../../DECISIONS.md).
 
 ## Human
@@ -43,26 +43,27 @@ Coverage: R01–R12; S03–S07, S10, S12.
 - [x] [YOU] Run focused and affected auth/Refresh/Publication offline regressions; review the diff and report skipped checks separately.
 - [ ] [ME] Explain what remains unchanged when the outbox insert fails.
 
-Gate: local service/HTTP/projection tests and affected offline checks pass. Six real PostgreSQL cases are authored and registered with the existing runner, but not executed; actual rollback, commit and concurrent-writer guarantees still require Step 4. No live recovery or retained database edits.
+Gate: local service/HTTP/projection tests and affected offline checks pass. The six PostgreSQL cases subsequently passed in Step 4, including rollback after every write and deferred commit failure. See the Step 4 record for measured writer boundaries. No live recovery or retained database edits.
 
 ### Step 4 — Real transaction, race and delivery acceptance
 
 Coverage: all S01–S12, especially S07–S09 and S11–S12.
 
 - [x] [ME] Authorized Step 3 commit/push and continuation with disposable Step 4 checks. No retained build or deployment is included. [YOU] Reuse existing PostgreSQL/Refresh fixtures and runners; isolate resources and cleanup only test-owned state.
-- [ ] [YOU] Prove full rollback with real PostgreSQL and race rerun/delete against each other, candidate retry/discard/commit, manual start, scheduler admission, settings update, logout and role change. Verify one owner and no stale slot release.
-- [ ] [YOU] Exercise confirmed-stop preparation/publication paths and pre-claim failures. Send stale dispatcher acknowledgements, queue deliveries and worker commits after abandonment; assert no revival or file publication.
-- [ ] [YOU] Use real HTTP to lose/replay a success response, recheck current authority, and verify changed revisions/actions. Use real outbox/Redis to test accepted rerun during queue failure and subsequent single-run dispatch; deletion emits none.
-- [ ] [YOU] Run relevant broader regressions, report pass/fail/skip counts per boundary and retain sanitized reproducible evidence. Do not sum overlapping suites as unique tests.
+- [x] [YOU] Prove full rollback with real PostgreSQL and race rerun/delete against each other, candidate retry/discard/commit, manual start, logout and role change. Verify one owner and no stale slot release. Scheduled admission primitive and settings-row writer races also passed.
+- [ ] [YOU] After the separate settings/scheduler slice is integrated, repeat races through its actual mutation endpoint and scheduler admission path. Those implementations are absent here; primitive-level results do not close this integration check.
+- [x] [YOU] Exercise confirmed-stop preparation/publication paths and pre-claim failures. Send stale dispatcher acknowledgements, queue deliveries and worker commits after abandonment; assert no revival or file publication.
+- [x] [YOU] Use real HTTP to lose/replay a success response, recheck current authority, and verify changed revisions/actions. Use real outbox/Redis to test accepted rerun during queue failure and subsequent single-run dispatch; deletion emits none.
+- [x] [YOU] Run relevant broader regressions, report pass/fail/skip counts per boundary and retain sanitized reproducible evidence. Do not sum overlapping suites as unique tests.
 
 Gate: all essential cases pass with measured database/HTTP/queue evidence. Fixture success does not prove retained deployment or full-history extraction.
 
 ### Step 5 — Review and retained operator handoff
 
-- [ ] [YOU] Review final diff, comments/docstrings, contract consistency and links; reconcile proposal/spec/design status with measured results. Record limitations in NOTES and a unique session record.
+- [x] [YOU] Review final diff, comments/docstrings, contract consistency and links; reconcile proposal/spec/design status with measured results. Record limitations in NOTES and a unique session record.
 - [ ] [ME] In separately authorized retained setup, inspect a genuine safe failed run as Admin; use one recovery action and verify the old publication/history remain. Live EIA calls and builds stay with [ME].
 - [ ] [YOU] Record observed operator result without credentials. Do not fabricate a failure or change retained state merely to complete the checklist. If prerequisites are missing, record the exact boundary and leave this check open.
-- [ ] [ME] Authorize implementation commits/push or merge separately. Preserve incremental history; document authorization and actual remote verification.
+- [x] [ME] Authorized slice delivery with “wrap it up and deliver this slice.” [YOU] Committed and pushed runtime tests as `2812ab9`; verified the remote head. Delivery preserves incremental history. Merge and retained deployment remain separate.
 
 Gate: distinguish automated acceptance, retained operator acceptance and Git delivery. None implies deployment of the others.
 
@@ -72,4 +73,4 @@ From `backend/`, use the existing `.venv/bin/python -m unittest discover -s test
 
 At every gate record command, environment, result count, failures/skips, cleanup and remaining boundary. Document-only checks do not run backend suites.
 
-Done: Step 3 implementation and offline checks. Pending: Step 4 runtime verification; the human failure-case explanation is unobserved but the user explicitly authorized continuation. Blocker: no offline code blocker; real transaction/writer proof remains pending.
+Done: implementation and runtime tests committed/pushed; 75 focused recovery checks and 25 PostgreSQL auth checks pass. Combined Refresh/Publication: 120 passed, 1 query-image-dependent skip, zero failures. Pending: actual settings/scheduler integration, and Step 5 retained operator acceptance. Blocker: this checkout has no settings mutation endpoint or scheduler loop; shared database primitives are tested. The human failure-case explanation remains unobserved; explicit continuation was authorized.

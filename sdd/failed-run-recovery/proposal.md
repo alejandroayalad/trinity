@@ -1,7 +1,7 @@
 # Proposal: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Specification drafting and proposal/specification commit/push authorized on October 5, 2026. Specification and P01 are now accepted; design/tasks are authorized. Implementation is not authorized.
+Status: Accepted and implemented through Step 3; delivered as `bff8446` and `da8be15`. Step 4 available automated acceptance passed and is delivered as `2812ab9`; settings/scheduler integration remains open. See [runtime evidence and remaining integration](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md). Retained operator acceptance remains pending.
 Specification: [Failed-run recovery](spec.md), accepted for design.
 Basis: A9/A16/A19/A20/A22–A24 in [DECISIONS.md](../../DECISIONS.md), [command contract](../../docs/api-contract.md#commands-and-concurrency), [OpenAPI](../../docs/openapi.json), [security contract](../../docs/security-contract.md) and [Publication design](../publication/design.md).
 Current priority: next after the ongoing [Schedule settings](../schedule-settings/proposal.md) work. Alayala selected recovery next on October 5, superseding the earlier order after Plant filter. [Dashboard](../national-dashboard/proposal.md) and [Plant filter](../plant-filter/proposal.md) retain their separate scopes.
@@ -79,3 +79,5 @@ Done: source-grounded proposal. Pending: review of [design](design.md) and [task
 **Implementation continuation — October 5:** Alayala accepted the design and asked to start tasks. Step 2 parsing/eligibility is implemented locally and offline-tested; see [evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-2.md). This supersedes the earlier no-implementation status for Step 2 only. Step 3 mutations and runtime acceptance remain pending.
 
 **Step 3 continuation — October 5:** After the observed lease/fence explanation, Alayala explicitly authorized Step 3. Both recovery routes, atomic service orchestration and shared Admin projections are implemented locally; see [implementation evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). This supersedes the earlier Step 3-pending status. Step 4 runtime proof remains pending.
+
+**Step 4 continuation — October 5:** The user authorized Step 3 delivery and disposable acceptance. Step 3 is pushed; 75 focused recovery checks and 25 PostgreSQL auth checks passed. This supersedes the earlier unexecuted-runtime statements for those cases. Full settings/scheduler integration and retained operator acceptance remain open. See the [Step 4 evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md) for exact scope, broader results and limitations.

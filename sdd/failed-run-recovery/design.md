@@ -1,7 +1,7 @@
 # Design: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Steps 2–3 authorized and implemented locally October 5, 2026. See [Step 2 evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-2.md) and [Step 3 implementation](../../ai/sessions/2026-10-05-failed-run-recovery-step-3.md). Runtime acceptance remains pending.
+Status: Accepted and implemented through Step 3; delivered as `bff8446` and `da8be15`. Step 4 available automated acceptance passed and is delivered as `2812ab9`; settings/scheduler integration remains open. See [runtime evidence and remaining integration](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md). Retained operator acceptance remains pending.
 Branch: `pending-endpoints-frontend`.
 Basis: [accepted specification](spec.md), [proposal](proposal.md), [tasks](tasks.md), A15/A16/A19/A20/A23/A24 in [DECISIONS](../../DECISIONS.md), [backend responsibilities](../../docs/backend.md), [API contract](../../docs/api-contract.md#commands-and-concurrency) and [schema abandonment rules](../../docs/schema.md#failure-resolution-and-abandonment).
 
@@ -133,3 +133,5 @@ This is source-derived lock analysis, not a measured deadlock test. No command l
 `POLICY` and `_insert_run` use the same factoring/signature shape inspected in the active schedule branch, with an optional rerun predecessor. Existing manual-call signatures remain valid. No schedule code was copied or changed in that worktree; its eventual merge still needs integration review. The recovery read projection now evaluates the shared helper inside `read_context`; `/me`, history and detail use those flags and historical runs cannot inherit another holder's enabled actions.
 
 The Step 2 source-reconciliation table above describes the earlier baseline; the candidate command's reversed lock order is now corrected in source. Actual PostgreSQL deadlock/rollback/writer-race proof remains pending. Six opt-in database tests cover linkage, no-work deletion, every-write rollback, deferred commit failure and stale outbox state. Their presence is not a passed runtime check.
+
+**Step 4 continuation — October 5:** The user authorized Step 3 delivery and disposable acceptance. Step 3 is pushed; 75 focused recovery checks and 25 PostgreSQL auth checks passed. This supersedes the earlier unexecuted-runtime statements for those cases. Full settings/scheduler integration and retained operator acceptance remain open. See the [Step 4 evidence](../../ai/sessions/2026-10-05-failed-run-recovery-step-4.md) for exact scope, broader results and limitations.
