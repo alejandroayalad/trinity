@@ -25,5 +25,9 @@ class HealthTests(unittest.TestCase):
                                      "/api/v1/candidates/{version_id}",
                                  "/api/v1/candidates/{version_id}/approval",
                                  "/api/v1/candidates/{version_id}/publication-retry",
-                                 "/api/v1/candidates/{version_id}/discard"})
+                                 "/api/v1/candidates/{version_id}/discard",
+                             "/api/v1/dashboard/national", "/api/v1/metrics/offline-share",
+                             "/api/v1/settings/schedule-status", "/api/v1/datasets/{dataset_key}/facilities",
+                             "/api/v1/datasets/{dataset_key}/generators",
+                             "/api/v1/refresh-runs/{run_id}/rerun", "/api/v1/refresh-runs/{run_id}/warning"})
         self.assertEqual(response.status_code, 401)

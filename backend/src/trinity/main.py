@@ -14,6 +14,7 @@ from trinity.auth.router import router
 from trinity.auth.service import AuthService
 from trinity.catalog.router import router as catalog_router
 from trinity.config import load_api_settings
+from trinity.dashboard.router import router as dashboard_router
 from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
 from trinity.queries.router import router as queries_router
@@ -65,6 +66,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
     application.include_router(settings_router)
     application.include_router(queries_router)
     application.include_router(catalog_router)
+    application.include_router(dashboard_router)
     application.include_router(refresh_router)
     application.include_router(candidates_router)
 

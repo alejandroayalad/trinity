@@ -49,3 +49,30 @@ async def preview_dataset(dataset_key: str, request: Request, token: str = Depen
             database, enabled=request.app.state.preview_enabled))
     return await supervised_call(request, service.execute, token, dataset_key,
                                  request.query_params.multi_items(), body=await request.body())
+
+
+async def choices(dataset_key, request, token, selection):
+    """Authorize detailed datasets before parsing protected choice filters."""
+    from trinity.queries.choices import ChoiceService
+    from trinity.queries.config import preview_execution_factory
+    database = request.app.state.auth.database
+    service = ChoiceService(database, lambda: preview_execution_factory(database,
+        enabled=request.app.state.preview_enabled), selection=selection)
+    result = await supervised_call(request, service.execute, token, dataset_key,
+                                   request.query_params.multi_items(), body=await request.body())
+    body = result.model_dump(mode='json')
+    if selection == 'facilities':
+        body.pop('facility')
+    return body
+
+
+@router.get('/datasets/{dataset_key}/facilities')
+async def facilities(dataset_key: str, request: Request, token: str = Depends(bearer_token)):
+    """List IDs and latest non-null names in the requested published range."""
+    return await choices(dataset_key, request, token, 'facilities')
+
+
+@router.get('/datasets/{dataset_key}/generators')
+async def generators(dataset_key: str, request: Request, token: str = Depends(bearer_token)):
+    """List exact generator IDs for one required parent facility."""
+    return await choices(dataset_key, request, token, 'generators')

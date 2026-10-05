@@ -100,7 +100,7 @@ class SafeTransport:
                     if not message.get("more_body", False):
                         break
             preview = scope['method'] == 'GET' and re.fullmatch(
-                r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
+                r'/api/v1/(?:datasets/[^/]+/(?:preview|facilities|generators)|dashboard/national|metrics/offline-share)', scope.get('path', '')) is not None
             refresh = scope['method'] == 'GET' and re.fullmatch(
                 r'/api/v1/refresh-runs(?:/[^/]+)?', scope.get('path', '')) is not None
             if len(scope.get('query_string', b'')) > 65536:

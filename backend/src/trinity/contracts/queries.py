@@ -163,12 +163,12 @@ def request_message(request_id, version_id, operation) -> dict:
     request_id, version_id = str(request_id), str(version_id)
     if any(str(UUID(value)) != value for value in (request_id, version_id)):
         raise ValueError('Invalid request binding')
-    if type(operation) not in (ValidatedQuery, PreviewOperation):
+    if type(operation) not in (ValidatedQuery, PreviewOperation, ChoiceOperation):
         raise ValueError('Invalid operation')
     if isinstance(operation, PreviewOperation) and operation.version_id != version_id:
         raise ValueError('Invalid request binding')
     return dict(protocol_version=PROTOCOL_VERSION, request_id=request_id, version_id=version_id,
-                operation_kind='preview' if isinstance(operation, PreviewOperation) else 'sql',
+                operation_kind='choices' if isinstance(operation, ChoiceOperation) else 'preview' if isinstance(operation, PreviewOperation) else 'sql',
                 operation=json.loads(operation.to_bytes()), operation_digest=operation.digest)
 
 
@@ -182,9 +182,9 @@ def read_request(data: bytes):
                 or type(body['protocol_version']) is not int or body['protocol_version'] != PROTOCOL_VERSION):
             raise ValueError
         kind = body['operation_kind']
-        if kind not in ('sql', 'preview'):
+        if kind not in ('sql', 'preview', 'choices'):
             raise ValueError
-        decoder = PreviewOperation if kind == 'preview' else ValidatedQuery
+        decoder = ChoiceOperation if kind == 'choices' else PreviewOperation if kind == 'preview' else ValidatedQuery
         operation = decoder.from_bytes(canonical_message(body['operation']))
         expected = request_message(body['request_id'], body['version_id'], operation)
         if expected != body or canonical_message(expected) != data:
@@ -203,3 +203,23 @@ def read_result_binding(body, request_id, version_id, operation):
             or type(body['result']) is not dict):
         raise ValueError('Invalid query result')
     return body['result']
+
+
+@dataclass(frozen=True)
+class ChoiceOperation(PreviewOperation):
+    """Use the same authorized mount, with a closed choice projection and bookmark."""
+    selection: str = 'facilities'
+    search: str | None = None
+    after_id: str | None = None
+
+    def __post_init__(self):
+        super().__post_init__()
+        if (self.dataset not in ('facility', 'generator') or self.selection not in ('facilities', 'generators')
+                or self.page_size > 100 or self.after is not None or self.generator is not None
+                or self.selection == 'generators' and (self.dataset != 'generator' or self.facility is None or self.search is not None)
+                or self.selection == 'facilities' and self.facility is not None):
+            raise ValueError('Invalid choice operation')
+        if self.search is not None and (type(self.search) is not str or not 1 <= len(self.search) <= 100):
+            raise ValueError('Invalid choice operation')
+        if self.after_id is not None and (type(self.after_id) is not str or not 1 <= len(self.after_id) <= 128 or not self.after_id.strip()):
+            raise ValueError('Invalid choice operation')

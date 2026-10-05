@@ -166,8 +166,8 @@ def admin_context(settings, run, version, warning, approval, step):
     publication_actions = run.get('_publication_actions', {}) if run else {}
     enabled = {
         "start_refresh": setup and run is None,
-        "rerun": False,
-        "delete_warning": False,
+        "rerun": setup and bool(run and run.get("_recovery_allowed")),
+        "delete_warning": setup and bool(run and run.get("_recovery_allowed")),
         **{name: setup and publication_actions.get(name,False)
            for name in ('approve','publication_retry','discard')},
     }

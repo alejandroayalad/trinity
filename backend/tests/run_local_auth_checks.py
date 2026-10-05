@@ -38,9 +38,12 @@ def main():
                             "trinity_test_auth"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             os.environ["TRINITY_TEST_DATABASE_URL"] = (
                 "postgresql://trinity_test_owner@/trinity_test_auth?host=" + quote(str(socket), safe=""))
+            if "--frontend-browser" in sys.argv or "--frontend-data" in sys.argv:
+                from run_frontend_browser import main as browser_checks
+                return browser_checks()
             suite = unittest.TestSuite([
                 unittest.defaultTestLoader.discover(str(backend / "tests"), pattern=pattern)
-                for pattern in ("test_auth*.py", "test_catalog*.py")
+                for pattern in (("test_frontend_postgres.py",) if "--frontend" in sys.argv else ("test_auth*.py", "test_catalog*.py"))
             ])
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             print(f"Database acceptance runtime: {version}; disposable Unix-socket cluster.")

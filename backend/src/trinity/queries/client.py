@@ -6,7 +6,7 @@ import time
 from trinity.adapters.docker import read_frames
 from trinity.contracts.manifest import read_json
 from trinity.errors import Problem
-from trinity.contracts.queries import PreviewOperation, read_result_binding
+from trinity.contracts.queries import ChoiceOperation, PreviewOperation, read_result_binding
 from trinity.publication.diagnostics import read_preview_diagnostics
 from trinity.queries.preview_schemas import build_preview_batch_response
 from trinity.queries import repository
@@ -98,7 +98,10 @@ class QueryExecution:
                 raise Problem(503,'dependency_unavailable')
             result = read_result_binding(body, reservation['request_id'],
                                          prepared.pinned.publication.version_id, prepared.query)
-            if isinstance(prepared.query, PreviewOperation):
+            if isinstance(prepared.query, ChoiceOperation):
+                from trinity.queries.choices import build_choice_response
+                response = build_choice_response(prepared.query, prepared.pinned.publication, result, prepared.codec)
+            elif isinstance(prepared.query, PreviewOperation):
                 response = build_preview_batch_response(prepared.query, prepared.pinned.publication,
                                                         result, diagnostics=diagnostics, codec=prepared.codec)
             else:

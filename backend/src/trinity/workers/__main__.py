@@ -30,6 +30,10 @@ async def serve(role):
     consumer=None
     database.open()
     try:
+        if role == 'scheduler':
+            from trinity.settings.scheduler import run
+            await run(database, stop)
+            return
         if role in ('publication','publication-outbox'):
             from trinity.publication.dispatch import PublicationDispatch
             from trinity.workers.publication import PublicationWorker
@@ -68,7 +72,7 @@ def main(argv=None):
         from trinity.publication.recovery import cli
         return cli(arguments[1:])
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('role',choices=('outbox','refresh','recovery','publication','publication-outbox','publication-recover'))
+    parser.add_argument('role',choices=('scheduler','outbox','refresh','recovery','publication','publication-outbox','publication-recover'))
     args=parser.parse_args(arguments)
     try:
         asyncio.run(serve(args.role))

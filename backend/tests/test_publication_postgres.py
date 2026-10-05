@@ -57,7 +57,9 @@ class PublicationPostgresTests(PublicationFixture,unittest.TestCase):
         self.assertEqual(detail.status_code,200,detail.text)
         actions={item['action']:item['enabled'] for item in detail.json()['actions']}
         self.assertFalse(actions['publication_retry']);self.assertTrue(actions['discard'])
-        self.assertFalse(actions['rerun']);self.assertFalse(actions['delete_warning'])
+        # Integrity failures still forbid retrying these bytes. The implemented
+        # run recovery controls may abandon them and start a full new refresh.
+        self.assertTrue(actions['rerun']);self.assertTrue(actions['delete_warning'])
         self.assertEqual(self.command('discard').status_code,200);self.assertTrue(path.exists())
         self.assertIsNone(self.worker.execute(self.payload()))
         self.assertIsNone(self.sql('SELECT publication_event_id FROM active_publication')[0]['publication_event_id'])

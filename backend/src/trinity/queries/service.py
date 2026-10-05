@@ -87,6 +87,7 @@ class QueryService:
 class PreparedPreview(PreparedQuery):
     """Retain signing authority in the API; never send it to the runtime."""
     codec: object
+    context: object = None
 
 
 class PreviewService:
@@ -97,6 +98,47 @@ class PreviewService:
         self.execution_factory = execution_factory
         self.codec_factory = codec_factory or (lambda: CursorCodec(load_cursor_keys()))
 
+    def authorize(self, principal, dataset_key):
+        """Apply current dataset authority before parsing input or touching counters."""
+        from trinity.queries.preview import authorize_preview
+        return authorize_preview(principal, dataset_key)
+
+    def parse_input(self, pairs, *, body):
+        """Parse preview input; national reads override only their public grammar."""
+        from trinity.queries.preview import parse_preview_input
+        return parse_preview_input(pairs, body=body)
+
+    def validate_input(self, dataset, request):
+        """Check cross-field rules after the shared rate debit."""
+        from trinity.queries.preview import validate_filters
+        validate_filters(dataset, request)
+
+    def resolve_input(self, dataset, request, latest):
+        """Resolve defaults from the pinned publication, never from a second read."""
+        from trinity.queries.preview import resolve_preview
+        return resolve_preview(dataset, request, latest)
+
+    def read_context(self, connection, pinned):
+        """Allow a national response to pin safe metadata in this same snapshot."""
+        return None
+
+    def decode_position(self, codec, request):
+        """Authenticate a preview bookmark without treating it as authority."""
+        return codec.decode(request.cursor) if request.cursor is not None else None
+
+    def resolve_position(self, position, dataset, request, publication):
+        """Bind continuation to the current publication and complete filter tuple."""
+        from trinity.queries.cursors import resolve_continuation
+        return resolve_continuation(position, dataset, request, publication)
+
+    def operation(self, dataset, pinned, resolved, position):
+        """Create the closed operation after authority and publication are pinned."""
+        from trinity.contracts.queries import PreviewOperation
+        return PreviewOperation(dataset, str(pinned.publication.publication_event_id),
+                                str(pinned.publication.version_id), resolved.start.isoformat(),
+                                resolved.end.isoformat(), resolved.facility, resolved.generator,
+                                resolved.limit, position.after if position is not None else None)
+
     def prepare(self, token, dataset_key, pairs, *, body=b'', cancelled=None):
         """Commit one debit after identity/shape checks, even if later checks fail.
 
@@ -105,44 +147,37 @@ class PreviewService:
         analytical budget immediately before capacity admission; preflight uses
         a separate bounded deadline. No rejection changes publication state.
         """
-        from trinity.contracts.queries import PreviewOperation
         from trinity.publication.repository import read_preview_publication
-        from trinity.queries.cursors import resolve_continuation
-        from trinity.queries.preview import (
-            authorize_preview, parse_preview_input, resolve_preview, validate_filters,
-        )
         preflight = QueryDeadline(15)
         preflight.cancelled = cancelled
         with self.database.transaction(preflight, readonly=True) as connection:
             first = resolve_session(connection, token)
-            dataset = authorize_preview(first, dataset_key)
-        request = parse_preview_input(pairs, body=body)
+            dataset = self.authorize(first, dataset_key)
+        request = self.parse_input(pairs, body=body)
         with self.database.transaction(preflight, error_code='dependency_unavailable') as connection:
             retry = repository.reserve_rate(connection, first.user_id)
         if retry is not None:
             raise Problem(429, 'rate_limited', retry_after=retry)
-        validate_filters(dataset, request)
+        self.validate_input(dataset, request)
         codec = self.codec_factory()
-        position = codec.decode(request.cursor) if request.cursor is not None else None
+        position = self.decode_position(codec, request)
         if position is not None and position.request.dataset != dataset:
             raise Problem(422, 'invalid_cursor')
         with self.database.transaction(preflight, readonly=True, error_code='dependency_unavailable') as connection:
             second = resolve_session(connection, token)
-            authorize_preview(second, dataset_key)
+            self.authorize(second, dataset_key)
             if first.user_id != second.user_id or first.session_id != second.session_id:
                 raise Problem(401, 'invalid_session')
             pinned = read_pinned_publication(connection)
             if position is not None:
-                resolved = resolve_continuation(position, dataset, request, pinned.publication if pinned else None)
+                resolved = self.resolve_position(position, dataset, request, pinned.publication if pinned else None)
             elif pinned is None:
                 raise Problem(409, 'data_unavailable')
             else:
-                resolved = resolve_preview(dataset, request, pinned.publication.latest_observation_date)
+                resolved = self.resolve_input(dataset, request, pinned.publication.latest_observation_date)
             pinned = read_preview_publication(connection, pinned)
-        operation = PreviewOperation(dataset, str(pinned.publication.publication_event_id),
-                                     str(pinned.publication.version_id), resolved.start.isoformat(),
-                                     resolved.end.isoformat(), resolved.facility, resolved.generator,
-                                     resolved.limit, position.after if position is not None else None)
+            context = self.read_context(connection, pinned)
+        operation = self.operation(dataset, pinned, resolved, position)
         execution = self.execution_factory()
         try:
             preflight.remaining()
@@ -157,7 +192,7 @@ class PreviewService:
         except Exception:
             execution.close()
             raise
-        return PreparedPreview(operation, pinned, reservation, deadline, started, codec), execution
+        return PreparedPreview(operation, pinned, reservation, deadline, started, codec, context), execution
 
     def execute(self, token, dataset_key, pairs, *, body=b'', cancelled=None):
         """Return the page only after the shared supervisor confirms cleanup."""

@@ -56,3 +56,27 @@ async def detail(run_id: str, request: Request, response: Response):
                                     body=await request.body())
     response.headers['ETag'] = f'"run-{result.revision}"'
     return result
+
+
+async def recover(request, response, run_id, action):
+    """Return a committed receipt, with replay taking precedence over stale ETags."""
+    from trinity.refresh.recovery_commands import RecoveryCommands
+    result = await run_in_threadpool(RecoveryCommands(request.app.state.auth.database).command,
+        bearer_token(request), run_id, action, await request.body(),
+        request.headers.getlist('idempotency-key'), request.headers.getlist('if-match'),
+        request.query_params.multi_items())
+    response.status_code = 202 if action == 'rerun' and not result.replayed else 200
+    response.headers['Location'] = result.status_url
+    return result
+
+
+@router.post('/{run_id}/rerun', response_model=ActionReceipt)
+async def rerun(run_id: str, request: Request, response: Response):
+    """Accept one replacement full refresh without reopening the failed run."""
+    return await recover(request, response, run_id, 'rerun')
+
+
+@router.delete('/{run_id}/warning', response_model=ActionReceipt)
+async def delete_warning(run_id: str, request: Request, response: Response):
+    """Resolve warning metadata without starting work or removing history."""
+    return await recover(request, response, run_id, 'delete_warning')

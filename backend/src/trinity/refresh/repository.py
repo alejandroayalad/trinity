@@ -15,8 +15,10 @@ def read_command(connection, key):
     return connection.execute('SELECT * FROM api_commands WHERE idempotency_key=%s',(key,)).fetchone()
 
 
-def accept_run(connection, actor_id, key, fingerprint, settings):
-    """Write the run, slot, queue intent and receipt on the supplied transaction.
+def accept_run(connection, actor_id, key, fingerprint, settings, *, trigger="manual"):
+    """Write run, slot and queue intent, plus a receipt for an Admin command.
+
+    Scheduled admission has no human actor or API receipt and returns the run.
 
     The service already holds refresh_control and the settings snapshot lock.
     Nothing here commits or contacts Redis. A failure in the final receipt
@@ -32,13 +34,15 @@ def accept_run(connection, actor_id, key, fingerprint, settings):
               'end_strategy':'latest_national'}
     run = connection.execute("""INSERT INTO refresh_runs(id,trigger_kind,requested_by,request_key,
         requested_at,status,settings_revision,policy_snapshot,requested_start)
-        VALUES(%s,'manual',%s,%s,clock_timestamp(),'requested',%s,%s,%s) RETURNING *""",
-        (run_id,actor_id,key,settings['revision'],Jsonb(policy),date(2024,10,2))).fetchone()
+        VALUES(%s,%s,%s,%s,clock_timestamp(),'requested',%s,%s,%s) RETURNING *""",
+        (run_id,trigger,actor_id,key,settings['revision'],Jsonb(policy),date(2024,10,2))).fetchone()
     connection.execute('UPDATE refresh_control SET holder_run_id=%s,revision=revision+1 WHERE id=1',(run_id,))
     connection.execute("""INSERT INTO job_outbox(id,run_id,job_kind,deduplication_key,payload)
         VALUES(%s,%s,'refresh_pipeline',%s,%s)""",
         (uuid4(),run_id,f'refresh:{run_id}',Jsonb({'schema_version':1,'run_id':str(run_id),
          'version_id':None,'job_kind':'refresh_pipeline','dispatch_generation':0})))
+    if trigger == "scheduled":
+        return run
     return connection.execute("""INSERT INTO api_commands(id,idempotency_key,actor_id,action,
         request_fingerprint,accepted_at,run_id,result,status_url)
         VALUES(%s,%s,%s,'start_refresh',%s,%s,%s,'queued',%s) RETURNING *""",
@@ -115,4 +119,7 @@ def read_context(connection):
     if run and version:
         from trinity.publication.checks import actions
         run['_publication_actions'] = actions(connection,run,version,warning)
+    if run:
+        from trinity.refresh.recovery_commands import recoverable
+        run['_recovery_allowed'] = recoverable(connection, run, version, warning)
     return run, version, warning, approval, step
