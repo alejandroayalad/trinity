@@ -57,3 +57,19 @@ Next action: [ME] Decide D02 (rounding).
 [YOU] Marked the specification approved, recorded D01 inputs/D02/D03 under A16 and D01 rate accounting under A19, following the preview pattern, and added one linked paragraph to the API contract that defines "half-up" for negative values. No OpenAPI change. Documentation only; no tests ran.
 
 Next action: [ME] Request the dashboard design and tasks.
+
+## Dashboard design and tasks
+
+[ME] Alayala asked to push the branch and continue with design and tasks. [YOU] Pushed `feat/national-dashboard` (`60499b7`, local and remote equal). Traced `QueryExecution.execute`, `build_preview_batch_response`, `PreviewResponse`, `read_preview_diagnostics`, `preview_execution_factory`, `create_app`, `read_last_refresh` and the `docs/backend.md` tree. Drafted the [design](../../sdd/national-dashboard/design.md) and [tasks](../../sdd/national-dashboard/tasks.md).
+
+Main design choice: reuse a national `PreviewOperation` with `page_size` equal to the number of dates, plus a codec that refuses to sign. No runtime, contract, client, staging, migration or dependency change. The metric uses `fractions.Fraction` for exact D02 rounding. Routes go in `queries/`, although `docs/backend.md` lists metric endpoints under catalog; the design records why. The routes reuse the preview execution switch.
+
+Design checks (not acceptance tests), run with this branch's source and the sibling `trinity` worktree's environment because this worktree has no `.venv`: a 366-date national operation with `page_size=366` is valid and 367 dates are rejected; synthetic batches give 503 for duplicate dates, negative capacity and `has_more` with the refusing codec, and `not_reported` for zero rows; the fraction rounding reproduced the D02 table and matched `Decimal` in 200,000 random and targeted near-half cases.
+
+Next action: [ME] Review the design and authorize Step 2.
+
+### Folder and switch choices
+
+[ME] Alayala rejected placing the code in `queries/` and asked for a new backend folder named `dashboard`. He also approved reusing the preview execution switch. [YOU] Created `backend/src/trinity/dashboard/__init__.py` with a docstring only, so Git tracks the folder. Moved all planned files to `dashboard/` (`router.py`, `service.py`, `calculation.py`, `schemas.py`) in the design and tasks, documented the one-way import from `dashboard/` to shared `queries/` pieces, added the folder to the `docs/backend.md` tree and recorded the folder as an A15 refinement. Recorded the switch approval in the design. No other code was written.
+
+Next action: [ME] Review the updated design and tasks, then authorize the commit.

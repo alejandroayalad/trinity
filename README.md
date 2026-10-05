@@ -1,5 +1,7 @@
 # Trinity — Arkham Outage Explorer
 
+**National dashboard handoff — October 5, 2026:** Steps 2–3 are implemented; Step 4 passed 101 combined tests with zero skips. Step 5 readiness and prerequisites are recorded in the [real acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md). National reads reuse the shared preview runtime. Retained operator readiness is **not ready**: no active publication, and the installed retained API lacks the national routes and preview switch. Execution is still disabled by default in this branch. See the handoff for final automated results and the retained prerequisites.
+
 Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
 
 **Refresh continuation:** `feat/refresh-publication` now extends merged SQL/Preview. Admin admission, durable BullMQ dispatch and fenced preparation are implemented with disposable-service checks. Linear migrations and verified candidate registration preserve Preview-compatible evidence fields. Task 5 now connects receipt routing/recovery and Admin candidate detail. [Current tasks](sdd/refresh-publication/tasks.md) track measured verification; Publication implementation and acceptance are tracked in the [implementation and acceptance](ai/sessions/2026-10-04-publication-implementation-acceptance.md) record.

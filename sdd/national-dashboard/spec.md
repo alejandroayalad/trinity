@@ -143,7 +143,7 @@ These routes have no 404 or `publication_changed` case: they have no dataset pat
 
 ### Acceptance scenarios
 
-None has run. O = offline; R = real database, HTTP and container; H = alayala's retained-account check.
+Steps 2–3 have pure and controlled-adapter/HTTP evidence in the [implementation record](../../ai/sessions/2026-10-05-dashboard-pure-and-service-implementation.md). S03–S11 passed at the pure level; the record distinguishes other offline coverage from pending real acceptance. O = offline; R = real database, HTTP and container; H = alayala's retained-account check. Subsequent authorized Step 4 real acceptance passed 101 combined tests with zero skips; the [runtime/operator handoff](../../ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md) maps measured scenarios and their boundaries. Retained H/S21 remains blocked by the missing publication and older API.
 
 | ID | Scenario and expected result | Requirements | Evidence |
 |---|---|---|---|
@@ -178,6 +178,6 @@ Maintain data evidence — ongoing. Synthetic fixtures do not prove EIA complete
 ## Review gate
 
 Done: approved specification with 23 requirements, 21 scenarios and D01–D03, recorded under A16/A19.
-Pending: design and tasks, then separately authorized implementation. Runtime results remain unverified.
-Blocker: none for the specification. Delivery depends on the verified shared runtime and a valid publication.
-Next: [ME] request the design and tasks.
+Pending: retained-account acceptance (S21). Both Step 2 explanations and the Step 4 local runtime results are recorded; see [tasks](tasks.md).
+Blocker: no active retained publication and an installed API without national/preview routes or the preview switch. Local acceptance does not establish deployed readiness.
+Next: [ME] review the handoff and decide the scope of retained preparation.

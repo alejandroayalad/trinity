@@ -395,6 +395,8 @@ Evidence: the supplied `Backend Stack.md`, alayala's correction, and the [review
 
 **Current scope / supersession:** A19 refines separate query execution to one container per query, with trusted file staging, a read-only authorized Parquet mount, no network/credentials/Docker control, and PostgreSQL query admission. The feature package remains accepted.
 
+**Dashboard feature folder — accepted October 5, 2026:** alayala selected a new `dashboard/` feature package for `GET /dashboard/national` and `GET /metrics/offline-share`, instead of placing them in `queries/` or `catalog/`. It owns the routes, input rules, metric calculation and response models. It uses the shared analytical admission, publication pinning and isolated execution from `queries/` rather than copying them. Catalog keeps metric definitions. See the [dashboard design](sdd/national-dashboard/design.md).
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. File structure and the five reviewed refinements selected; implementation pending.
