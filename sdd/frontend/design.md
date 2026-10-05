@@ -215,3 +215,30 @@ Tests that replace `fetch` are O evidence only. They never count as R evidence.
 - **Local publication for R data tests:** a synthetic publication made by the existing backend test helpers, or a recorded local refresh. Decide before step 7. Synthetic values are not EIA evidence.
 - **Hosting headers:** CSP and the production origin are hosting work, out of scope.
 - **Node version:** local Node is v26.3.0, and Vite 8.3.2 accepts `>=22.12.0`. The proposal pins 24.21.0 LTS for repeatable installs.
+
+### Continuation design — steps 7–9
+
+Implementation request: alayala asked to continue and finish steps 3–9. The
+following implementation uses the existing API contract. It introduces no new
+production package or retained-data migration. Earlier per-step starts are
+covered by this continuation request; human visual acceptance remains separate.
+
+- National reads reuse `PreviewService` authorization, shared admission, frozen
+  publication evidence and isolated national-only execution. The service pins
+  safe refresh metadata in the same publication snapshot. A complete national
+  page contains at most 366 rows. The API builds calendar gaps and calculates
+  exact decimal shares only after execution cleanup. The UI uses range-end
+  cards as specified in R24; the earlier latest-card proposal is not adopted.
+- Settings writes hold the shared lifecycle lock, recheck Admin authority, and
+  compare the settings revision. Setup time is set once. No save enqueues work.
+  Schedule calculations select the first repeated local occurrence and skip
+  nonexistent local times. A scheduler role polls once per second, admits only
+  crossed future occurrences, skips missed or blocked work, and uses a stable
+  occurrence key to prevent duplicate outbox admission. It loads no EIA key.
+- Choice endpoints must use bounded isolated execution and publication-bound
+  cursors. They must not scan unbounded preview pages in the API process.
+  Recovery must lock control, reauthorize, replay the same intent before stale
+  revision checks, prove the old writer stopped, and retain every history row.
+- Automated data checks use synthetic disposable state, never the retained
+  publication or a live EIA refresh. Human persona and visual checks remain
+  unchecked until observed.

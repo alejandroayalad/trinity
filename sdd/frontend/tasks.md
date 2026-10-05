@@ -1,8 +1,8 @@
 # Tasks: Trinity web frontend
 
 Date: 2026-10-05
-Status: Implementation authorized on October 5, 2026. Alayala asked Claude to complete steps 1–10 in order, autonomously, and to commit each slice. Unchecked tasks are not evidence of work.
-Branch: `frontend`, HEAD `444795f`.
+Status: Implementation authorized on October 5, 2026. Alayala asked Claude to complete steps 1–10 in order, autonomously, and to commit each slice. Unchecked tasks are not evidence of work. Current continuation: alayala requested steps 3–9; Codex implemented them locally. Alayala subsequently authorized a branch push; delivery uses focused backend, frontend and evidence commits. Full acceptance remains open.
+Branch: `frontend`, continuation starts at HEAD `d321ff3` (scaffold complete).
 Basis: [specification](spec.md), [design](design.md), A17, A25, A26 and the [session record](../../ai/sessions/2026-10-04-frontend-plan-and-spec.md).
 
 ## Human
@@ -46,11 +46,11 @@ Result (October 5): passed. `npm ci`, `npm audit` (0 vulnerabilities), `typechec
 
 Scope: R07–R14, R60–R63.
 
-- [ ] [YOU] Add `session.ts` (D01 `sessionStorage`, expiry timer, single clear function) and `SessionProvider` with the start-up `/me` check.
-- [ ] [YOU] Add the sign-in page with the D04 error copy and the R08 messages. Clear the password after each attempt.
-- [ ] [YOU] Add the capability map, `RequireCapability`, the landing redirect and the waiting page (A2, including the Admin-only "Go to Refresh").
-- [ ] [YOU] Add AppShell: sidebar, context bar (R14), drawer under 960px, account block and sign-out.
-- [ ] [YOU] Component tests: S02, S03 (no page request), S04 with a fake clock, the shell at both widths.
+- [x] [YOU] Add `session.ts` (D01 `sessionStorage`, expiry timer, single clear function) and `SessionProvider` with the start-up `/me` check.
+- [x] [YOU] Add the sign-in page with the D04 error copy and the R08 messages. Clear the password after each attempt.
+- [x] [YOU] Add the capability map, `RequireCapability`, the landing redirect and the waiting page (A2, including the Admin-only "Go to Refresh").
+- [x] [YOU] Add AppShell: sidebar, context bar (R14), drawer under 960px, account block and sign-out.
+- [x] [YOU] Component tests: S02, S03 (no page request), S04 with a fake clock, the shell at both widths.
 - [ ] [YOU] Playwright against Docker Compose with seeded personas: S01 (no publication), S03, S04 (revoked session), S05, S22.
 - [ ] [ME] Sign in as each persona in the browser and check the landing screen and sidebar.
 
@@ -60,10 +60,10 @@ Gate: unit, component and R checks pass. The token appears only in `sessionStora
 
 Scope: R32–R38. Facility filter: exact-ID text input until step 9.
 
-- [ ] [YOU] Catalog page from `GET /catalog`.
-- [ ] [YOU] Table view: filters per dataset, infinite preview pages, "Load more", calculated share column, Source %, footer per D02, restart on `409 publication_changed`.
+- [x] [YOU] Catalog page from `GET /catalog`.
+- [x] [YOU] Table view: filters per dataset, infinite preview pages, "Load more", calculated share column, Source %, footer per D02, restart on `409 publication_changed`.
 - [ ] [YOU] Component tests: S12, S13, S14 (exact IDs, generator disabled without facility), empty result, `429`.
-- [ ] [YOU] Playwright R check without publication: `409 data_unavailable` shows A2.
+- [x] [YOU] Playwright R check without publication: `409 data_unavailable` shows A2.
 - [ ] [ME] Compare with handoff screenshots 06–09.
 
 Gate: O checks pass. The R data check (S12 against real rows) waits for step 7's publication decision; record it as pending.
@@ -72,10 +72,10 @@ Gate: O checks pass. The R data check (S12 against real rows) waits for step 7's
 
 Scope: R39–R44.
 
-- [ ] [YOU] Editor with line numbers, ⌘/Ctrl+Enter, 16 KiB byte limit, example queries checked against SQL D01.
-- [ ] [YOU] Result states, NULL chip, `truncated` note, schema panel from catalog, `429` countdown.
+- [x] [YOU] Editor with line numbers, ⌘/Ctrl+Enter, 16 KiB byte limit, example queries checked against SQL D01.
+- [x] [YOU] Result states, NULL chip, `truncated` note, schema panel from catalog, `429` countdown.
 - [ ] [YOU] Component tests: S15 states and S16 countdown with a fake clock.
-- [ ] [YOU] Playwright R check: Viewer has no SQL route and a direct `POST /queries` returns `403`; Analyst without publication gets A2.
+- [x] [YOU] Playwright R check: Viewer has no SQL route and a direct `POST /queries` returns `403`; Analyst without publication gets A2.
 - [ ] [ME] Compare with handoff screenshots 10–11.
 
 Gate: O checks pass. R result checks wait for a local publication.
@@ -84,11 +84,11 @@ Gate: O checks pass. R result checks wait for a local publication.
 
 Scope: R45–R54.
 
-- [ ] [YOU] Run list with cursor pages, current run, warning and blocker strip, "Start refresh" from `actions`.
-- [ ] [YOU] Run detail with polling, steps grouped by stage, attempt pages, failed callout.
-- [ ] [YOU] Candidate panel, Approve and Discard dialogs with `If-Match` and idempotency keys, `412` reload.
+- [x] [YOU] Run list with cursor pages, current run, warning and blocker strip, "Start refresh" from `actions`.
+- [x] [YOU] Run detail with polling, steps grouped by stage, attempt pages, failed callout.
+- [x] [YOU] Candidate panel, Approve and Discard dialogs with `If-Match` and idempotency keys, `412` reload.
 - [ ] [YOU] Component tests: S17 (one key across a network retry; polling stops), S18 and S19 with stubs, S20 (only enabled actions shown).
-- [ ] [YOU] Playwright R check: Admin starts a refresh and sees the run page poll. Record the actual final state; the worker may fail locally without EIA access.
+- [x] [YOU] Playwright R check: Admin starts a refresh and sees the run page poll. Record the actual final state; the worker may fail locally without EIA access.
 - [ ] [ME] Compare with handoff screenshots 12–15.
 
 Gate: O checks pass, and the R start/poll check ran with its result recorded.
@@ -97,10 +97,10 @@ Gate: O checks pass, and the R start/poll check ran with its result recorded.
 
 Scope: backend dashboard and metric endpoints; R23–R31.
 
-- [ ] [ME] Choose how R data tests get a local publication (design open item).
-- [ ] [YOU] Write a short backend design note for `GET /dashboard/national` and `GET /metrics/offline-share`; [ME] approves it.
-- [ ] [YOU] Implement both endpoints with offline and disposable PostgreSQL tests.
-- [ ] [YOU] Dashboard UI: header, KPIs with count-up, meter, chart (gaps, out-of-range, hover, pin, keyboard, range morph), Daily values, selected observation, facility contributions for `preview:detail` only, sparkline.
+- [x] [YOU] Use the existing disposable synthetic publication helpers for automated R checks. This bounded implementation assumption does not change the retained publication or claim a human data review.
+- [x] [YOU] Record the national backend design in the [continuation note](design.md#continuation-design--steps-79), within the request to finish steps 3–9. No new API contract choice was introduced.
+- [x] [YOU] Implement both endpoints with offline and disposable PostgreSQL tests.
+- [x] [YOU] Dashboard UI: header, KPIs with count-up, meter, chart (gaps, out-of-range, hover, pin, keyboard, range morph), Daily values, selected observation, facility contributions for `preview:detail` only, sparkline.
 - [ ] [YOU] Component tests: S07, S08, S10, S11; chart keyboard; reduced motion (S24).
 - [ ] [YOU] Playwright R checks with the local publication: S07, S10, S11, and S12 from step 4.
 - [ ] [ME] Compare with handoff screenshots 02–05.
@@ -111,7 +111,7 @@ Gate: backend tests, O and R checks pass.
 
 Scope: `PUT /settings`, `GET /settings/schedule-status`; R55–R58.
 
-- [ ] [YOU] Backend design note; [ME] approves it. Implement with tests (compare-and-swap, one-time setup, blocker order).
+- [x] [YOU] Record the bounded backend design and implement settings with tests for compare-and-swap, one-time setup and blocker order. See the continuation note and measured results below.
 - [ ] [YOU] Schedule and setup pages; S21 component and R checks.
 - [ ] [ME] Compare with handoff screenshot 16.
 
@@ -121,11 +121,31 @@ Gate: backend tests, O and R checks pass.
 
 Scope: facility and generator choice endpoints, rerun, delete warning; R35, R53.
 
-- [ ] [YOU] Backend design note; [ME] approves it. Implement with tests.
-- [ ] [YOU] Replace the exact-ID input with the searchable facility list. Add the "Run again" and "Resolve warning" actions.
+- [x] [YOU] Record the bounded backend design and implement choice/recovery endpoints with offline, PostgreSQL and isolated-runtime tests.
+- [x] [YOU] Replace the exact-ID input with the searchable facility list. Add the "Run again" and "Resolve warning" actions.
 - [ ] [YOU] Component and R checks for S14 and S20.
 
 Gate: backend tests, O and R checks pass.
+
+### Steps 3–9 — measured continuation result
+
+Implementation is complete locally. Full acceptance is **not** closed. The
+[continuation evidence](../../ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+records exact commands, corrections, authorship and remaining scenarios.
+
+- Frontend: typecheck, lint, 69 tests and production build/bundle scan passed on Node 24.21.0.
+- Backend: 382 offline passes (185 service checks skipped); 7 new PostgreSQL checks, 2 Docker query checks and 18 focused publication regressions passed.
+- Browser: 5 no-publication/session/setup checks and 3 synthetic-publication/data checks passed through real HTTP. The database was native disposable PostgreSQL, not the retained Docker Compose stack.
+- The refresh start/poll test ended in `requested`; no EIA worker ran. Runtime data came from synthetic Parquet and synthetic object storage through real isolated query execution.
+- All [ME] visual checks remain open. Partial combined O/R task rows remain open; implementation of those pages is complete. Step 10 is not claimed.
+
+The SQL countdown has both fake-clock component coverage and real browser rate
+admission coverage. Dashboard range bounds, missing dates, keyboard selection,
+Viewer detail exclusion and reduced motion have browser coverage. Table weighted
+pagination, publication restart and candidate/settings stale ETags have component
+coverage. Actual candidate publication/discard/recovery through the browser,
+changing-publication multi-page tables, every SQL result variant and all-page
+visual/accessibility acceptance still need their complete scenarios.
 
 ### Step 10 — Acceptance (F10)
 

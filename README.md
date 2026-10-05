@@ -2,6 +2,15 @@
 
 Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
 
+**Current frontend continuation — October 5, 2026:** steps 3–9 are implemented
+locally on `frontend`, with sign-in, dashboard, Catalog/tables, SQL, Refresh and
+Settings plus their missing backend endpoints. See [run the frontend](frontend/README.md),
+[measured checks and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+and the [task checklist](sdd/frontend/tasks.md). Human visual acceptance, complete
+browser acceptance and retained-system enablement remain open. This status
+supersedes older statements below that the frontend or these endpoints do not exist;
+those paragraphs retain their historical evidence boundaries.
+
 **Design handoff — October 4, 2026:** alayala created the interface mockups himself in Figma. The earlier Trinity brand reference was created with ChatGPT. He plans to pass both to Claude to apply the brand to his interface design. See [authorship and workflow](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026), [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) and the [retained screenshots and handoff](ai/sessions/2026-10-04-figma-brand-handoff.md). This records design inputs; Claude adaptation and frontend delivery are not yet verified.
 
 **Refresh continuation:** `feat/refresh-publication` now extends merged SQL/Preview. Admin admission, durable BullMQ dispatch and fenced preparation are implemented with disposable-service checks. Linear migrations and verified candidate registration preserve Preview-compatible evidence fields. Task 5 now connects receipt routing/recovery and Admin candidate detail. [Current tasks](sdd/refresh-publication/tasks.md) track measured verification; Publication implementation and acceptance are tracked in the [implementation and acceptance](ai/sessions/2026-10-04-publication-implementation-acceptance.md) record.

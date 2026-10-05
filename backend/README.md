@@ -629,7 +629,9 @@ Admin commands accept `{}`, a UUID `Idempotency-Key`, and the exact candidate
 
 New approval/retry returns 202; discard and authorized receipt replay return 200.
 Retry cannot waive missing/changed evidence or a recorded permanent failure.
-Run again, warning deletion and setup/schedule writes remain disabled/unimplemented.
+Run again, warning resolution and setup/schedule writes are implemented by the
+[frontend continuation](../ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md).
+Recovery availability requires durable proof that the failed writer stopped.
 
 After a crash or lost delivered job, run the executable on the recorded host as
 the trusted worker OS account. It requires only database configuration and the
@@ -667,3 +669,40 @@ Set `TRINITY_TEST_QUERY_IMAGE` to the existing immutable `sha256:...` image ID a
 Without them, container tests skip and do not establish that gate. The service runner
 owns only its temporary PostgreSQL cluster and disposable Redis container. Synthetic
 storage fixtures establish no new EIA finding or live S3 protection claim.
+
+## Frontend endpoint continuation
+
+The API now implements national dashboard/metric reads, facility/generator
+choices, settings writes/schedule status, full rerun and warning resolution.
+The [API contract](../docs/api-contract.md) remains authoritative. National and
+choice reads use the existing query-execution configuration, immutable runtime
+image and publication readiness checks. Installing the frontend enables none
+of those retained-system settings. See [frontend startup and browser checks](../frontend/README.md).
+
+From `backend/`, the focused checks are:
+
+```sh
+uv run --locked python -m unittest discover -s tests -p 'test_frontend_endpoints.py' -v
+uv run --locked python tests/run_local_auth_checks.py --frontend
+uv run --locked python tests/run_local_sql_checks.py --pattern test_frontend_runtime.py
+```
+
+The last command requires the existing `TRINITY_TEST_QUERY_IMAGE` and
+`TRINITY_TEST_DOCKER_SOCKET` configuration; a skipped test is not runtime proof.
+Browser checks use `--frontend-browser` and `--frontend-data` on the auth runner.
+They create their own native PostgreSQL cluster and generated persona credentials.
+Data checks additionally run real Docker queries over synthetic Parquet.
+
+Schedule saves preserve initial setup time and use the settings ETag. Saving
+does not enqueue work. The new explicit scheduler process is:
+
+```sh
+uv run --locked python -m trinity.workers scheduler
+```
+
+It needs `TRINITY_DATABASE_URL`, polls once per second and writes the existing
+refresh outbox for future due occurrences. The existing dispatcher and preparation
+worker perform that work separately. Repeated local clock times use the first
+occurrence; nonexistent clock times are skipped. Startup does not catch up missed
+occurrences. This process was tested with disposable state and was not activated
+against retained resources during the continuation.

@@ -6,7 +6,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 | Theme | Records |
 |---|---:|
-| [Interface design and brand](#interface-design-and-brand) | 1 |
+| [Interface design and brand](#interface-design-and-brand) | 2 |
 | [Catalog and permissions](#catalog-and-permissions) | 7 |
 | [Authentication](#authentication) | 5 |
 | [Data evidence and findings](#data-evidence-and-findings) | 5 |
@@ -17,6 +17,8 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Delivery and working practices](#delivery-and-working-practices) | 7 |
 
 ## Interface design and brand
+
+- [2026-10-05 — Frontend steps 3–9 implementation and measured checks](2026-10-05-frontend-steps-3-9-continuation.md)
 
 - [2026-10-04 — Human Figma mockups, ChatGPT brand and planned Claude handoff](2026-10-04-figma-brand-handoff.md)
 

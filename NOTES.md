@@ -605,3 +605,24 @@ login setup failures and does not claim their cause was fixed. Synthetic data is
 `main`. [YOU] separated test infrastructure from acceptance documentation for
 reviewable commits and preserved history without squashing. Deployment remains
 outside this Git delivery.
+
+## Frontend steps 3–9 continuation — October 5, 2026
+
+[ME] Asked to continue and finish frontend steps 3–9. [YOU] Codex implemented
+the application pages and their missing national, settings, choices and recovery
+backend routes, plus the explicit scheduler role. The work was initially local
+and uncommitted. [ME] subsequently requested a branch push; [YOU] prepared focused
+backend, frontend and evidence commits. No EIA key or retained-data mutation was
+part of this continuation.
+
+[YOU] Ran the frontend build/checks, offline Python regression, disposable
+PostgreSQL checks, isolated Docker queries and real browser scenarios. See the
+[measured evidence and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+and [updated tasks](sdd/frontend/tasks.md). Human visual review and the complete
+acceptance matrix remain open; synthetic data and screenshots are not EIA findings.
+Maintain data evidence — ongoing.
+
+This is Codex implementation work, separate from the earlier Claude scaffold and
+alayala's original Figma design. Preserve the
+[canonical design attribution](#figma-mockups-brand-and-claude-handoff--october-4-2026)
+and A25. No later AI contribution changes the authorship of the original mockups.
