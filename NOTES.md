@@ -635,3 +635,15 @@ and A25. No later AI contribution changes the authorship of the original mockups
 See [scope, corrections and evidence limits](ai/sessions/2026-10-05-recovery-schedule-component-coverage.md).
 This is synthetic API/component evidence. Real-browser recovery and extended
 schedule editing remain open; original design attribution is unchanged.
+
+### Redis and worker Compose services — October 5, 2026
+
+[ME] Asked for Redis and BullMQ services under A6/A7, reviewed the draft and
+approved `compose.yaml`. Kept Redis persistence and the PostgreSQL 17.11 vs A17
+18.6 mismatch unresolved.
+[YOU] Drafted the opt-in `workers` profile: `redis:8.10.2` (noeviction, no
+published port), `refresh_root_init`, and the six `trinity.workers` roles with
+per-role settings. `docker compose config` passed with and without the profile,
+with EIA/AWS/S3 variables unset. No container ran; no EIA or AWS access was used.
+Open: Redis persistence (A7), PostgreSQL version, Redis auth/TLS, worker restart
+policy, and the API refresh cursor keys. Runtime behavior is unverified.
