@@ -61,6 +61,12 @@ def valid_timezone(name: object) -> bool:
     """
     if not isinstance(name, str) or not 1 <= len(name) <= 100:
         return False
+    # Debian's tzdata adds "localtime", a link to /etc/localtime, and
+    # available_timezones() lists it in the Linux API image. Its meaning
+    # depends on the container configuration, so it is not a fixed zone.
+    # macOS does not list it, so only this guard rejects it everywhere.
+    if name == "localtime":
+        return False
     if name not in _known_timezones():
         return False
     try:

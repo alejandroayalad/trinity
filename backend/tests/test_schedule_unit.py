@@ -8,6 +8,7 @@ November 1. America/Merida has no daylight-saving time.
 from datetime import date, datetime, timedelta, timezone
 import json
 import unittest
+from unittest.mock import patch
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -148,6 +149,19 @@ class TimezoneTests(unittest.TestCase):
                      "America/Nowhere", "", "A" * 101, None, 5):
             with self.subTest(name=name):
                 self.assertFalse(valid_timezone(name))
+
+    def test_localtime_is_rejected_when_the_runtime_lists_it(self):
+        # The Linux API image lists "localtime" in available_timezones(), and
+        # ZoneInfo("localtime") loads there. macOS has neither. Simulate both
+        # so that only the explicit guard can reject the name; without the
+        # guard this test fails on macOS too.
+        from trinity.settings import schedule
+        linux_like = schedule._known_timezones() | {"localtime"}
+        with patch.object(schedule, "_known_timezones", lambda: linux_like), \
+                patch.object(schedule, "ZoneInfo", lambda name: ZoneInfo("UTC")):
+            self.assertFalse(valid_timezone("localtime"))
+            self.assertTrue(valid_timezone("America/New_York"))
+
 
 class SettingsRequestTests(unittest.TestCase):
     VALID = {"schedule_enabled": True, "daily_time": "06:15", "timezone": "America/New_York"}
