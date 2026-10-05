@@ -660,5 +660,7 @@ choice endpoints, isolated full-range distinct computation, latest-label search,
 purpose-separated cursors and shared permission/rate/capacity supervision. No new
 dependency, migration or live EIA/S3 access was used. The [implementation record](ai/sessions/2026-10-05-plant-filter-implementation.md)
 records automated checks, corrections, integration and the retained/frontend
-boundary. Synthetic fixtures do not create new EIA findings; maintain data
+boundary. The pre-integration combined runtime passed 128 checks with no skips.
+After preserving the latest schedule work, 27 choice and 112 auth/catalog/settings
+checks passed without skips; the offline suite passed 532 with 258 opt-in skips. Synthetic fixtures do not create new EIA findings; maintain data
 evidence — ongoing.

@@ -16,12 +16,42 @@ These routes reuse `enable_preview` and the configured cursor key ring. Deployme
 
 ## Checks and corrections
 
-- Focused local checks: 24 passed (choice calculation, service and health surface), with no skips.
-- Pre-integration offline regression: 711 discovered, 484 passed, 227 opt-in skips, no failures/errors.
-- Initial disposable PostgreSQL/HTTP/container acceptance: all five choice runtime tests passed. The fixture uses real producer Parquet/manifest bytes and synthetic object storage, not AWS.
-- The locked query image built successfully from `backend/Dockerfile.query`. Native checks use the existing sibling Python 3.14.8 environment with this worktree's `backend/src` and `backend/tests` on `PYTHONPATH`; they are not a fresh native installation.
+| Check | Measured result |
+|---|---|
+| Focused choice/service/health checks before integration | 24 passed, no skips. |
+| Shared PostgreSQL/HTTP/container regression before schedule integration (`run_local_sql_checks.py --all`) | 128 passed, zero skips; SQL, preview, choice, auth, catalog and national checks, including cleanup/crash probes. |
+| Full offline regression after schedule integration | 790 discovered, 532 passed, 258 opt-in skips, zero failures/errors. |
+| Choice acceptance after integration (`run_local_sql_checks.py --choices`) | 27 passed, zero skips, with the rebuilt matching query image. |
+| Auth/catalog/settings acceptance after integration (`run_local_auth_checks.py`) | 112 passed, zero skips, in disposable PostgreSQL 17.11. |
+
+The initial five container choice checks also passed independently. Fixtures use
+real producer Parquet/manifest bytes and synthetic object storage, not AWS.
+The locked query image built successfully from `backend/Dockerfile.query`;
+the final image is `sha256:239c5630a752bdc8ad50cd709287eee68409a0ad2d9f69a8c322cc3ff354a448`.
+Native checks use the existing sibling Python 3.14.8 environment with this
+worktree's `backend/src` and `backend/tests` on `PYTHONPATH`; they are not a fresh
+native installation. The runners use private disposable database clusters.
+
+Diff whitespace checks and local file-link checks passed; `docs/openapi.json`
+parsed successfully. No formatter/linter dependency was added. Tests are the
+repository's unittest runners.
 
 The first HTTP test exposed the missing exact-route registration in `SafeTransport`; the new routes now defer their primitive input checks until after identity checks, while retaining transport size limits. The first full offline run exposed the expected health route-set update. Both were corrected and their checks rerun. Review also changed cursor payload encoding to canonical UTF-8 so maximum-length supplementary Unicode IDs/search remain within the 4096-character limit, and added a runtime output-size regression. Existing Starlette/httpx deprecation warnings remain; no dependency was changed.
+
+## Integration and Git delivery
+
+[YOU] Kept implementation/tests (`ca91ab8`) separate from behavior/evidence
+(`348e4f5`). While this slice was being checked, schedule settings reached
+`pending-endpoints-frontend` at `c93c41d`. Integrated that target without squashing.
+The sole conflict was `create_app`'s signature: preserve both `settings_service`
+and `choice_service`, plus their application state. The diff against the updated
+target contains no change to settings, refresh or worker implementation. The
+post-integration checks above verify the combined application.
+
+[ME] Authorized pushing the feature and merging into `pending-endpoints-frontend`.
+The final delivery preserves both histories and uses a merge commit. Git refs
+and history provide the final delivery identity; this record does not claim a
+retained deployment or a frontend run.
 
 ## Remaining boundary
 
