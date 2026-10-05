@@ -32,7 +32,7 @@ def main():
     if args.runtime_only:
         patterns = ['test_preview_runtime.py', 'test_query_guarantees.py']
     if args.refresh:
-        patterns = ['test_refresh_postgres.py', 'test_refresh_admission.py', 'test_refresh_dispatch.py', 'test_refresh_worker.py', 'test_refresh_candidates.py', 'test_publication*.py']
+        patterns = ['test_refresh_postgres.py', 'test_refresh_admission.py', 'test_refresh_dispatch.py', 'test_refresh_worker.py', 'test_refresh_candidates.py', 'test_scheduler*.py', 'test_publication*.py']
     if args.publication:
         patterns = ['test_publication*.py']
     if args.pattern:

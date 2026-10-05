@@ -15,6 +15,43 @@ def read_command(connection, key):
     return connection.execute('SELECT * FROM api_commands WHERE idempotency_key=%s',(key,)).fetchone()
 
 
+# Every admitted run freezes this policy, together with the settings revision.
+# Manual and scheduled runs use the same values, so a scheduled run is
+# processed exactly like a manual run after admission.
+POLICY = {'workflow_policy':'warnings-v1','diagnostic_registry':'warnings-v1',
+          'contract_version':'trinity-data-v1','validation_checkset':'trinity-data-v1',
+          'requested_start':'2024-10-02','end_strategy':'latest_national'}
+
+
+def _insert_run(connection, trigger_kind, actor_id, request_key, settings):
+    """Insert one run, reserve the lifecycle slot and record its queue intent.
+
+    Input: 'manual' with the Admin's user ID, or 'scheduled' with None. The
+    database CHECK requires requested_by to be null exactly for 'scheduled'.
+    request_key is unique in refresh_runs, so a second insert with the same
+    key fails and rolls back the caller's whole transaction.
+
+    The caller already holds refresh_control and the settings share lock.
+    This function writes three rows and returns the new run row. It does not
+    commit and does not contact Redis; the outbox worker dispatches later.
+    """
+    from datetime import date
+    from uuid import uuid4
+    from psycopg.types.json import Jsonb
+    run_id = uuid4()
+    policy = {'settings_revision':settings['revision'],**POLICY}
+    run = connection.execute("""INSERT INTO refresh_runs(id,trigger_kind,requested_by,request_key,
+        requested_at,status,settings_revision,policy_snapshot,requested_start)
+        VALUES(%s,%s,%s,%s,clock_timestamp(),'requested',%s,%s,%s) RETURNING *""",
+        (run_id,trigger_kind,actor_id,request_key,settings['revision'],Jsonb(policy),date(2024,10,2))).fetchone()
+    connection.execute('UPDATE refresh_control SET holder_run_id=%s,revision=revision+1 WHERE id=1',(run_id,))
+    connection.execute("""INSERT INTO job_outbox(id,run_id,job_kind,deduplication_key,payload)
+        VALUES(%s,%s,'refresh_pipeline',%s,%s)""",
+        (uuid4(),run_id,f'refresh:{run_id}',Jsonb({'schema_version':1,'run_id':str(run_id),
+         'version_id':None,'job_kind':'refresh_pipeline','dispatch_generation':0})))
+    return run
+
+
 def accept_run(connection, actor_id, key, fingerprint, settings):
     """Write the run, slot, queue intent and receipt on the supplied transaction.
 
@@ -22,28 +59,29 @@ def accept_run(connection, actor_id, key, fingerprint, settings):
     Nothing here commits or contacts Redis. A failure in the final receipt
     insert must also roll back the earlier slot and outbox writes.
     """
-    from datetime import date
     from uuid import uuid4
-    from psycopg.types.json import Jsonb
-    run_id, operation = uuid4(),uuid4()
-    policy = {'settings_revision':settings['revision'],'workflow_policy':'warnings-v1',
-              'diagnostic_registry':'warnings-v1','contract_version':'trinity-data-v1',
-              'validation_checkset':'trinity-data-v1','requested_start':'2024-10-02',
-              'end_strategy':'latest_national'}
-    run = connection.execute("""INSERT INTO refresh_runs(id,trigger_kind,requested_by,request_key,
-        requested_at,status,settings_revision,policy_snapshot,requested_start)
-        VALUES(%s,'manual',%s,%s,clock_timestamp(),'requested',%s,%s,%s) RETURNING *""",
-        (run_id,actor_id,key,settings['revision'],Jsonb(policy),date(2024,10,2))).fetchone()
-    connection.execute('UPDATE refresh_control SET holder_run_id=%s,revision=revision+1 WHERE id=1',(run_id,))
-    connection.execute("""INSERT INTO job_outbox(id,run_id,job_kind,deduplication_key,payload)
-        VALUES(%s,%s,'refresh_pipeline',%s,%s)""",
-        (uuid4(),run_id,f'refresh:{run_id}',Jsonb({'schema_version':1,'run_id':str(run_id),
-         'version_id':None,'job_kind':'refresh_pipeline','dispatch_generation':0})))
+    run = _insert_run(connection,'manual',actor_id,key,settings)
     return connection.execute("""INSERT INTO api_commands(id,idempotency_key,actor_id,action,
         request_fingerprint,accepted_at,run_id,result,status_url)
         VALUES(%s,%s,%s,'start_refresh',%s,%s,%s,'queued',%s) RETURNING *""",
-        (operation,key,actor_id,fingerprint,run['requested_at'],run_id,
-         f'/api/v1/refresh-runs/{run_id}')).fetchone()
+        (uuid4(),key,actor_id,fingerprint,run['requested_at'],run['id'],
+         f"/api/v1/refresh-runs/{run['id']}")).fetchone()
+
+
+def accept_scheduled_run(connection, request_key, settings):
+    """Admit one scheduled occurrence and return the new run row.
+
+    request_key is the occurrence key from settings.schedule.occurrence_key.
+    No api_commands receipt is written: that table requires a human actor,
+    and the unique request_key already identifies the occurrence.
+    """
+    return _insert_run(connection,'scheduled',None,request_key,settings)
+
+
+def find_run_by_key(connection, request_key):
+    """Return the ID of the run with this request_key, or None."""
+    row = connection.execute('SELECT id FROM refresh_runs WHERE request_key=%s',(request_key,)).fetchone()
+    return row['id'] if row else None
 
 
 def run_history(connection, maximum, after, limit):
