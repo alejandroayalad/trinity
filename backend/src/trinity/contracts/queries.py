@@ -160,20 +160,22 @@ def canonical_message(body) -> bytes:
 def request_message(request_id, version_id, operation) -> dict:
     """Tag the operation explicitly; old or cross-kind envelopes cannot execute."""
     from uuid import UUID
+    from trinity.contracts.choices import ChoiceOperation
     request_id, version_id = str(request_id), str(version_id)
     if any(str(UUID(value)) != value for value in (request_id, version_id)):
         raise ValueError('Invalid request binding')
-    if type(operation) not in (ValidatedQuery, PreviewOperation):
+    if type(operation) not in (ValidatedQuery, PreviewOperation, ChoiceOperation):
         raise ValueError('Invalid operation')
-    if isinstance(operation, PreviewOperation) and operation.version_id != version_id:
+    if isinstance(operation, (PreviewOperation, ChoiceOperation)) and operation.version_id != version_id:
         raise ValueError('Invalid request binding')
     return dict(protocol_version=PROTOCOL_VERSION, request_id=request_id, version_id=version_id,
-                operation_kind='preview' if isinstance(operation, PreviewOperation) else 'sql',
+                operation_kind=operation.kind if isinstance(operation, (PreviewOperation, ChoiceOperation)) else 'sql',
                 operation=json.loads(operation.to_bytes()), operation_digest=operation.digest)
 
 
 def read_request(data: bytes):
     """Validate the closed envelope before any table registration."""
+    from trinity.contracts.choices import ChoiceOperation
     try:
         if len(data) > MAX_REQUEST_BYTES:
             raise ValueError
@@ -182,9 +184,9 @@ def read_request(data: bytes):
                 or type(body['protocol_version']) is not int or body['protocol_version'] != PROTOCOL_VERSION):
             raise ValueError
         kind = body['operation_kind']
-        if kind not in ('sql', 'preview'):
+        if kind not in ('sql', 'preview', 'choices'):
             raise ValueError
-        decoder = PreviewOperation if kind == 'preview' else ValidatedQuery
+        decoder = {'preview': PreviewOperation, 'choices': ChoiceOperation, 'sql': ValidatedQuery}[kind]
         operation = decoder.from_bytes(canonical_message(body['operation']))
         expected = request_message(body['request_id'], body['version_id'], operation)
         if expected != body or canonical_message(expected) != data:

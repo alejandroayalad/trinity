@@ -650,3 +650,17 @@ outside this Git delivery.
 ## Failed-run recovery Step 4 — October 5, 2026
 
 [ME] Authorized Step 3 commit/push and Step 4 disposable acceptance. [YOU] pushed `bff8446` (implementation/tests) and `da8be15` (design/evidence), and verified the remote head. Added 22 runtime acceptance cases for competing commands, real HTTP response loss, Redis outage/delivery, measured worker termination, stale publisher commits and database lock timeout. The final focused suite passed 75 checks with no skips; PostgreSQL auth passed 25 and Publication database checks passed 18. The final combined Refresh/Publication run discovered 121: 120 passed, 1 query-image-dependent published-reader check skipped, zero failures/errors. Disposable services were cleaned up; retained containers remained healthy. One old Publication assertion was updated for the newly accepted recovery actions while retaining its invalid-evidence retry rejection. See [Step 4 evidence](ai/sessions/2026-10-05-failed-run-recovery-step-4.md) for broader results and corrections. The user subsequently authorized slice delivery. [YOU] committed/pushed runtime acceptance as `2812ab9` and verified the matching remote head; the handoff documents are delivered in a following documentation commit. Full settings mutation/scheduler integration and Step 5 retained operator acceptance remain open; no retained state, live EIA/S3, migrations or dependencies changed.
+
+
+## Plant filter implementation — October 5, 2026
+
+[ME] Requested direct completion without new SDD and authorized commit, push and
+merge into `pending-endpoints-frontend`. [YOU] implemented the two typed filter
+choice endpoints, isolated full-range distinct computation, latest-label search,
+purpose-separated cursors and shared permission/rate/capacity supervision. No new
+dependency, migration or live EIA/S3 access was used. The [implementation record](ai/sessions/2026-10-05-plant-filter-implementation.md)
+records automated checks, corrections, integration and the retained/frontend
+boundary. The pre-integration combined runtime passed 128 checks with no skips.
+After preserving the latest schedule work, 27 choice and 112 auth/catalog/settings
+checks passed without skips; the offline suite passed 532 with 258 opt-in skips. Synthetic fixtures do not create new EIA findings; maintain data
+evidence — ongoing.

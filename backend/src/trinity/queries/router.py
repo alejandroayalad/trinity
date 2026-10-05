@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request
 from trinity.auth.dependencies import bearer_token
 from trinity.queries.schemas import QueryRequest, QueryResponse
 from trinity.queries.preview_schemas import PreviewResponse
+from trinity.queries.choice_schemas import FacilityOptions, GeneratorOptions
 
 router=APIRouter(prefix='/api/v1',tags=['queries'])
 
@@ -49,3 +50,28 @@ async def preview_dataset(dataset_key: str, request: Request, token: str = Depen
             database, enabled=request.app.state.preview_enabled))
     return await supervised_call(request, service.execute, token, dataset_key,
                                  request.query_params.multi_items(), body=await request.body())
+
+
+async def choice_call(dataset_key, choice, request, token):
+    """Keep duplicate parameters and disconnect handling identical to preview."""
+    service = request.app.state.choice_service
+    if service is None:
+        from trinity.queries.config import preview_execution_factory
+        from trinity.queries.choice_service import ChoiceService
+        database = request.app.state.auth.database
+        service = ChoiceService(database, lambda: preview_execution_factory(
+            database, enabled=request.app.state.preview_enabled))
+    return await supervised_call(request, service.execute, token, dataset_key, choice,
+                                 request.query_params.multi_items(), body=await request.body())
+
+
+@router.get('/datasets/{dataset_key}/facilities', response_model=FacilityOptions)
+async def facility_choices(dataset_key: str, request: Request, token: str = Depends(bearer_token)):
+    """List published Plants observed in the requested detailed dataset range."""
+    return await choice_call(dataset_key, 'facilities', request, token)
+
+
+@router.get('/datasets/{dataset_key}/generators', response_model=GeneratorOptions)
+async def generator_choices(dataset_key: str, request: Request, token: str = Depends(bearer_token)):
+    """List distinct generator IDs for one exact published Plant ID."""
+    return await choice_call(dataset_key, 'generators', request, token)

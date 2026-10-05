@@ -12,6 +12,7 @@ from uuid import UUID
 
 import pyarrow.parquet as pq
 
+from trinity.contracts.choices import ChoiceOperation
 from trinity.adapters.s3 import MAX_OBJECT_BYTES, StorageError, _error_kind
 from trinity.contracts.datasets import DATASETS
 from trinity.contracts.manifest import read_manifest, safe_relative_path
@@ -101,7 +102,7 @@ def stage_query(root: Path, request_id, pinned, query, reader: PublishedReader, 
     try:
         data = io.BytesIO()
         publication = pinned.publication
-        if isinstance(query, PreviewOperation) and (query.version_id != str(publication.version_id)
+        if isinstance(query, (PreviewOperation, ChoiceOperation)) and (query.version_id != str(publication.version_id)
                 or query.publication_event_id != str(publication.publication_event_id)):
             raise Problem(503, 'dependency_unavailable')
         reader.read_into(publication.version_id, 'manifest.json', data, deadline=deadline,
