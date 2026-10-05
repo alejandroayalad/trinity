@@ -10,6 +10,7 @@ Most tests pass a fixed test clock to SchedulerService. The occurrence T is
 instant such as T + 20 seconds stands for "the scheduler evaluates at
 06:15:20". One test starts the real worker process with the PostgreSQL clock.
 """
+import asyncio
 from datetime import datetime, timedelta, timezone
 import multiprocessing
 import os
@@ -26,14 +27,18 @@ import psycopg
 
 from postgres_fixture import DSN, PostgresFixture
 from trinity.adapters.postgres import Database
+from trinity.adapters.queue import RefreshQueue, job_id
 from trinity.config import ApiSettings
 from trinity.errors import Problem
+from trinity.refresh.dispatch import DispatchService
 from trinity.refresh.repository import POLICY
 from trinity.settings.schedule import occurrence_key
+from trinity.workers import outbox
 from trinity.workers.scheduler import SchedulerService
 
 T = datetime(2026, 10, 6, 10, 15, tzinfo=timezone.utc)
 SECOND = timedelta(seconds=1)
+REDIS_PORT = os.environ.get("TRINITY_TEST_REDIS_PORT")
 
 
 def at(instant):
@@ -391,6 +396,46 @@ class SchedulerPostgresTests(PostgresFixture, unittest.TestCase):
         self.assertTrue(any(expected.fullmatch(line) for line in lines), errors)
         self.assertTrue(all("scheduler outcome=" in line for line in lines), errors)
         self.assertNotIn(DSN, output + errors)
+
+
+@unittest.skipUnless(DSN and REDIS_PORT, "Use tests/run_local_refresh_checks.py for real Redis and PostgreSQL")
+class SchedulerDispatchTests(PostgresFixture, unittest.TestCase):
+    def test_scheduled_run_is_dispatched_by_the_existing_outbox_worker(self):
+        # S16. The queue has no consumer, so no refresh worker and no EIA
+        # call runs. The check ends when the job waits in Redis.
+        self.sql("""UPDATE shared_settings SET setup_completed_at=%s, updated_at=%s, updated_by='test_admin',
+            daily_time='06:15', schedule_timezone='America/New_York', schedule_enabled=true, revision=4""",
+                 (T - timedelta(days=1), T - timedelta(days=1)))
+        admitted = SchedulerService(self.database, clock=at(T + 20 * SECOND)).once()
+        self.assertEqual(admitted.code, "admitted")
+        connection = {"host": "127.0.0.1", "port": int(REDIS_PORT), "socket_connect_timeout": 2, "socket_timeout": 2}
+
+        async def scenario():
+            # A unique queue name keeps this job away from other tests.
+            queue = RefreshQueue(connection, name="test-" + uuid4().hex)
+            stop = asyncio.Event()
+            worker = asyncio.create_task(outbox.run(DispatchService(self.database, queue), stop))
+            try:
+                for _ in range(100):
+                    if self.sql("SELECT status FROM job_outbox")[0]["status"] == "delivered":
+                        break
+                    await asyncio.sleep(0.1)
+                stop.set()
+                await asyncio.wait_for(worker, 10)
+                payload = self.sql("SELECT payload FROM job_outbox")[0]["payload"]
+                job = await queue.queue.getJob(job_id(payload))
+                return payload, await queue.state(payload), job.data if job else None
+            finally:
+                stop.set()
+                await queue.queue.obliterate(force=True)
+                await queue.close()
+
+        payload, state, data = asyncio.run(scenario())
+        self.assertEqual(self.sql("SELECT status FROM job_outbox")[0]["status"], "delivered")
+        self.assertEqual((payload["run_id"], payload["dispatch_generation"]), (str(admitted.run_id), 0))
+        self.assertEqual((state, data), ("waiting", payload))
+        run = self.sql("SELECT trigger_kind, status FROM refresh_runs")[0]
+        self.assertEqual(run, {"trigger_kind": "scheduled", "status": "requested"})
 
 
 if __name__ == "__main__":
