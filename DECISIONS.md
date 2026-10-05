@@ -621,6 +621,8 @@ remain unauthorized. Current implementation and actual checks are recorded in th
 
 ### A20 — Seeded local authentication for the challenge: closed
 
+**Operator password rotation refinement — October 5, 2026:** alayala approved an explicit, terminal-only `python -m trinity.auth.rotate <persona>...` command after he lost the retained persona passwords. It updates only `local_users.password_hash` for named, existing, active personas whose role matches the name, in one transaction under the seed advisory lock, with hidden double entry (15–1024 characters). It does not revoke sessions, reset login limits, change IDs, roles or status, or touch settings, runs or publication state; an unexpired session stays valid until it expires. Seeding still never changes an existing persona, and no recovery endpoint is added. Evidence: [rotation session](ai/sessions/2026-10-05-retained-persona-password-rotation.md).
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. The original record was documentation only. The October 4 [implementation slice](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md) now implements local credentials, sessions, seeding, `/me` and settings reads; A21 records defaults and remaining verification limits.
