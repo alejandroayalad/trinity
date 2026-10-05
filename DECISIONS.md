@@ -669,8 +669,12 @@ An incomplete pipeline becomes failed/rejected with one unresolved warning, neve
 ready. No automatic extraction restart or second candidate is permitted.
 
 **Boundary:** completed preparation retains original receipt custody for task 5.
-The existing candidate registration boundary still needs normal worker/recovery
-wiring; until then, `receipt_pending` retains the slot without granting readiness.
+The initial task 4 boundary retained `receipt_pending` without readiness. Task 5
+supersedes that intermediate state: normal worker and proven stopped-worker
+recovery call the existing verifier/registration service. Migration 0007 persists
+the 30-second registration deadline and caps registration invocations at three;
+recovery preserves the original budget and takes a new fence. Changed/missing
+evidence or exhausted limits record failure, never publication readiness.
 Publisher, setup writes and Admin review/recovery commands remain separate.
 The [current tasks](sdd/refresh-publication/tasks.md) state the tested boundary.
 

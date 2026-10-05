@@ -18,6 +18,7 @@ from trinity.errors import SafeTransport, install_handlers
 from trinity.settings.router import router as settings_router
 from trinity.queries.router import router as queries_router
 from trinity.refresh.router import router as refresh_router
+from trinity.refresh.candidates import router as candidates_router
 
 
 class HealthResponse(BaseModel):
@@ -65,6 +66,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
     application.include_router(queries_router)
     application.include_router(catalog_router)
     application.include_router(refresh_router)
+    application.include_router(candidates_router)
 
     # The decorator registers this handler; the response model fixes the JSON shape.
     @application.get("/health", response_model=HealthResponse, tags=["health"])

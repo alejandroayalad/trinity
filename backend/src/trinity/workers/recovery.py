@@ -6,19 +6,21 @@ from pathlib import Path
 import socket
 
 from trinity.refresh.execution import ExecutionService
-from trinity.workers.refresh import failure_results
+from trinity.adapters.s3 import S3Storage
+from trinity.workers.refresh import failure_results, register_receipt
 
 
 class RecoveryService:
     """Confirm same-host lifetime-lock release before failing an incomplete run.
 
     An unknown host, missing lock, changed inode or held lock keeps admission
-    blocked. A completed receipt remains available for the candidate import gate.
+    blocked. A completed receipt is verified under a new database fence.
     Recovery never launches extraction and never discards existing evidence.
     """
-    def __init__(self, database, output_root):
+    def __init__(self, database, output_root, s3=None, *, storage_factory=None):
         self.execution = ExecutionService(database)
         self.output_root = Path(output_root).resolve(strict=True)
+        self.storage_factory = storage_factory or (lambda:S3Storage(s3))
 
     def once(self):
         """Retain unknown execution; fail only after both process owners have ended."""
@@ -41,20 +43,23 @@ class RecoveryService:
                 fcntl.flock(descriptor,fcntl.LOCK_EX|fcntl.LOCK_NB)
             except BlockingIOError:
                 return 'still_owned'
-            # Recheck under SQL locks after obtaining exclusive process custody.
-            with self.execution.transaction() as connection:
-                current = self.execution.owned(connection,run['id'],run['worker_owner_id'],run['execution_fence'],stopped=True)
-                if current['live']:
-                    return 'renewed'
-            if ref.get('receipt_sha256'):
-                # Step 5 must verify parent completion, immutable files and the
-                # original deadline. Receipt presence alone grants no readiness.
-                return 'receipt_pending'
-            self.execution.reference(run['id'],run['worker_owner_id'],run['execution_fence'],
-                                     {'child_stopped':True},stopped=True)
+            # Exclusive process custody proves both supervisor and child have
+            # released the inode. SQL still rejects a renewed or replaced owner.
+            run = self.execution.reclaim_stopped(run['id'],run['worker_owner_id'],run['execution_fence'])
+            ref = run['worker_execution_ref']
             root = self.output_root/ref['version_id'] if ref.get('version_id') else None
+            code = 'worker_lost'
+            if ref.get('receipt_sha256'):
+                try:
+                    return register_receipt(self.execution.database,run,root,self.storage_factory)
+                except Exception:
+                    # Invalid/missing evidence or expired budgets cannot leave
+                    # a confirmed stopped execution silently running forever.
+                    # If SQL is unavailable the outer loop retains custody for
+                    # a later bounded recovery; accepted state rejects failure.
+                    code = 'refresh_failed'
             rows = failure_results(root,ref.get('validation_attempt_id'))
-            self.execution.fail(run['id'],run['worker_owner_id'],run['execution_fence'],'worker_lost',results=rows)
+            self.execution.fail(run['id'],run['worker_owner_id'],run['execution_fence'],code,results=rows)
             return 'failed'
         finally:
             os.close(descriptor)

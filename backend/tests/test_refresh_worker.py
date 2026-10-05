@@ -15,6 +15,7 @@ from uuid import uuid4
 import httpx
 from postgres_fixture import DSN, PostgresFixture
 from test_prepare import fixture_worker
+from refresh_worker_fixture import shared_child, storage
 from test_validate import reconciled
 from trinity.config import EIASettings, S3Settings
 from trinity.connector.prepare import Limits
@@ -57,13 +58,14 @@ class WorkerTests(PostgresFixture, unittest.TestCase):
 
     def worker(self, mode='success', **kwargs):
         return RefreshWorker(self.database,self.root,EIASettings(EIA_API_KEY='synthetic'),
-            S3Settings('synthetic-bucket',mode,'us-east-1'),worker=kwargs.pop('worker',fixture_worker),
+            S3Settings('synthetic-bucket',mode,'us-east-1'),worker=kwargs.pop('worker',shared_child),
+            storage_factory=lambda:storage(self.root,S3Settings('synthetic-bucket',mode,'us-east-1')),
             discovery_transport=httpx.MockTransport(discovery),**kwargs)
 
     def test_real_pipeline_durable_order_attempts_receipt_and_no_second_run(self):
         worker=self.worker()
         result=worker.execute(self.payload)
-        self.assertEqual(result,'prepared',self.sql('SELECT * FROM refresh_runs'))
+        self.assertEqual(result,'publishing',self.sql('SELECT * FROM refresh_runs'))
         run=self.sql('SELECT * FROM refresh_runs')[0]
         self.assertTrue(run['worker_execution_ref']['child_stopped'])
         self.assertTrue(run['worker_execution_ref']['preparation_complete'])
@@ -77,10 +79,8 @@ class WorkerTests(PostgresFixture, unittest.TestCase):
         self.assertEqual(worker.execute(self.payload),'ignored')
         self.assertEqual(self.sql('SELECT count(*) AS n FROM data_versions')[0]['n'],1)
         self.assertIsNone(self.sql('SELECT publication_event_id FROM active_publication')[0]['publication_event_id'])
-        # Step 4 retains successful custody; Step 5 alone may grant readiness.
-        self.assertEqual(self.sql('SELECT status FROM data_versions')[0]['status'],'validating')
-        self.sql("UPDATE refresh_runs SET lease_until=now()-interval '1 second'")
-        self.assertEqual(RecoveryService(self.database,self.root).once(),'receipt_pending')
+        self.assertEqual(self.sql('SELECT status FROM data_versions')[0]['status'],'validated')
+        self.assertEqual(RecoveryService(self.database,self.root).once(),'idle')
 
     def test_failed_validation_imports_real_rows_without_readiness(self):
         self.assertEqual(self.worker('validation-failure').execute(self.payload),'failed')

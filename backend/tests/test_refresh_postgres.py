@@ -209,7 +209,7 @@ class RefreshPostgresTests(PostgresFixture, unittest.TestCase):
         after = self.sql('SELECT * FROM data_versions WHERE id=%s',(version,))[0]
         self.assertEqual(before,{key:after[key] for key in before})
         self.assertIsNone(after['preparation_receipt_sha256'])
-        self.assertEqual(ScriptDirectory.from_config(self.migration).get_heads(),['0006_refresh_dispatch'])
+        self.assertEqual(ScriptDirectory.from_config(self.migration).get_heads(),['0007_refresh_registration'])
         with self.database.transaction(QueryDeadline(10),readonly=True) as connection:
             pinned = read_preview_publication(connection,read_pinned_publication(connection))
         self.assertEqual(pinned.evidence_bundle_sha256,self.receipt.bundle_sha256)

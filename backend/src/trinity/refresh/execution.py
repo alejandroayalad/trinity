@@ -82,6 +82,29 @@ class ExecutionService:
             raise Problem(409, 'candidate_ineligible')
         return run
 
+    def reclaim_stopped(self, run_id, owner, fence):
+        """Take a new fence after the caller holds the exclusive lifetime lock.
+
+        The caller must keep that process lock through import or failure. Recheck
+        the old lease under SQL locks. Preserve every deadline and operation
+        count; only ownership and the selected validation step's fence change.
+        """
+        with self.transaction() as connection:
+            run = self.owned(connection,run_id,owner,fence,stopped=True)
+            if run['live']:
+                raise Problem(409, 'candidate_ineligible')
+            ref = {**(run['worker_execution_ref'] or {}), 'child_stopped':True}
+            new_owner = uuid4()
+            ref['owner'] = str(new_owner)
+            claimed = connection.execute("""UPDATE refresh_runs SET worker_owner_id=%s,
+                execution_fence=execution_fence+1,worker_execution_ref=%s,
+                lease_until=LEAST(execution_deadline_at,clock_timestamp()+interval '30 seconds'),
+                revision=revision+1 WHERE id=%s RETURNING *""", (new_owner,Jsonb(ref),run_id)).fetchone()
+            if ref.get('validation_step_id'):
+                connection.execute('UPDATE refresh_steps SET execution_fence=%s WHERE id=%s AND run_id=%s',
+                    (claimed['execution_fence'],UUID(ref['validation_step_id']),run_id))
+            return claimed
+
     def heartbeat(self, run_id, owner, fence):
         """Renew only a live lease; an expired owner cannot revive itself."""
         with self.transaction() as connection:
@@ -174,6 +197,11 @@ class ExecutionService:
                     ref['validation_attempt_id'] = str(attempt)
             elif kind == 'child_verified':
                 ref['receipt_sha256'] = event['receipt_sha256']
+            # Candidate detail exposes the selected validation step and its
+            # progress state even before results are imported. Change its ETag
+            # revision when those visible fields change.
+            if kind in ('started','finished') and event.get('stage') == 'validation':
+                connection.execute('UPDATE data_versions SET revision=revision+1 WHERE run_id=%s',(run_id,))
             connection.execute('UPDATE refresh_runs SET revision=revision+1,worker_execution_ref=%s WHERE id=%s', (Jsonb(ref),run_id))
 
     def fail(self, run_id, owner, fence, code, *, results=()):
@@ -186,11 +214,13 @@ class ExecutionService:
                 raise Problem(409, 'candidate_ineligible')
             version = connection.execute('SELECT * FROM data_versions WHERE run_id=%s FOR UPDATE', (run_id,)).fetchone()
             step_id = ref.get('validation_step_id')
+            # A corrupt binding must not strand confirmed stopped work. Retain
+            # its files but import none of that untrusted batch into SQL.
+            if any(version is None or str(version['id']) != result.version_id
+                   or result.attempt_id != ref.get('validation_attempt_id')
+                   or version['manifest_sha256'] != result.manifest_sha256 for result in results):
+                results = ()
             for result in results:
-                if (version is None or str(version['id']) != result.version_id
-                        or result.attempt_id != ref.get('validation_attempt_id')
-                        or version['manifest_sha256'] != result.manifest_sha256):
-                    raise ValueError('wrong_failure_evidence')
                 connection.execute("""INSERT INTO validation_results(id,version_id,step_id,manifest_sha256,
                     checkset_version,check_code,check_revision,dataset_key,required,severity,status,
                     checked_count,failed_count,details,details_path,details_sha256,checked_at)

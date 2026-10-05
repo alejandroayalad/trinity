@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 import re
+import time
 from uuid import UUID
 
 from trinity.adapters.s3 import StoredArtifact
@@ -50,6 +51,7 @@ def load_candidate(root: Path, expected_receipt_sha256: str, storage, *, timeout
     Remote verification uses the caller's bounded storage operation. Preserve
     all files on rejection; never repair or overwrite a candidate here.
     """
+    verification_deadline = time.monotonic() + timeout_seconds
     try:
         if re.fullmatch('[0-9a-f]{64}', expected_receipt_sha256) is None:
             raise ValueError
@@ -83,7 +85,7 @@ def load_candidate(root: Path, expected_receipt_sha256: str, storage, *, timeout
                 result['approval_required'])
         # Existing verification binds the summary hashes to the bundle and
         # checks every member. Hashing the summaries above does not trust them.
-        verify_stored_candidate(report, receipt, storage, timeout_seconds=timeout_seconds)
+        verify_stored_candidate(report, receipt, storage, timeout_seconds=verification_deadline-time.monotonic())
         return CandidateEvidence(report, receipt, expected_receipt_sha256)
     except Exception:
         raise Problem(503, 'dependency_unavailable') from None

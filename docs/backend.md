@@ -210,4 +210,6 @@ for service-owned transactions, and `workers/outbox.py`, `workers/refresh.py`,
 `workers/recovery.py` with a `workers/__main__.py` command entrypoint. These concrete
 names refine the earlier roadmap tree; they do not add a second queue stack.
 Connector hooks reuse the existing preparation process and evidence formats.
-Successful receipt routing and publisher completion remain separate tasks.
+Successful receipt routing and stopped-worker receipt recovery now call the
+existing registration service. `refresh/candidates.py` exposes the Admin-only
+persisted detail snapshot. Publisher completion remains a separate task.

@@ -1,18 +1,19 @@
 # Tasks: Build Refresh
 
-Date: October 4, 2026. Status: **tasks 2–4 implemented; task 5 routing/recovery integration pending**.
+Date: October 4, 2026. Status: **tasks 2–5 implemented and verified within the bounded scope; Task 5 delivery authorized**.
 Related: [proposal](proposal.md), [spec](spec.md), [design](design.md),
 [integration contract](integration-contract.md).
 
 Implementation authorized after the Preview compatibility corrections. No live EIA/S3,
 retained-database migration or PR was requested. The later delivery request authorizes
 incremental commits and push for the existing tasks 1–4 and registration foundation.
-The subsequent Task 5 integration must remain uncommitted and unpushed.
+Task 5 was first completed locally without commit or push. Alayala subsequently
+requested its commit and push; that later instruction authorizes this delivery.
 
 ## Review checkpoint
 
-Done: persistence, initial verified registration, Admin admission, durable dispatch and fenced preparation.
-Pending: task 5 successful-receipt routing, candidate detail and completed-receipt recovery.
+Done: persistence, admission, dispatch, fenced preparation, receipt recovery and candidate detail.
+Pending: separate publisher/deployment work and human code walkthrough.
 Blocker: none for continued authorized coding; setup writes and publisher remain product dependencies.
 
 ## Bounded implementation sequence — authorized
@@ -50,7 +51,7 @@ using existing private storage and records the exact exit/evidence. Until then,
 report synthetic preparation and database/queue proof separately. No setup writes,
 approval/recovery commands or publication completion are established by this SDD.
 
-Next: [YOU] implement task 5 successful-receipt routing and completed-receipt recovery.
+Next: [ME] review the local Task 5 diff and measured results.
 
 ## Implemented boundary and verification
 
@@ -59,8 +60,8 @@ Task 1 persistence is implemented by `0005_refresh_evidence` and
 ongoing. Task 5 has its successful-candidate registration boundary implemented in
 `refresh/evidence.py` and `refresh/registration.py`. Tasks 2–4 now add Admin routes,
 durable BullMQ dispatch, supervised preparation and failed/partial import. The
-successful worker retains custody for task 5; its routing/recovery wiring and the
-publisher remain pending. The following initial-writer results are historical.
+successful worker now routes through task 5 registration; completed-receipt recovery
+uses the same verifier. The publisher remains outside this scope. The following initial-writer results are historical.
 
 - Five offline loader tests passed: exact reconstruction, child-only completion,
   retained-hash mismatch, changed detail/remote bytes and contradictory failure.
@@ -98,13 +99,50 @@ crashes, incomplete/corrupt journal import, denied storage and finite temporary 
 S20 generates the full accepted calendar window and uses a reduced trusted object limit to exercise the same guard;
 full-history capacity and live EIA/S3 remain explicitly unverified.
 
-Successful preparation returns `prepared` and keeps the candidate unvalidated with
-admission retained. Recovery returns `receipt_pending` for retained custody. Task 5
-must verify/import it using the original deadline and identities before granting
-readiness. No publication pointer change occurs in tasks 3–4.
+At the tasks 3–4 delivery boundary, successful preparation returned `prepared` and
+recovery returned `receipt_pending`. Task 5 below supersedes those intermediate
+returns with verified routing. No publication pointer change belongs to Refresh.
 
 Final checks: 40 refresh integration tests passed without skips; a separate real
 loopback HTTP commit/acceptance/replay test also passed; 371 offline tests
 passed (117 opt-in skips); 55 broader PostgreSQL tests passed (17 query-image skips).
 Commands, fixes and boundaries:
 [dispatch/worker evidence](../../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+
+
+### Task 5 — receipt routing, recovery and candidate detail
+
+Successful workers call the existing registration service with the original receipt,
+reserved version, validation step and fence. Recovery first proves termination with
+the same-host exclusive lifetime lock, then takes a new SQL owner/fence and imports
+that receipt. It never extracts again. Changed/missing proof or exhausted budgets
+record a failed run and warning, retaining evidence and the admission blocker.
+
+`0007_refresh_registration` adds a fixed first-verification deadline (at most 30
+seconds and within the original execution deadline) and a nondecreasing counter
+capped at three registration invocations. Remote verification holds no transaction;
+the final evidence/route transaction rechecks authority and remaining time.
+`GET /api/v1/candidates/{version_id}` authorizes the current Admin and projects only
+actual persisted checks, diagnostics, review/publication state, actions and revision.
+Absent checks stay absent, and unresolved review state remains null/not ready.
+
+Final measured results are recorded in the
+[Task 5 session](../../ai/sessions/2026-10-04-refresh-task5-receipt-routing.md).
+Task 5 delivery is authorized by the subsequent commit/push request. No publisher,
+active pointer change, live EIA/S3 or retained-database migration is included.
+
+
+Final Task 5 checks on the completed changes:
+
+- Disposable PostgreSQL 17.11 and Redis 8.10.2: **63 passed, no skips**, 126.652 seconds.
+- Offline discovery: **372 passed, 139 opt-in skips** (511 collected), 50.665 seconds.
+- Broader PostgreSQL SQL/auth/catalog/Preview regression: **55 passed, 17 query-image
+  skips** (72 collected), 100.975 seconds. The final worker revision adjustment was
+  additionally covered by its focused test and the complete Refresh rerun.
+- Diff/whitespace review, 15 Python file parses and 397 local Markdown link targets
+  passed. No formatter/linter/type checker is configured. No dependency changed.
+
+The earlier 8 offline / 40 disposable-service review counts are historical. These
+results supersede them for this working tree. Active publication remained unchanged
+in the new end-to-end scenarios, each of which retained an older published version.
+The scope stops at `publishing` plus one obligation or `awaiting_approval`.

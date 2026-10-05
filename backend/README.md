@@ -521,16 +521,20 @@ Tokens/cursors stay in memory; the checker attempts logout on failure and checks
 revocation after successful checks. Output contains safe summaries only. This
 command neither configures nor enables preview and makes no publication changes.
 
-## Refresh evidence registration — initial implementation
+## Refresh evidence registration and candidate detail
 
 `refresh.evidence.load_candidate` reconstructs and rechecks a retained parent receipt,
 validation report and stored bundle. `refresh.registration.CandidateRegistration`
 then atomically stores artifacts/results and Preview's existing `evidence_bundle_sha256`
 and `validation_attempt_id`, with the selected validation step. Zero warnings creates
 publication intent; review warnings wait for approval. This is an internal trusted
-worker boundary, not a public upload endpoint. The task 4 worker retains completion for the task 5 routing gate.
+worker boundary, not a public upload endpoint. Both successful preparation and
+confirmed stopped-worker recovery call this service with retained receipt custody.
+`GET /api/v1/candidates/{version_id}` returns the canonical Admin-only panel from
+actual persisted evidence, with `ETag: "candidate-<revision>"` and no-store headers.
 
-Migrations `0005_refresh_evidence` and `0006_refresh_dispatch` extend
+Migrations `0005_refresh_evidence`, `0006_refresh_dispatch` and
+`0007_refresh_registration` extend
 `0004_preview_evidence`; existing Preview evidence remains unchanged. Do not run
 migrations against a retained database as part of the disposable test command.
 From `backend/`, the focused checks are:
@@ -574,13 +578,16 @@ using `run_local_sql_checks.py --refresh` without the Redis runner.
 Background entrypoints are `python -m trinity.workers outbox`, `refresh`, and
 `recovery`. They use `TRINITY_DATABASE_URL` and trusted `TRINITY_REDIS_URL`.
 Refresh/recovery also require an existing private durable `TRINITY_REFRESH_ROOT`;
-refresh alone loads the existing EIA and S3 settings. Keep this root on the same
+refresh loads existing EIA and S3 settings; recovery loads S3 settings only. Keep this root on the same
 host/filesystem for recovery and preserve its lock/evidence files. Never place
 credentials in command arguments or queue payloads.
 
-Do not enable a live refresh walkthrough yet: task 5 must wire successful receipt
-custody into candidate registration and completed-receipt recovery. Task 4 leaves
-successful preparation unvalidated in application state with admission retained.
+Successful preparation and stopped-worker recovery verify/import the retained
+receipt and end at `publishing` with one obligation or `awaiting_approval`.
+Registration shares its saved 30-second deadline and at most three invocations
+across crashes; neither extraction nor budgets restart. Recovery requires proven
+process termination, valid fenced ownership and the original evidence bytes.
+Live enablement remains a separate gate.
 Failure import is implemented: measured results stay available, readiness stays
 false, and an unresolved warning blocks a new run. Publisher, setup writes and
 Admin resolution commands remain separate. See the [implementation record](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).

@@ -34,7 +34,7 @@ async def serve(role):
         if role=='outbox':
             await outbox.run(dispatch,stop)
         elif role=='recovery':
-            await recovery.run(dispatch,recovery.RecoveryService(database,os.environ['TRINITY_REFRESH_ROOT']),stop)
+            await recovery.run(dispatch,recovery.RecoveryService(database,os.environ['TRINITY_REFRESH_ROOT'],load_s3_settings()),stop)
         else:
             worker=RefreshWorker(database,os.environ['TRINITY_REFRESH_ROOT'],load_eia_settings(),load_s3_settings(),
                                  cancelled=stop.is_set)

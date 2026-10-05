@@ -503,3 +503,15 @@ not establish live EIA/S3 or full-history capacity. Successful receipts remain a
 the task 5 routing/recovery gate. Commands, measured results, corrections and
 remaining boundaries are in the [session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
 No retained migration, commit, push or PR occurred. Maintain data evidence — ongoing.
+
+## Refresh Task 5 — October 4, 2026
+
+[ME] Alayala requested receipt routing/recovery and canonical Admin candidate detail,
+with no commit or push for this task. [YOU] connected successful and stopped-worker
+receipts to existing verification/registration, persisted nonresetting budgets and
+added candidate detail from actual results. The earlier five delivery commits were
+pushed before Task 5 began. Alayala subsequently authorized the Task 5 commit and
+push; concurrent Publication documents remain outside that delivery. Synthetic child-process,
+HTTP, PostgreSQL and Redis evidence, corrections and remaining limits are in the
+[Task 5 session](ai/sessions/2026-10-04-refresh-task5-receipt-routing.md). No publisher,
+live EIA/S3, retained migration or active data change was performed.

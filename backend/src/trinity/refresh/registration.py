@@ -5,6 +5,7 @@ current execution fence. Verify saved preparation outside SQL transactions.
 Then persist artifacts, checks, Preview's identities and either review state
 or publication intent together. The active publication is never changed here.
 """
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from psycopg.types.json import Jsonb
@@ -18,14 +19,17 @@ from trinity.refresh.evidence import load_candidate
 def _owned(connection, run_id, version_id, step_id, fence):
     """Lock in canonical order and reject a stale or unrelated writer."""
     control = connection.execute('SELECT * FROM refresh_control WHERE id=1 FOR UPDATE').fetchone()
-    run = connection.execute('SELECT *,lease_until>clock_timestamp() AS lease_valid '
-                             'FROM refresh_runs WHERE id=%s FOR UPDATE', (run_id,)).fetchone()
+    run = connection.execute('''SELECT *,lease_until>clock_timestamp() AS lease_valid,
+        (execution_deadline_at IS NULL OR execution_deadline_at>clock_timestamp()) AS in_time,
+        (registration_deadline_at IS NULL OR registration_deadline_at>clock_timestamp()) AS registration_live
+        FROM refresh_runs WHERE id=%s FOR UPDATE''', (run_id,)).fetchone()
     version = connection.execute('SELECT * FROM data_versions WHERE id=%s FOR UPDATE', (version_id,)).fetchone()
     step = connection.execute('SELECT * FROM refresh_steps WHERE id=%s FOR UPDATE', (step_id,)).fetchone()
     if (not control or control['holder_run_id'] != run_id or not run or not version or not step
             or run['execution_fence'] != fence
             or run['status'] not in ('running','awaiting_approval','publishing')
-            or (run['status'] == 'running' and run['lease_valid'] is not True)
+            or (run['status'] == 'running' and
+                (run['lease_valid'] is not True or not run['in_time'] or not run['registration_live']))
             or (run['status'] != 'running' and version['preparation_receipt_sha256'] is None)
             or version['run_id'] != run_id or version['disposition'] != 'active'
             or step['run_id'] != run_id or step['stage'] != 'validate'
@@ -120,7 +124,7 @@ def persist_candidate(connection, run_id, version_id, step_id, fence, evidence):
             VALUES(%s,%s,'publish_version',%s,%s)""",
             (uuid4(),run_id,f'publish:{version_id}',Jsonb({'schema_version':1,'run_id':str(run_id),
              'version_id':str(version_id),'job_kind':'publish_version',
-             'publication_generation':run['publication_generation']})))
+             'publication_generation':run['publication_generation'],'dispatch_generation':0})))
     # Waiting review and publication intent retain admission, but no longer
     # grant this preparation worker an active execution lease.
     connection.execute('UPDATE refresh_runs SET status=%s,revision=revision+1,lease_until=NULL WHERE id=%s',
@@ -141,10 +145,28 @@ class CandidateRegistration:
         trusted supervisor. Storage failure preserves the old publication and
         all available evidence; the worker records its bounded failure later.
         """
+        deadline_at = None
         if root.name != str(version_id):
             raise Problem(409, 'candidate_ineligible')
         with self.database.transaction(Deadline(), error_code='dependency_unavailable') as connection:
-            _owned(connection,run_id,version_id,step_id,fence)
+            run, _, _ = _owned(connection,run_id,version_id,step_id,fence)
+            if run['status'] == 'running':
+                # Save the first verification deadline before remote I/O. A
+                # recovered owner consumes another attempt inside this budget.
+                # Neither another delivery nor a crash can add thirty seconds.
+                if run['registration_attempts'] >= 3:
+                    raise Problem(409, 'candidate_ineligible')
+                budget = connection.execute('''UPDATE refresh_runs SET
+                    registration_deadline_at=COALESCE(registration_deadline_at,
+                        LEAST(execution_deadline_at,clock_timestamp()+%s*interval '1 second')),
+                    registration_attempts=registration_attempts+1 WHERE id=%s
+                    RETURNING registration_deadline_at''', (min(30,timeout_seconds),run_id)).fetchone()
+                deadline_at = budget['registration_deadline_at']
+                timeout_seconds = min(timeout_seconds,
+                    (deadline_at-datetime.now(UTC)).total_seconds())
         evidence = load_candidate(root,receipt_sha256,storage,timeout_seconds=timeout_seconds)
-        with self.database.transaction(Deadline(), error_code='dependency_unavailable') as connection:
+        # Bound the final transaction and its commit by the same saved budget.
+        # Verification may have consumed almost all of the original allowance.
+        remaining = (deadline_at-datetime.now(UTC)).total_seconds() if deadline_at else timeout_seconds
+        with self.database.transaction(Deadline(min(15,remaining)), error_code='dependency_unavailable') as connection:
             return persist_candidate(connection,run_id,version_id,step_id,fence,evidence)

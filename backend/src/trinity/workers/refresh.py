@@ -5,7 +5,8 @@ root. PostgreSQL supplies the accepted policy. Discovery freezes the date and
 version before the first extraction. One child runs preparation; its events are
 journaled and committed before acknowledgment. On failure, retain only measured
 validation rows and keep the lifecycle blocked. A completed receipt is retained
-for the separate candidate-routing gate; it does not grant publication readiness.
+and verified before atomic candidate registration. Registration queues publication
+or waits for review; it never activates data.
 """
 import asyncio
 from dataclasses import replace
@@ -14,14 +15,17 @@ import fcntl
 import os
 from pathlib import Path
 import socket
-from uuid import uuid4
+from uuid import UUID, uuid4
 
+from trinity.adapters.s3 import S3Storage
 from trinity.connector import parquet, prepare
+from trinity.connector.validate import _bound_results, REQUIRED_CHECKS, DIAGNOSTIC_CHECKS
 from trinity.connector.client import EIAClient
 from trinity.connector.pipeline import _read_storage_file
 from trinity.contracts.manifest import read_json, sha256
 from trinity.refresh.evidence import _results
 from trinity.refresh.execution import ExecutionService
+from trinity.refresh.registration import CandidateRegistration
 
 
 def partial_results(root, attempt):
@@ -35,6 +39,7 @@ def partial_results(root, attempt):
     from uuid import UUID
     prefix = f'evidence/{UUID(attempt)}'
     items = []
+    seen = set()
     try:
         with parquet._directory(root) as descriptor:
             paths = parquet._inventory(descriptor)
@@ -48,10 +53,16 @@ def partial_results(root, attempt):
                 if event.get('event') != 'result':
                     continue
                 result, = _results([event['result']])
-                if (result.version_id != root.name or result.attempt_id != attempt
+                pair = (result.check_code,result.dataset_key)
+                if (pair in seen or pair not in (*REQUIRED_CHECKS,*DIAGNOSTIC_CHECKS)
+                        or not _bound_results((result,),(pair,),version_id=root.name,attempt_id=attempt,
+                            manifest_sha256=result.manifest_sha256,required=pair in REQUIRED_CHECKS)
+                        or result.checked_count > 9223372036854775807
+                        or result.version_id != root.name or result.attempt_id != attempt
                         or result.details_path != f'{prefix}/{result.check_code}-{result.dataset_key}.json'
                         or _read_storage_file(descriptor,result.details_path) != result.details_json):
                     raise ValueError('invalid_partial_evidence')
+                seen.add(pair)
                 items.append(result)
     except FileNotFoundError:
         return ()
@@ -71,15 +82,34 @@ def failure_results(root, attempt):
         return ()
 
 
+def register_receipt(database, run, root, storage_factory):
+    """Use only durable custody and the remaining original execution budget.
+
+    The caller holds the process lifetime lock. Registration separately checks
+    the database fence before and after remote verification. No new extraction,
+    reserved version, validation attempt or receipt hash is created here.
+    """
+    ref = run['worker_execution_ref']
+    remaining = (run['execution_deadline_at']-datetime.now(UTC)).total_seconds()
+    if remaining <= 0:
+        raise ValueError('registration_deadline_exhausted')
+    return CandidateRegistration(database).register(run_id=run['id'],
+        version_id=UUID(ref['version_id']),step_id=UUID(ref['validation_step_id']),
+        fence=run['execution_fence'],root=root,receipt_sha256=ref['receipt_sha256'],
+        storage=storage_factory(),timeout_seconds=min(30,remaining))
+
+
 class RefreshWorker:
     """Coordinate one claim; duplicate notifications cannot launch another child."""
     def __init__(self, database, output_root, eia, s3, *, worker=prepare._worker,
-                 discovery_transport=None, limits=prepare.Limits(), cancelled=lambda:False):
+                 discovery_transport=None, limits=prepare.Limits(), cancelled=lambda:False,
+                 storage_factory=None):
         self.execution = ExecutionService(database)
         self.output_root = Path(output_root).resolve(strict=True)
         self.eia, self.s3 = eia, s3
         self.worker, self.discovery_transport, self.limits = worker, discovery_transport, limits
         self.cancelled = cancelled
+        self.storage_factory = storage_factory or (lambda:S3Storage(self.s3))
 
     async def _discover(self, run, event, heartbeat):
         """Keep discovery within its budget and renew the independent worker lease."""
@@ -135,12 +165,14 @@ class RefreshWorker:
                 return 'stop_unconfirmed'
             ref = reference({'child_stopped':True},stopped=True)
             if code == 0:
-                # This is custody for Step 5. Do not invent a validation status
-                # or release admission before that transaction accepts evidence.
+                # Reuse the supervisor's original digest. The verifier checks
+                # local and remote bytes before the database grants readiness.
                 if sha256((root/prepare.EVIDENCE/'result.json').read_bytes()) != ref.get('receipt_sha256'):
                     raise ValueError('changed_receipt')
-                reference({'preparation_complete':True})
-                return 'prepared'
+                ref = reference({'preparation_complete':True})
+                heartbeat()
+                return register_receipt(self.execution.database,
+                    {**run,'worker_execution_ref':ref},root,self.storage_factory)
             rows = failure_results(root,ref.get('validation_attempt_id'))
             failure = 'stage_timeout' if result.get('error_code') == 'deadline_exceeded' else 'refresh_failed'
             self.execution.fail(run_id,owner,fence,failure,results=rows)

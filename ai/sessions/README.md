@@ -106,3 +106,5 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-04 — Docker local setup — API and PostgreSQL](2026-10-04-docker-local-setup.md)
 
 - [2026-10-04 — Refresh admission, durable dispatch and fenced worker](2026-10-04-refresh-dispatch-and-worker.md)
+
+- [2026-10-04 — Refresh Task 5 receipt routing and recovery](2026-10-04-refresh-task5-receipt-routing.md)

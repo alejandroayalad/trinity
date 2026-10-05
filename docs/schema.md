@@ -373,3 +373,21 @@ candidate; absent manifest/checks remain absent. A completed parent receipt reta
 custody for task 5 and does not independently grant readiness or publication.
 See [A23](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
 and the [measured session](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+
+
+### Registration budget persistence (0007)
+
+`refresh_runs.registration_deadline_at` is null until the first verification starts.
+It becomes the earlier of the original execution deadline and thirty seconds from
+that start. Once set it is immutable. `registration_attempts` starts at zero, cannot
+decrease and cannot exceed three. Each verification invocation consumes an attempt
+before remote I/O. Neither a recovered owner nor a new queue delivery resets it.
+Historical rows gain no invented verification timestamps or receipt evidence.
+
+After exclusive same-host lifetime-lock acquisition confirms termination, recovery
+increments the execution fence, replaces the owner and rebinds the same validation
+step to that fence. It preserves all original stage/execution/registration deadlines,
+validation attempt and receipt hash. Remote verification stays outside SQL; final
+registration rechecks authority and time, and writes evidence plus routing atomically.
+The active publication remains unchanged. See the
+[Task 5 verification record](../ai/sessions/2026-10-04-refresh-task5-receipt-routing.md).
