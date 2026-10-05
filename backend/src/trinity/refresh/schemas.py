@@ -1,5 +1,6 @@
 """Define strict refresh commands and safe tracking responses from A16."""
 from datetime import date, datetime
+from dataclasses import dataclass
 import json
 import re
 from typing import Annotated, Literal
@@ -16,12 +17,12 @@ Counter = Annotated[str, Field(pattern=r'^(0|[1-9][0-9]*)$')]
 class ActionReceipt(StrictModel):
     """Describe the original accepted command, not its current execution state."""
     operation_id: UUID
-    action: Literal['start_refresh','approve','publication_retry','discard']
+    action: Literal['start_refresh','approve','publication_retry','discard','rerun','delete_warning']
     accepted_at: datetime
     run_id: UUID
     version_id: UUID | None
     status_url: str = Field(pattern=r'^/api/v1/refresh-runs/[0-9a-f-]{36}$')
-    result: Literal['queued','discarded']
+    result: Literal['queued','discarded','warning_resolved']
     replayed: bool
 
 
@@ -123,6 +124,50 @@ def parse_command(raw, key_headers, pairs):
     except ValidationError:
         raise Problem(422, 'invalid_request') from None
     return key
+
+
+@dataclass(frozen=True)
+class RecoveryCommand:
+    """Keep validated command identity separate from current database state."""
+
+    run_id: UUID
+    key: UUID
+    action: Literal['rerun', 'delete_warning']
+    revision: str
+
+
+def parse_recovery_command(run_id, action, raw, key_headers, etags, pairs=()):
+    """Validate one recovery request after the caller authorizes the Admin.
+
+    Accept a run UUID, action, raw body and all command-header values. Return
+    immutable identity and the expected revision, without reading any state.
+    Rerun requires an empty JSON object; warning deletion requires zero bytes.
+    Reject missing preconditions with 428 and malformed inputs with safe errors.
+    The caller must compare the revision only after checking receipt replay.
+    This parser neither authorizes the actor nor enables a mutation route.
+    """
+    if not etags:
+        raise Problem(428, 'precondition_required')
+    # A revision is a decimal counter, not a weak tag or list of alternatives.
+    # For example, "run-12" is valid; "run-012" and "candidate-12" are not.
+    match = (re.fullmatch(r'"run-(0|[1-9][0-9]*)"', etags[0])
+             if len(etags) == 1 else None)
+    if match is None:
+        raise Problem(422, 'invalid_request')
+    try:
+        parsed_run = UUID(run_id)
+        if len(run_id) != 36 or str(parsed_run) != run_id.lower():
+            raise ValueError
+    except (ValueError, TypeError, AttributeError):
+        raise Problem(422, 'invalid_request') from None
+    if action not in ('rerun', 'delete_warning'):
+        raise Problem(422, 'invalid_request')
+    # Hashing may use the same empty intent for both actions, but an actual
+    # DELETE body is forbidden. Do not silently treat supplied {} as no body.
+    if action == 'delete_warning' and raw != b'':
+        raise Problem(422, 'invalid_request')
+    key = parse_command(b'{}' if action == 'delete_warning' else raw, key_headers, pairs)
+    return RecoveryCommand(parsed_run, key, action, match.group(1))
 
 
 def parse_page(pairs, *, steps=False, body=b''):

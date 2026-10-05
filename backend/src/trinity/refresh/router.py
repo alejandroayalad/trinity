@@ -56,3 +56,40 @@ async def detail(run_id: str, request: Request, response: Response):
                                     body=await request.body())
     response.headers['ETag'] = f'"run-{result.revision}"'
     return result
+
+
+RECOVERY_PARAMETERS = [
+    {'name':'run_id','in':'path','required':True,'schema':{'type':'string','format':'uuid'}},
+    {'name':'Idempotency-Key','in':'header','required':True,'schema':{'type':'string','format':'uuid'}},
+    {'name':'If-Match','in':'header','required':True,'schema':{'type':'string'}},
+]
+
+
+async def _recover(run_id, action, request, response):
+    """Pass raw bounded input to the service and return its committed receipt."""
+    result = await run_in_threadpool(service(request).recover, bearer_token(request),
+        run_id, action, await request.body(), request.headers.getlist('idempotency-key'),
+        request.headers.getlist('if-match'), request.query_params.multi_items())
+    response.status_code = 202 if action == 'rerun' and not result.replayed else 200
+    response.headers['Location'] = result.status_url
+    if response.status_code == 202:
+        response.headers['Retry-After'] = '2'
+    return result
+
+
+@router.post('/{run_id}/rerun', response_model=ActionReceipt, status_code=202, openapi_extra={
+    'parameters': RECOVERY_PARAMETERS,
+    'requestBody': {'required':True,'content':{'application/json':{'schema':EmptyRequest.model_json_schema()}}},
+    'responses': {'200': {'description':'Original acceptance receipt replayed.',
+                          'content':{'application/json':{'schema':{'$ref':'#/components/schemas/ActionReceipt'}}}}},
+})
+async def rerun(run_id: str, request: Request, response: Response):
+    """Resolve a stopped failure and accept one linked complete new refresh."""
+    return await _recover(run_id, 'rerun', request, response)
+
+
+@router.delete('/{run_id}/warning', response_model=ActionReceipt,
+               openapi_extra={'parameters': RECOVERY_PARAMETERS})
+async def delete_warning(run_id: str, request: Request, response: Response):
+    """Resolve a stopped failure without starting work or deleting history."""
+    return await _recover(run_id, 'delete_warning', request, response)

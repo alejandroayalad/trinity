@@ -23,6 +23,8 @@ class HealthTests(unittest.TestCase):
                                      "/api/v1/dashboard/national", "/api/v1/metrics/offline-share",
                                      "/api/v1/datasets/{dataset_key}/preview",
                                      "/api/v1/refresh-runs", "/api/v1/refresh-runs/{run_id}",
+                                     "/api/v1/refresh-runs/{run_id}/rerun",
+                                     "/api/v1/refresh-runs/{run_id}/warning",
                                      "/api/v1/candidates/{version_id}",
                                  "/api/v1/candidates/{version_id}/approval",
                                  "/api/v1/candidates/{version_id}/publication-retry",

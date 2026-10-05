@@ -85,6 +85,11 @@ class RefreshService:
                 raise Problem(503,error.code,retry_after=1) from None
             raise
 
+    def recover(self, token, run_id, action, raw, keys, etags, pairs=()):
+        """Delegate recovery while preserving the route's injected service boundary."""
+        from trinity.refresh.recovery import RecoveryService
+        return RecoveryService(self.database).command(token, run_id, action, raw, keys, etags, pairs)
+
     def _page(self, pairs, body, *, run_id=None):
         """Load signing keys only when decoding or emitting a continuation."""
         from trinity.refresh.schemas import parse_page
@@ -164,10 +169,11 @@ def admin_context(settings, run, version, warning, approval, step):
     elif status in ("failed", "publication_failed"):
         code = "failure_unresolved"
     publication_actions = run.get('_publication_actions', {}) if run else {}
+    recovery = run.get('_recovery_actions', {}) if run else {}
     enabled = {
         "start_refresh": setup and run is None,
-        "rerun": False,
-        "delete_warning": False,
+        "rerun": setup and recovery.get("rerun", False),
+        "delete_warning": recovery.get("delete_warning", False),
         **{name: setup and publication_actions.get(name,False)
            for name in ('approve','publication_retry','discard')},
     }
