@@ -84,6 +84,8 @@ All host clients reach the containerized API through one Docker gateway address.
 
    The seed command prompts only for missing `viewer`, `analyst` and `admin` passwords, 15–1024 characters. It stores salted hashes. Reruns preserve IDs, passwords, roles, account status and history. An existing persona with a different role or inactive status produces a safe failure; there is no automatic reset. Seed and migration commands must finish before product requests can succeed.
 
+   If you no longer know a persona password, rotate it explicitly instead: `python -m trinity.auth.rotate viewer analyst admin` (name only the personas you need). It asks twice for each new password with hidden input and updates only that persona's password hash in one transaction. It refuses a missing, inactive or wrong-role persona. It does not revoke sessions, reset login limits or change settings, runs or publication state. It prints only the rotated names.
+
 3. Start one API process from `backend/`:
 
    ```bash

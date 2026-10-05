@@ -28,7 +28,8 @@ class HealthResponse(BaseModel):
 
 
 def create_app(*, settings=None, service=None, query_service=None, preview_service=None,
-               refresh_service=None, national_service=None, enable_preview=False) -> FastAPI:
+               refresh_service=None, national_service=None, settings_service=None,
+               enable_preview=False) -> FastAPI:
     """Return the API with auth, catalog, SQL and delivery-gated national/preview reads.
 
     Register startup and shutdown hooks without opening a database here.
@@ -54,6 +55,7 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
         application.state.preview_service = preview_service
         application.state.national_service = national_service
         application.state.refresh_service = refresh_service
+        application.state.settings_service = settings_service
         application.state.preview_enabled = enable_preview
         try:
             yield

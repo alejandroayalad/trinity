@@ -32,6 +32,10 @@ def _insert_run(connection, trigger_kind, actor_id, request_key, settings, *, re
 
     The caller holds admission and a shared settings lock in its transaction.
     A rerun links its predecessor but takes a fresh policy/settings snapshot.
+    A scheduled run passes trigger_kind 'scheduled' and actor_id None; the
+    database CHECK requires requested_by to be null exactly for that kind.
+    request_key is unique, so a second insert with the same key fails and
+    rolls back the caller's whole transaction.
     No commit or queue request occurs here. Any later receipt failure must
     roll back these writes and the caller's preceding abandonment writes.
     """
@@ -69,6 +73,22 @@ def accept_run(connection, actor_id, key, fingerprint, settings, *, rerun_of_run
         VALUES(%s,%s,%s,%s,%s,%s,%s,%s,'queued',%s) RETURNING *""",
         (uuid4(),key,actor_id,action,rerun_of_run_id,fingerprint,run['requested_at'],run['id'],
          f'/api/v1/refresh-runs/{run["id"]}')).fetchone()
+
+
+def accept_scheduled_run(connection, request_key, settings):
+    """Admit one scheduled occurrence and return the new run row.
+
+    request_key is the occurrence key from settings.schedule.occurrence_key.
+    No api_commands receipt is written: that table requires a human actor,
+    and the unique request_key already identifies the occurrence.
+    """
+    return _insert_run(connection,'scheduled',None,request_key,settings)
+
+
+def find_run_by_key(connection, request_key):
+    """Return the ID of the run with this request_key, or None."""
+    row = connection.execute('SELECT id FROM refresh_runs WHERE request_key=%s',(request_key,)).fetchone()
+    return row['id'] if row else None
 
 
 def lock_recovery_target(connection, run_id):

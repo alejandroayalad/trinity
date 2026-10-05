@@ -1,4 +1,4 @@
-"""Run auth and catalog acceptance in an isolated, disposable PostgreSQL cluster.
+"""Run auth, catalog and settings acceptance in an isolated, disposable PostgreSQL cluster.
 
 Use PostgreSQL 17.11 binaries via TRINITY_PG_BIN. The cluster listens only on
 its private Unix socket; no existing database or service is modified.
@@ -40,7 +40,7 @@ def main():
                 "postgresql://trinity_test_owner@/trinity_test_auth?host=" + quote(str(socket), safe=""))
             suite = unittest.TestSuite([
                 unittest.defaultTestLoader.discover(str(backend / "tests"), pattern=pattern)
-                for pattern in ("test_auth*.py", "test_catalog*.py")
+                for pattern in ("test_auth*.py", "test_catalog*.py", "test_settings*.py")
             ])
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             print(f"Database acceptance runtime: {version}; disposable Unix-socket cluster.")
