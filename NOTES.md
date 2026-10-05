@@ -6,6 +6,8 @@
 
 [YOU] Added the separate [Plant filter proposal](sdd/plant-filter/proposal.md), covering exact facility/generator IDs, distinct published choices, label/search semantics, authenticated pagination and shared query isolation. Name tie-breaking and search details remain specification decisions.
 
+[YOU] Added [failed-run recovery](sdd/failed-run-recovery/proposal.md), separating rerun, warning resolution and existing publication retry/discard. It covers atomic receipts, revision checks, stopped-writer evidence, new-run linkage and read-side action eligibility. The three additions are proposals only and retain implementation/runtime gates.
+
 ## Dashboard backend planning — October 5, 2026
 
 [ME] Alayala prioritized dashboard backend planning, then schedule settings, Plant filter and failed-run recovery. [YOU] Codex mapped the designed screen to the two existing national API contracts and implemented preview flow, and drafted the [dashboard proposal](sdd/national-dashboard/proposal.md). The [session](ai/sessions/2026-10-05-dashboard-backend-priority.md) records the latest-card/range-end distinction, publication consistency and verification boundaries. Concurrent frontend work is preserved. This is planning only; no endpoint implementation or runtime readiness is claimed.

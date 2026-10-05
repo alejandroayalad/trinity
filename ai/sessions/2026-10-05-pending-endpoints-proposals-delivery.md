@@ -20,6 +20,20 @@ Checks: source/contract tracing and document links/whitespace before each commit
 
 The Schedule commit passed changed-document local-link, fence and whitespace checks and alignment of all eight planned routes with OpenAPI. The same checks apply before the Plant commit. These are documentation checks, not endpoint runtime tests.
 
-Done: isolated branch, dashboard cherry-pick, Schedule settings and Plant filter proposals.
-Pending: failed-run recovery proposal, final checks and push.
+## Failed-run recovery proposal
+
+[YOU] Traced `RefreshService.start`, `admin_context`, `refresh.repository.accept_run`, `PublicationCommands.command`, stopped-writer checks and operator recovery, plus existing migration fields and A16 command schemas. Drafted the [recovery proposal](../../sdd/failed-run-recovery/proposal.md). New run commands must also update read-side eligibility; merely adding handlers would leave rerun/warning actions disabled. Old-state abandonment and new-run admission must commit together. Unknown writer state remains blocked under existing rules.
+
+Plant checks passed for six changed/new Markdown files, 154 local links, balanced fences/whitespace and eight OpenAPI operation mappings. The recovery proposal is checked with the same method before its own commit. No specifications were marked accepted and no frontend draft was rewritten.
+
+## Final local verification
+
+All seven changed/new Markdown files passed the document check: 164 local links resolve, four proposal heading anchors resolve, fences are balanced, and whitespace is clean. All eight planned operations match the canonical OpenAPI paths/methods. The scoped diff and commit sequence were reviewed; only proposals, their session records and NOTES contributions are included. Original frontend changes remain in their checkout. No backend tests ran because executable code did not change.
+
+This is the pre-push record. The authorized final operations are the recovery proposal commit, push to `origin/pending-endpoints-frontend`, and comparison of the remote branch hash with local HEAD. No PR or merge is included.
+
+Done: isolated branch and all four endpoint proposals, each in its requested scope.
+Pending at this checkpoint: recovery commit and branch push; specifications remain future work.
 Blocker: none.
+
+Next action after delivery: [ME] Review the dashboard proposal's latest-card recommendation before its specification.
