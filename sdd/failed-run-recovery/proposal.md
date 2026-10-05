@@ -1,8 +1,8 @@
 # Proposal: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Specification drafting and proposal/specification commit/push authorized on October 5, 2026. Design and implementation are not authorized.
-Specification: [Failed-run recovery](spec.md), drafted for review.
+Status: Specification drafting and proposal/specification commit/push authorized on October 5, 2026. Specification and P01 are now accepted; design/tasks are authorized. Implementation is not authorized.
+Specification: [Failed-run recovery](spec.md), accepted for design.
 Basis: A9/A16/A19/A20/A22–A24 in [DECISIONS.md](../../DECISIONS.md), [command contract](../../docs/api-contract.md#commands-and-concurrency), [OpenAPI](../../docs/openapi.json), [security contract](../../docs/security-contract.md) and [Publication design](../publication/design.md).
 Current priority: next after the ongoing [Schedule settings](../schedule-settings/proposal.md) work. Alayala selected recovery next on October 5, superseding the earlier order after Plant filter. [Dashboard](../national-dashboard/proposal.md) and [Plant filter](../plant-filter/proposal.md) retain their separate scopes.
 
@@ -74,4 +74,4 @@ Resolve the precise lock order across session/user, admission, run, candidate, w
 | Races | Rerun versus delete-warning, discard, publication retry, publication commit, manual start, due scheduler, role change and logout; one winner; late worker/outbox delivery cannot revive abandoned work. |
 | Output/runtime | Correct statuses/receipt targets, new run linked to old, read-side actions refresh, no immediate work for warning deletion, old publication and schedule preserved, real outbox dispatch for rerun. |
 
-Done: source-grounded proposal. Pending: specification review, run-policy choice and design/locking details. Blocker: none for planning. No implementation or live recovery was performed.
+Done: source-grounded proposal. Pending: design/tasks and locking details. Blocker: none for planning. No implementation or live recovery was performed.

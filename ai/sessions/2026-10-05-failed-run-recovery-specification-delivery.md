@@ -21,3 +21,7 @@ The initial local write command could not start because `python` was unavailable
 Done: proposal update and specification draft. Pending: specification review, P01 and design. Blocker: none for authorized Git delivery.
 
 Next: [ME] review P01's recommendation to snapshot current settings for rerun. Final delivery identity is in Git history and remote refs.
+
+## Subsequent acceptance
+
+[ME] Accepted P01 and requested committing/pushing that acceptance, followed by design/tasks. [YOU] recorded the current-settings snapshot choice as an A16 refinement and marked the specification accepted for design. This supersedes the earlier pending-P01 status; implementation and runtime actions remain outside this authorization.

@@ -1,7 +1,7 @@
 # Specification: Failed-run recovery commands
 
 Date: 2026-10-05
-Status: Draft for review. Alayala authorized proposal/specification commit and push to `pending-endpoints-frontend`. Design, implementation and runtime recovery are outside this delivery.
+Status: Accepted for design/tasks on October 5, 2026, including P01. Acceptance commit/push authorized on `pending-endpoints-frontend`; implementation and runtime recovery remain unauthorized.
 Basis: [Proposal](proposal.md), A9/A16/A19/A20/A22–A24 in [DECISIONS](../../DECISIONS.md), [API command contract](../../docs/api-contract.md#commands-and-concurrency), [OpenAPI](../../docs/openapi.json), [security contract](../../docs/security-contract.md) and [schema](../../docs/schema.md).
 
 ## Human
@@ -50,11 +50,11 @@ Use the canonical ActionReceipt fields, including operation ID, acceptance time,
 | R11 | Preserve active publication and schedule. A future scheduled check may admit work after resolution; warning deletion neither triggers work nor catches up missed occurrences. Existing retry/discard rules remain intact. |
 | R12 | Use canonical safe errors: `401` authentication, `403` permission, `404` authorized unknown target, `409` conflict/ineligible state and the input/precondition errors above. Do not expose secrets, raw payloads, storage paths or stack traces. |
 
-### Run-policy choice for review
+### Accepted run-policy choice
 
-**P01 recommendation, not accepted:** snapshot current committed shared settings and the current approved refresh policy when accepting the new run. Preserve the failed run's original snapshot. This fits a complete new refresh and the existing `accept_run` snapshot pattern. Concurrent settings changes must yield one coherent revision.
+**P01 accepted October 5, 2026; canonical record: A16 in DECISIONS:** snapshot current committed shared settings and the current approved refresh policy when accepting the new run. Preserve the failed run's original snapshot. This fits a complete new refresh and the existing `accept_run` snapshot pattern. Concurrent settings changes must yield one coherent revision.
 
-Copying the failed run's old settings is an alternative but can repeat obsolete configuration. Resolve P01 in DECISIONS before implementation; this documentation delivery does not accept it. Exact lock ordering, schedule-settings integration, abandonment disposition mapping and migration constraints belong in design and must follow the canonical contracts.
+Copying the failed run's old settings was rejected because it can repeat obsolete configuration. Exact lock ordering, schedule-settings integration, abandonment disposition mapping and migration constraints belong in design and must follow the canonical contracts.
 
 ### Acceptance scenarios
 
@@ -68,7 +68,7 @@ Copying the failed run's old settings is an alternative but can repeat obsolete 
 | S06 | Given a lost successful response, identical same-key replay with an old ETag returns the original operation/target and `200` without new effects. Conflicting actor/action/target/body reuse fails safely. |
 | S07 | Given injected failures at every mutation through receipt insertion, the entire warning/candidate/fence/admission/run/outbox/receipt transaction rolls back. |
 | S08 | Given concurrent rerun/delete/discard/publication retry/publication commit, only a valid transition wins. Late queue deliveries and worker commits cannot revive abandoned work. |
-| S09 | Given concurrent manual start or due scheduler admission, preserve one owner and never clear the winner's slot. Settings races use one coherent snapshot after P01 is accepted. |
+| S09 | Given concurrent manual start or due scheduler admission, preserve one owner and never clear the winner's slot. Settings races use one coherent snapshot under accepted P01. |
 | S10 | Given changed eligibility, `/me`, run list/detail and command enforcement agree; revisions change and stale submissions fail safely. |
 | S11 | Given accepted rerun and temporary queue outage, retain and later dispatch its durable intent without duplicate run effects. Warning deletion emits no dispatch. |
 | S12 | Given lock exhaustion or database failure, return safe dependency errors without partial effects. Replaying an accepted receipt remains an acceptance record after the new run progresses. |
@@ -79,4 +79,4 @@ Run focused offline checks, then disposable PostgreSQL transaction/race tests an
 
 Current source evidence: `refresh.router` exposes start/list/detail; `refresh.service.admin_context` disables both new actions; `refresh.repository.accept_run` hard-codes manual trigger and receipt semantics. `PublicationCommands.command` and `publication.checks.stopped_failure` supply existing receipt and stop patterns. Design must reconcile their locks and migration constraints. No new dependency is specified.
 
-Done: draft requirements and scenarios. Pending: specification review, P01 and design. Blocker: none for documentation delivery; policy choice remains open before implementation.
+Done: specification and P01 accepted for design. Pending: design/tasks and their review. Blocker: none for planning.

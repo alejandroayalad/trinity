@@ -419,6 +419,8 @@ Evidence: alayala's supplied tree and acceptance of the five refinements; [folde
 
 ### A16 — Approved API flow and detailed contract
 
+**Failed-run recovery refinement — accepted October 5, 2026 (P01):** Run again snapshots the current committed shared settings and current approved refresh policy when the new run is accepted. Preserve the failed run's original snapshot. A concurrent settings update must yield one coherent settings revision. Alayala explicitly accepted this recommendation and authorized design/tasks after committing and pushing the acceptance. Copying the failed run's old settings is rejected because a new full refresh should use current configuration rather than repeat obsolete settings. This refines A16 in both **Product / business** and **Technical / code** categories; it does not authorize implementation or live recovery. See the [recovery specification](sdd/failed-run-recovery/spec.md#accepted-run-policy-choice).
+
 **Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
 
 Category: **Product / business** and **Technical / code**.
