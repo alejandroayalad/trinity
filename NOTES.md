@@ -504,6 +504,28 @@ the task 5 routing/recovery gate. Commands, measured results, corrections and
 remaining boundaries are in the [session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
 No retained migration, commit, push or PR occurred. Maintain data evidence — ongoing.
 
+## Publication proposal — October 4, 2026
+
+[ME] Alayala requested the Publication proposal. [YOU] drafted the separate
+[sdd/publication/proposal.md](sdd/publication/proposal.md) against current contracts,
+with Refresh Task 5 as a prerequisite. No implementation or live activation was
+authorized or performed. Checks and scope are recorded in the
+[session](ai/sessions/2026-10-04-publication-proposal.md).
+
+## Publication specification and design — October 4, 2026
+
+[ME] Alayala supplied his proposal and requested specification and design together;
+he will review them before tasks. [YOU] preserved that proposal and drafted the
+[specification](sdd/publication/spec.md) and [design](sdd/publication/design.md),
+including exact evidence binding, command replay, atomic activation, separate
+publication ownership/budgets, safe retry classification and reader acceptance.
+P2 records proposed settings without marking them accepted. Concurrent Task 5
+implementation and its new handoff were preserved; its test results are attributed
+to that record, not rerun here. Documentation checks and limits are in the
+[session](ai/sessions/2026-10-04-publication-specification-design.md).
+No tasks, backend implementation, runtime checks, live activation or Git delivery
+were performed by this documentation task. Maintain data evidence — ongoing.
+
 ## Refresh Task 5 — October 4, 2026
 
 [ME] Alayala requested receipt routing/recovery and canonical Admin candidate detail,
@@ -515,3 +537,32 @@ push; concurrent Publication documents remain outside that delivery. Synthetic c
 HTTP, PostgreSQL and Redis evidence, corrections and remaining limits are in the
 [Task 5 session](ai/sessions/2026-10-04-refresh-task5-receipt-routing.md). No publisher,
 live EIA/S3, retained migration or active data change was performed.
+
+## Publication scope approval and tasks — October 4, 2026
+
+[ME] Alayala approved the reduced Publication scope: one worker host, executable
+operator recovery and separate Admin retry of the same eligible candidate. He
+requested canonical reconciliation and tasks, not implementation or Git delivery.
+[YOU] Recorded A24, explicitly superseded P2/conflicting automatic-publication
+recovery expectations while preserving history, updated the affected contracts and
+prepared [six bounded tasks](sdd/publication/tasks.md) covering PUB-R01–R09/PUB-E01–E10.
+Operator recovery and full same-candidate re-verification are required executable
+acceptance, not deferred resilience. The [approval session](ai/sessions/2026-10-04-publication-scope-approval-and-tasks.md)
+records inspection, checks and limits. No runtime evidence or implementation approval
+is inferred from this documentation work. Maintain data evidence — ongoing.
+
+
+## Publication implementation — October 4, 2026
+
+[ME] Authorized all approved Build Publication Tasks 1–6, code and disposable local
+checks, with no intermediate approval stops. Live/retained changes, commits, pushes
+and a PR remain excluded. [YOU] implemented atomic publication, exact approval,
+same-candidate retry/discard, bounded queue execution and executable stop-proof
+operator recovery. See the [implementation/acceptance record](ai/sessions/2026-10-04-publication-implementation-acceptance.md)
+for actual commands, final gate status, corrections and limits. Synthetic tests do
+not establish EIA findings or live deployment. Maintain data evidence — ongoing.
+
+[ME] Subsequently authorized focused implementation commits and push before live-system
+testing. [YOU] preserved the approved Publication scope and drafted the
+[full-system acceptance plan](docs/live-system-acceptance-plan.md). No live execution
+or retained-data changes occurred during Git delivery.

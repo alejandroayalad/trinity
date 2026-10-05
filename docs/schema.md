@@ -258,7 +258,7 @@ A16 supersedes the original selectable `publication_mode` workflow. One shared a
 | `running` | `publishing` | Required checks and diagnostic evaluation complete with no review warnings; commit publication outbox and run transition together. |
 | `awaiting_approval` | `publishing` | Authorized approval binds manifest, validation attempt and warning digest; approval, outbox and state commit together. |
 | `publishing` | `succeeded` | Worker commits publication event, active pointer, run success and admission-slot release atomically. |
-| `publishing` | `publication_failed` | Bounded publication retries are exhausted or a permanent publication error occurs; create unresolved failure warning and retain slot. |
+| `publishing` | `publication_failed` | Bounded publication retries are exhausted, a permanent publication error occurs, or A24 operator reconciliation proves stopped unpublished work; create unresolved failure warning and retain slot. |
 | `publication_failed` | `publishing` | Admin requests eligible same-candidate retry; resolve warning, increment publication generation/fence and rearm outbox atomically. |
 | `requested/running` | `failed` | Required validation fails or full-refresh recovery exhausts its finite budget; preserve failure warning and slot until Admin resolves it. |
 | `awaiting_approval/publication_failed` | `discarded` | Allowed candidate discard marks disposition permanently discarded, resolves warning, invalidates old fences and releases slot. |
@@ -283,19 +283,35 @@ Approval binds `version_id`, `manifest_sha256`, `validation_step_id`, and `revie
 
 ### Publication and same-candidate retry
 
-A publication worker claims a lease/fence for the current publication generation and verifies job kind/state before touching files. Lock order for state changes is `refresh_control` → run → candidate → active publication → warning/command/outbox rows; all competing paths use the same order. External file integrity checks occur outside long SQL transactions; final eligibility is rechecked under lock, and immutable storage must prevent a file change between verification and commit.
+**A24 first-delivery operating model — accepted October 4, 2026:** support one
+worker host with Refresh's private retained root and original lifetime-lock inode.
+Reuse run ownership/fence/lease and a unique publish step (`stage=publish`,
+`work_key=publication`, `attempt=publication_generation+1`). Commit the claim before
+verification; its immutable deadline is database claim time plus 300 seconds.
+A present step forbids a second verifier invocation in that generation, including
+after a crash. Only explicit eligible Admin retry advances publication generation
+and permits fresh verification/budgets; duplicates and operator recovery do not.
+No renewal heartbeat, automatic verifier/commit retry, per-object resume ledger or
+new execution table is selected. Retain existing bounded dispatch/S3 retries.
+Preserve preparation/registration deadlines, receipt custody and selected validation
+step. This is an approved design mapping, not verified DDL compatibility; append
+only justified migrations after the actual head during authorized implementation.
+See [A24](../DECISIONS.md#a24--build-publication-first-delivery) and the
+[Publication design](../sdd/publication/design.md) for the exact operating contract.
+
+A publication worker claims a lease/fence for the current publication generation and verifies job kind/state before touching files. Lock order for state changes is `refresh_control` → run → candidate → active publication → publish step → warning/command/outbox rows; all competing paths use the same order. External file integrity checks occur outside long SQL transactions; final eligibility is rechecked under lock, and immutable storage must prevent a file change between verification and commit.
 
 First return an existing publication event for the same version as an idempotent retry. Otherwise require current slot ownership, active candidate disposition, validated immutable manifest, complete matching required and diagnostic results, matching approval when required, current worker fence/generation and publishing state. Require run sequence greater than the active publication's run and nonregressing coverage: candidate start <= active start and candidate end >= active end. Atomically insert the unique event, update the pointer, succeed the run, clear its slot and condition all writes on the current execution fence. Roll back if any condition no longer holds. `publish:<version_id>` remains the stable unique publication effect identity.
 
 `publication_events.publication_mode` is retained as a historical **derived outcome** (`automatic` or `approval`), not a configurable policy. Automatic requires a frozen empty warning set and null approval; approval requires the candidate's bound approval. The actor is the approving Admin for an approval path; a publication-retry actor is recorded in its command/warning history, not substituted as approver. No HTTP command runs the publication pipeline inline.
 
-Publication retry is eligible only for an active validated unpublished candidate, intact recorded evidence, valid approval if required, no recorded permanent integrity/coverage violation, and a recoverable operational publication error. The API returns safe eligibility; the worker rechecks actual file integrity before publishing. Queue/storage connectivity or a transient database error can permit retry. Changed/missing candidate bytes, incompatible contract, validation failure, discard, supersession, or coverage regression cannot be bypassed by retry/approval.
+Publication retry is eligible only for an active validated unpublished candidate, intact recorded evidence, valid approval if required, no recorded permanent integrity/coverage/contract violation, and a recoverable operational publication error. The API returns safe eligibility; the worker rechecks actual file integrity before publishing. Queue/storage connectivity or a transient database error can permit retry. Changed/missing candidate bytes, incompatible contract, validation failure, discard, supersession, or coverage regression cannot be bypassed by retry/approval.
 
 On retry, keep candidate ID, frozen files and any original approval. Resolve the current operational warning as `publication_retry`, bump run/candidate revisions and publication generation, clear/rearm the existing publication outbox with a new dispatch generation, and move the run to publishing in one transaction. Reuse the unique `(run_id, job_kind)` outbox row; do not create duplicate obligations. Another exhausted retry creates a **new** warning record, preserving the prior resolved warning and attempts. An automatic candidate remains automatic.
 
 ### Failure resolution and abandonment
 
-Create an unresolved `failure_warnings` row only after automatic retry exhaustion or a permanent failure. At most one globally unresolved warning can exist while one lifecycle holds the slot. Reads expose the current warning; history retains every resolved warning. Failed work remains unpublished and the previous active publication is unchanged.
+Create an unresolved `failure_warnings` row after bounded automatic retry exhaustion, a permanent failure, or A24 operator reconciliation of a proven stopped publication attempt. At most one globally unresolved warning can exist while one lifecycle holds the slot. Reads expose the current warning; history retains every resolved warning. Failed work remains unpublished and the previous active publication is unchanged.
 
 Run-again and warning deletion require an unresolved warning and no authorized active writer. Candidate discard is allowed only while awaiting approval or publication-failed, never during active publishing or after publication. Under the common locks/fences, mark the unpublished candidate disposition discarded, set abandonment actor/time, resolve associated warning, invalidate prior execution ownership, and release the slot. Run-again transfers admission to a newly created run and outbox in that same transaction; failure to create the new run rolls back warning resolution and abandonment as well. Old failed runs are not resumed.
 
@@ -303,7 +319,38 @@ Direct candidate discard closes the run as discarded. Warning deletion or run-ag
 
 ### Durable recovery and reads
 
-Periodic recovery reconciles requested/running/publishing work with durable progress. Reclaim expired leases by increasing the execution fence; redispatch only the unfinished job kind and current publication generation. Replaying a retained queue job cannot suppress needed repair. Do not replay failed, succeeded, discarded, superseded, awaiting-approval, or publication-failed work. The last two states require the recorded Admin action; they are not lost-worker states.
+**Current scope under A24:** periodic Refresh recovery still handles requested/running
+work under A23. Publication keeps bounded pending/unacknowledged outbox dispatch,
+but lost delivered jobs and interrupted publishing require the operator CLI. Do not
+automatically resume verification or repair delivered publication work. Never replay
+terminal, awaiting-approval or publication-failed work as lost-worker work.
+
+Operator recovery checks expected publication generation/fence and acquires the
+original same-host lifetime-lock inode exclusively, without creating/replacing it.
+Hold the lock through canonical SQL locks and the final event/state recheck; lease
+expiry and PID checks alone are insufficient. Preserve a committed same-version event
+without moving the pointer, including when a newer publication is active. Otherwise
+invalidate old execution/dispatch authority and atomically finish/create the failed
+publish step, record `publication_failed` with null run finish time and unresolved
+warning, and retain candidate, original approval and admission. Preserve known
+permanent errors. Clear leases/acknowledgment, update dispatch generation/payload
+and leave the outbox pending but ineligible while the run is publication-failed;
+retain enqueue count. Do not advance publication generation or enqueue. Unknown
+ownership/commit outcome remains blocked. Repeated reconciliation has no new effect.
+
+Admin retry is a separate command: only recoverable operational failure with the
+original eligible evidence/approval permits a new attempt. Increment run fence and
+both appropriate generations, reset enqueue count for that new publication attempt,
+clear old leases/errors and atomically rearm the existing obligation as publishing.
+Preserve failure history; actual evidence/files must be verified again. Generic or
+unknown errors must not enable retry, and restoring altered bytes cannot erase a
+recorded integrity/coverage/contract violation. The operator interface, access,
+outputs and safety cases are specified in the [approved design](../sdd/publication/design.md#operator-interface--required-executable-delivery).
+
+**History:** A9/A15 previously required periodic recovery/redispatch across
+requested/running/publishing work. A24 supersedes the publishing portion for this
+first delivery; automatic publication crash/queue-loss recovery and multi-host
+failover are deferred. Refresh recovery and publication safety remain required.
 
 Resolve one active publication per analytical request and authorize before registering permitted manifest files. Keep that version for the whole response. On preview/filter-choice continuation, require the cursor's publication still active or return `publication_changed`. SQL cannot query application-state tables or unpublished candidates. For v1 retain all published versions and evidence; automatic deletion is disabled. Discard/cleanup must not delete files referenced by frozen evidence or active readers.
 
@@ -322,7 +369,7 @@ These are acceptance scenarios, not tests that have run:
 | Facility API total equals generator count | Required coverage/reconciliation decides readiness; no known-total warning after pass. |
 | One facility/date differs by 0.000001 MW | Exact v1 reconciliation fails; no auto-correction. |
 | Sixteen required passes spread across two failed attempts | Candidate remains unpublished. Only one complete passing attempt qualifies. |
-| Crash before enqueue, after enqueue, or Redis data loss | Durable request recovers; duplicate workers cannot publish twice. |
+| Crash before enqueue, after enqueue, or Redis data loss | Refresh follows A23; Publication keeps bounded pending dispatch, then requires A24 operator reconciliation for lost delivered work/crashes and a separate Admin retry. Duplicate workers cannot publish twice. |
 | Publish candidate B, then approve older candidate A | A is superseded; B stays active. |
 | A higher-sequence candidate has an earlier end than the active version | Publication fails with `coverage_regression`; active coverage does not shrink. |
 | Worker crashes after end discovery, before extraction | Retry uses the frozen end; it does not discover a different window. |

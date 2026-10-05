@@ -4,6 +4,12 @@ Status: the supplied high-level API flow is approved by alayala on October 3, 20
 
 Implementation update, October 4: login/logout, `/me` and read-only `/settings` are implemented in the [local-auth slice](../ai/sessions/2026-10-04-fastapi-local-auth-implementation.md). The full 22-operation contract remains broader than the running app; later routes are not registered.
 
+**Publication delivery scope — October 4, 2026:** [A24](../DECISIONS.md#a24--build-publication-first-delivery)
+accepts approval, same-candidate retry, discard and tested manual operator recovery
+on one worker host. Run again/warning deletion remain separate dependencies; their
+canonical API definitions are preserved but unavailable implementations must remain
+disabled in capability/action reads. Approval of this scope is not runtime delivery.
+
 ## Human overview
 
 The approved source is `trinity-api-contract-final.md`. Its six-part design is retained here, followed by exact requests, responses, errors, and recovery rules. Publication is fixed by validation and warnings; no Admin chooses a publication mode. A failed lifecycle holds new refreshes until recovery or abandonment. Your downloaded source file is unchanged.
@@ -226,7 +232,7 @@ A19 selects these **provisional analytical limits**, pending local measurements:
 
 Accepted input/rate limits: 64 KiB JSON body, 16 KiB SQL input measured as encoded UTF-8, and initially 30 analytical requests per user per minute across processes. Progress/status polling is excluded from that analytical rate counter, but still requires authentication and authorization. Excess rate or active concurrency returns the existing `429 rate_limited` busy response with `Retry-After`; it does not enqueue analytical work. Limit settings are server-controlled. PostgreSQL transactions reserve shared query slots; release only after execution has ended or been stopped. See [shared admission](security-contract.md#shared-query-admission) for recovery and cleanup rules.
 
-Temporary external failures allow at most three total attempts, with waits of one and three seconds before attempts two and three. All attempts and waits fit the operation's existing deadline; retries never reset the analytical deadline. Do not retry invalid SQL, denied access, or failed validation. Retried effects reuse the same durable identity. This automatic policy does not change the explicit Admin rerun/publication-retry rules below. Refresh-stage deadlines remain to be selected; the 30-second analytical deadline is not a full-refresh deadline.
+Temporary external failures allow at most three total attempts, with waits of one and three seconds before attempts two and three. All attempts and waits fit the operation's existing deadline; retries never reset the analytical deadline. Do not retry invalid SQL, denied access, or failed validation. Retried effects reuse the same durable identity. This automatic policy does not change the explicit Admin rerun/publication-retry rules below. A23 selects Refresh preparation/registration bounds and A24 selects a 300-second Publication attempt deadline; the 30-second analytical deadline is not a full-refresh deadline.
 
 ### Refresh history and progress
 
@@ -264,7 +270,19 @@ A new `202` response has `result: queued` and `replayed: false`. A completed war
 | Publication retry | `publication_failed`, intact validated candidate, correct bound approval if needed, current candidate revision, no writer. | Resolve current warning as `publication_retry`, increment publication generation/fence, rearm publication outbox, transition to publishing, keep slot. Do not extract or rebuild files. |
 | Discard | `awaiting_approval` or `publication_failed`, unpublished active disposition, current candidate revision, no writer. | Mark candidate discarded permanently, mark run discarded, resolve any associated warning and release slot. No physical deletion. |
 
-Publication retry requires intact validated evidence and a recoverable operational error; a recorded integrity/coverage/contract violation disables it and requires abandonment/new work. The worker rechecks actual files after acceptance. Forbid discard while work is actively publishing/preparing and after publication. If a worker crashes, durable recovery must first establish the old lease/fence is no longer authoritative. Deleting a warning and run-again must increment/invalidate any old execution fence before abandoning the candidate. Two simultaneous Admin actions cannot both win. Recheck eligibility under the transaction lock; do not trust a previously rendered enabled button.
+Publication retry requires intact validated evidence and a recoverable operational error; a recorded integrity/coverage/contract violation disables it and requires abandonment/new work. The worker rechecks actual files after acceptance. Forbid discard while work is actively publishing/preparing and after publication.
+
+If a publisher crashes or delivered publication work is lost, A24 requires the
+worker-host operator's executable recovery mode to prove stop with the original
+exclusive lifetime lock and reconcile the committed event under database locks.
+An existing publication stays intact; otherwise record a safely stopped failure
+without starting work or releasing admission. An eligible Admin retry is a separate
+new attempt with full exact evidence/file verification and original approval.
+Duplicate deliveries cannot repeat verification within one generation. Lease expiry,
+PID checks and manual database edits are not stop proof. Unknown execution remains
+blocked. No new public operator endpoint is added.
+
+Deleting a warning and run-again must increment/invalidate any old execution fence before abandoning the candidate. Two simultaneous Admin actions cannot both win. Recheck eligibility under the transaction lock; do not trust a previously rendered enabled button.
 
 Warning resolution does not disable the daily schedule. After a delete/discard releases the blocker, a future scheduled check may admit new work. Do not auto-start missed occurrences. If retry publication fails again, create a new unresolved warning; the previously resolved warning and its actor/time remain in history. Automatic publication retries remain automatic, without introducing a new approval requirement.
 
@@ -969,9 +987,9 @@ The artifacts specify behavior. No application endpoint, database migration, pro
 | Required checks pass without warnings | Automatic publication, including automatic-path publication retry. |
 | Exhausted publication failure | Persistent warning and slot remain; same-candidate retry can rearm outbox safely. |
 | Run again / delete warning / discard | History preserved; prior unpublished candidate permanently ineligible. |
-| Redis loss or stale worker completion | Durable recovery works; stale generation/fence cannot resurrect or publish discarded work. |
+| Redis loss or stale worker completion | A23 Refresh recovery remains; A24 delivered-publication loss/crash uses tested operator reconciliation followed by eligible Admin retry. Stale generation/fence cannot resurrect or publish discarded work. |
 | Browser closes / query times out | Background refresh continues; isolated query execution terminates under its supervisor. |
 
-Still open: exact token configuration, SQL AST/type compatibility, executable DDL, refresh-stage deadlines, container hardening and supervision details, S3 policies, dependency compatibility, and runtime tests. A19 selects the security design and retry count; no control is proven merely by producing OpenAPI.
+Still open: exact token configuration, SQL AST/type compatibility, executable DDL, remaining refresh-stage settings beyond A23/A24, container hardening and supervision details, S3 policies, dependency compatibility, and runtime tests. A19 selects the security design and retry count; no control is proven merely by producing OpenAPI.
 
 Sources for HTTP/schema conventions: [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html), [RFC 9110 HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html), and [RFC 9457 Problem Details](https://www.rfc-editor.org/rfc/rfc9457.html). Product behavior comes from alayala's supplied approved design; completion defaults are attributed above.

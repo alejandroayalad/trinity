@@ -27,6 +27,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A18 | Technical / code   | Required v1 single-table SQL; joins, CTEs, and subqueries are optional after the core works and its tests pass. |
 | A19 | Technical / code | Security contract: trusted server-side roles (local authentication under A20), selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
 | A20 | Technical / code | Seeded local authentication for the challenge; unchanged server-side permissions; Clerk deferred to future production work. |
+| A24 | Technical / code | Publication first delivery: one worker host, executable operator reconciliation and separate Admin same-candidate retry; automatic crash recovery deferred. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -390,6 +391,8 @@ Evidence: the supplied `Backend Stack.md`, alayala's correction, and the [review
 
 ### A15 — Backend structure and responsibility boundaries: closed
 
+**Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
+
 **Current scope / supersession:** A19 refines separate query execution to one container per query, with trusted file staging, a read-only authorized Parquet mount, no network/credentials/Docker control, and PostgreSQL query admission. The feature package remains accepted.
 
 Category: **Technical / code**.
@@ -413,6 +416,8 @@ Status: accepted by alayala on October 3, 2026. File structure and the five revi
 Evidence: alayala's supplied tree and acceptance of the five refinements; [folder review](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-folder-proposal-review). Acceptance and documentation checks: [structure session](ai/sessions/2026-10-03-backend-structure-accepted.md).
 
 ### A16 — Approved API flow and detailed contract
+
+**Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
 
 Category: **Product / business** and **Technical / code**.
 
@@ -507,6 +512,8 @@ Source: alayala's supplied stage/scope table. Supporting record: [SQL scope sess
 
 ### A19 — Security contract and local execution: closed
 
+**Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Design selected; analytical capacity limits are provisional and runtime verification is pending.
@@ -532,6 +539,79 @@ Status: accepted by alayala on October 3, 2026. Design selected; analytical capa
 **Validation required:** Local persona flows, denied-before-read evidence, SQLGlot/DataFusion fixtures, read-only mounts/no-network/no-secret/no-Docker checks, stop/cleanup proof, PostgreSQL multi-process admission/crash recovery, deadline-bounded retries, rate/polling behavior, immutable approval and publication races. Measure cold reads, previews, dashboards and grouped SQL before adjusting provisional limits. No such runtime tests have run.
 
 Source: alayala's explicit security and documentation instructions; [session evidence](ai/sessions/2026-10-03-security-contract-and-api-split.md).
+
+### A24 — Build Publication first delivery
+
+Category: **Technical / code**.
+
+Status: **scope, specification and design approved by alayala on October 4, 2026;
+implementation of Tasks 1–6 subsequently authorized; essential local acceptance passed**.
+
+**Choice:** deliver the reduced [Publication specification](sdd/publication/spec.md)
+and [design](sdd/publication/design.md). Keep exact evidence/file verification,
+warning-free automatic publication, bound Admin approval for review warnings,
+atomic duplicate-safe activation and pinned analytical requests. Support one worker
+host and one publication consumer, reusing Refresh's retained evidence, lifetime
+lock, run fence/lease, step records, outbox and pinned BullMQ/Redis adapters.
+
+**Operating bounds (O1):** one committed verification invocation per publication
+generation, with a 300-second cooperative work deadline and no heartbeat renewal.
+Retain existing bounded enqueue and S3 read retries. Do not add an automatic
+whole-verifier/final-commit retry loop, per-object resume ledger or publication
+child supervisor. Only an explicit eligible Admin retry creates the next generation
+and fresh attempt budget. These are selected engineering bounds, not measured
+throughput or a promise of process termination within 300 seconds.
+
+**Two recovery actions:** the delivered `publication-recover` CLI runs on the
+recorded worker host with the trusted worker OS account, database access and private
+retained root. It checks expected generation/fence, acquires the original lock inode
+exclusively and rechecks state under canonical database locks. Preserve an existing
+committed event without moving the pointer; otherwise record safely stopped
+`publication_failed`, retaining evidence, approval and admission. No PID check,
+lease expiry or manual database edit substitutes for stop proof. Unknown ownership
+or commit state keeps the blocker. The CLI cannot retry, approve, discard or fetch data.
+The [operator interface](sdd/publication/design.md#operator-interface--required-executable-delivery)
+and real subprocess/database tests are required delivery, not future documentation.
+
+A current Admin separately invokes the existing publication-retry command after a
+recoverable failure. Preserve candidate, evidence and original bound approval;
+resolve the old warning, advance publication generation/fence, rearm the same outbox
+and store the receipt atomically. Reverify all exact bytes in the new attempt.
+Duplicate delivery cannot repeat that invocation. Recorded integrity/coverage/contract
+violations and unknown error causes cannot enable retry. Discard remains the
+permanent abandonment path; it preserves history and releases admission safely.
+
+**History and precedence:** D1 is accepted: for Publication's first delivery,
+manual reconciliation replaces automatic publishing crash recovery and repair of
+lost delivered publication jobs previously required by A9/A15's schema/backend
+contracts. Pending/unacknowledged enqueue retains bounded transport recovery;
+Refresh preparation/registration recovery under A23 is unchanged. Multi-host
+failover and unattended publication recovery are deferred. D2's proposed removal
+of same-candidate retry is withdrawn; A16/A19 retry remains required. This decision
+supersedes P2's additional execution/operation records, 600-second generation budget,
+three verifier starts, renewing 30-second lease/5-second heartbeat and publication
+child supervision. P2 and the original proposal remain historical. A6/A7 queue/outbox,
+A9 publication invariants, A16 API commands, A19 query isolation and A20 permissions
+remain in force. Run again/warning deletion and setup/scheduling remain separately
+tracked work; do not claim the entire A16 recovery surface is delivered.
+
+**Reason and rejected alternatives:** discard plus EIA re-extraction wastes valid
+candidates after temporary failures. A runbook without a tested executable does not
+provide usable recovery. Automatic crash continuation and multi-host ownership add
+unneeded first-delivery machinery. Retaining locks/fences and conservative blockers
+keeps correctness while accepting operator intervention after crashes.
+
+**Verification and authority:** [bounded tasks](sdd/publication/tasks.md) implement
+PUB-R01–R09 and require PUB-E01–E10, including production publication transactions,
+real CLI/process/Redis/PostgreSQL tests, retry/integrity races and actual query-container
+reader acceptance. The original planning record claimed no runtime results; the
+acceptance session below records subsequent implementation evidence.
+Live EIA/S3, retained migrations, live activation and retained-account checks remain
+separate deployment gates. The original scope approval did not authorize code.
+Alayala subsequently authorized all six tasks, code and disposable local migrations/tests,
+without intermediate approval stops; commits, pushes, a PR and retained/live changes
+remain unauthorized. Current implementation and actual checks are recorded in the
+[acceptance session](ai/sessions/2026-10-04-publication-implementation-acceptance.md).
 
 ## Finalized specifications
 
@@ -560,6 +640,8 @@ Status: accepted by alayala on October 3, 2026. The original record was document
 Source and contributions: alayala explicitly requested this rollback and documentation update. [Supporting session](ai/sessions/2026-10-03-seeded-local-authentication.md). See [security contract](docs/security-contract.md) and [API contract](docs/api-contract.md) for the current design.
 
 ### A9 — Data contract v1: finalized
+
+**Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
 
 Category: **Technical / code** and **Product / business**.
 
@@ -691,10 +773,53 @@ conservative recovery of a completed receipt. See the [contract](sdd/refresh-pub
 and [SDD design](sdd/refresh-publication/design.md) for exact fields, proposed values,
 tradeoffs and acceptance cases. A22 records the implemented boundary; other details
 remain proposals without changing A9/A16. Setup writes, publication execution, review/recovery
-commands and daily scheduling remain separate dependencies. No runtime verification
-or approval of these new details is claimed.
+commands and daily scheduling remain separate dependencies. A24 later accepts the
+Publication first-delivery design and task preparation; other unaccepted details
+remain proposals. This historical entry claims no runtime verification.
 
 A16 accepts the API flow and A19 accepts the security design. Remaining implementation details are listed in [the security contract](docs/security-contract.md#remaining-implementation-details); A21 now records the implemented local API pooling/synchronous execution defaults; other remaining details stay in [backend architecture](docs/backend.md#proposed-database-execution-model). This heading is retained for historical links.
+
+### P2 — Build Publication specification and design: proposed
+
+**Historical proposal — superseded October 4, 2026 by [A24](#a24--build-publication-first-delivery).**
+The original proposal below is preserved, including its former authorization gate
+and migration snapshot. Its settings are not current requirements. The later
+reduction D1 is accepted; D2 is withdrawn; O1 and executable operator recovery plus
+Admin same-candidate retry govern the first delivery. Tasks are now requested; code
+and Git delivery remain unauthorized.
+
+Category: **Technical / code**.
+
+[ME] Alayala supplied the Publication proposal and explicitly requested both
+specification and design, reserving tasks for his subsequent review. This authorizes
+documents only. [YOU] Drafted the [specification](sdd/publication/spec.md) and
+[design](sdd/publication/design.md) from A9/A16/A19/A20/A22/A23 and current source.
+The user-supplied [proposal](sdd/publication/proposal.md) is preserved as the scope
+baseline; its earlier specification-only gate is superseded by this direct request.
+
+**Proposed choices:** separate per-generation publication execution and operation
+history; 600-second generation budget from first publisher initialization,
+300-second maximum verifier pass, at most three verifier starts, 30-second lease,
+5-second heartbeat and confirmed terminate/kill waits of 5 seconds each. Preserve
+A19's three total temporary external attempts with 1/3-second waits through durable
+operation permits. Use a separate publication queue with the existing BullMQ pin,
+the producer's schema-1 payload and distinct publication/dispatch generations.
+Map logical `publish:<version_id>` to the existing UUID event key using UUIDv5
+with `NAMESPACE_URL` and `urn:trinity:publish:<canonical version UUID>`.
+
+**Reason and alternatives:** preparation deadlines/custody and the selected
+validation step are immutable after registration. Reusing them would lose evidence
+or reset budgets. Nested SDK/job retries could exceed accepted limits. A new random
+effect key per delivery would weaken replay identity. These bounds are engineering
+proposals, not measured full-history capacity or accepted settings.
+
+**Boundary:** append justified DDL after the actual Task 5 head (currently the
+uncommitted `0007_refresh_registration`), without editing its migration. Reuse
+verification with safe typed failure causes; generic dependency errors cannot
+establish retry eligibility. Existing A9/A16 publication/recovery rules remain
+unchanged. The [Task 5 handoff](ai/sessions/2026-10-04-refresh-task5-receipt-routing.md)
+now records synthetic/disposable acceptance; it was not rerun for this SDD.
+No tasks, implementation, migration execution or publication activation is authorized.
 
 ## Arkham decision topics still to complete
 

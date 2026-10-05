@@ -1,13 +1,13 @@
 # Refresh and publication — integration contract
 
-Status: **tasks 2–4 implemented; task 5 integration pending**, October 4, 2026. Contract and implementation status.
+Status: **Refresh tasks 2–5 implemented per the recorded handoff; Publication scope approved under A24, implementation pending**, October 4, 2026. These prior runtime results were not rerun for the Publication approval.
 Initial draft baseline: `82a4af7`; reconciled implementation baseline: `aea1eda` (merged SQL/Preview); branch: `feat/refresh-publication`.
 
 The user authorized implementation after correcting the Preview field mapping and migration baseline. See [implementation status](tasks.md#implemented-boundary-and-verification).
 [A9/A16/A19/A20](../../DECISIONS.md), [canonical schema](../../docs/schema.md),
 [API contract](../../docs/api-contract.md), and [backend ownership](../../docs/backend.md)
 remain authoritative. Physical additions below are proposals, not accepted decisions.
-Implemented additions are reconciled in A22/A23 and the canonical schema; unimplemented details remain proposals.
+Implemented Refresh additions are reconciled in A22/A23; A24 selects the reduced Publication scope and supersedes conflicting publication-recovery proposals here. Other unaccepted implementation details remain proposals.
 
 ## 1. Human review
 
@@ -155,7 +155,7 @@ Run status, version validation status and version disposition are separate field
 | `awaiting_approval` → `publishing` | Current Admin and candidate revision; exact bound approval + outbox + transition in one transaction. | Hold. |
 | `publishing` → `succeeded` | Intact eligible version; current fence/generation; sequence newer than active and coverage start <= active start/end >= active end. Insert unique event, switch pointer, finish run and clear slot together. | Release. |
 | `requested/running` → `failed` | Permanent error or exhausted recovery; retain partial artifacts/checks, safe failure warning and terminal finish time. No publication. | Hold until resolution. |
-| `publishing` → `publication_failed` | Permanent publication error or retry exhaustion; new unresolved warning. Candidate retains validation evidence; finish time remains null. | Hold. |
+| `publishing` → `publication_failed` | Permanent publication error, retry exhaustion or A24 operator reconciliation of safely stopped unpublished work; new unresolved warning. Candidate retains validation evidence; finish time remains null. | Hold. |
 | `publication_failed` → `publishing` | Explicit Admin retry only for intact active validated unpublished candidate and recoverable operational failure; original approval remains required. Resolve warning, increment publication generation/fence/revisions and rearm existing outbox. | Hold. |
 | `awaiting_approval/publication_failed` → `discarded` | Admin discard, no active publisher; permanently discard candidate, resolve warning if any, invalidate stale work and finish. | Release. |
 | `failed/publication_failed` → `failed`, optionally new `requested` | Warning deletion closes blocker; run-again additionally creates new run/version later and refresh outbox. Abandon any candidate; preserve history. New-run failure rolls back old warning resolution too. | Release, or transfer atomically. |
@@ -169,15 +169,20 @@ separate cases: the former supersedes old work; the latter blocks publication wi
 `coverage_regression`, and cannot be bypassed by retry or approval.
 
 All competing mutations use the canonical lock order: control → run → candidate →
-active publication → warning/command/outbox. External calls stay outside SQL transactions.
+active publication → publish step (when applicable) → warning/command/outbox. External calls stay outside SQL transactions.
 Recheck revisions, slot ownership, disposition, generation and fence under locks.
 All stage/result writes carry the current execution fence; expired or replaced workers
 cannot register outcomes. An unknown live process state cannot justify overlapping writers.
 
 Queue delivery is at least once. Outbox acknowledgment is not job completion.
-Recovery inspects durable `requested/running/publishing` work, increments fences when
-reclaiming, and repairs unfinished work using dispatch generation. Explicit publication
-retry increments publication generation; it does not create a new candidate or approval.
+A23 automatic recovery inspects Refresh `requested/running` work. A24 supersedes
+the earlier automatic `publishing` recovery proposal: lost delivered publication jobs
+and publisher crashes require the tested same-host operator CLI. Exclusive original
+lock custody plus guarded SQL reconciliation preserves committed publication or
+records safely stopped failure, without rerun or slot release. Pending/unacknowledged
+publication enqueue retains its bounded transport budget. Only a separate eligible
+Admin retry increments publication generation and permits another full verification;
+it does not create a new candidate or approval. See the [approved Publication design](../publication/design.md).
 Rerun and publication retry are different operations. Same command key/actor/action/body
 returns its stored receipt before stale-revision checks; conflicting reuse fails.
 Concurrent recovery actions can produce only one committed outcome.
@@ -200,7 +205,7 @@ for boundary tests and disposable PostgreSQL for transaction/concurrency tests.
 | IC09 | Inject failure after artifact/results writes but before outbox/commit. | Entire acceptance transaction rolls back; exact receipt can be retried without duplicate rows. |
 | IC10 | Replay identical receipt; replay differing receipt for same version; stale worker completes after reclaim. | Exact current-owner replay has no new effects; conflicting/stale writes rejected. |
 | IC11 | Crash after stored receipt before registration, and after registration before queue acknowledgment. | Retained identity enables safe import in first case; committed outbox/state recover second. Missing trusted receipt fails closed. |
-| IC12 | Crash before enqueue, after enqueue, and Redis loss after delivered acknowledgment. | Durable recovery repairs eligible work; duplicate queue jobs create one publication event. |
+| IC12 | Crash before enqueue, after enqueue, and Redis loss after delivered acknowledgment. | A23 repairs eligible Refresh work. A24 Publication uses bounded pending dispatch, operator reconciliation for delivered loss/crashes and a separate eligible Admin retry; duplicate jobs create one publication effect. |
 | IC13 | Two manual requests, or schedule/manual collision; replay command with changed actor/body. | One lifecycle admitted; matching replay returns receipt; conflicting reuse fails. |
 | IC14 | Two approvals; publication retry vs discard; rerun vs delete warning. | One allowed state effect; loser conflicts or receives same-command receipt. No abandoned candidate publishes. |
 | IC15 | Recoverable publication failure then explicit retry, for automatic and approved candidates. | Same version/files/approval retained; generation advances; outbox rearmed; new failure creates new warning history. |
