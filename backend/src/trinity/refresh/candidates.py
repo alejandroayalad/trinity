@@ -20,7 +20,7 @@ from trinity.connector.validate import MESSAGES, REQUIRED_CHECKS
 from trinity.errors import Problem
 from trinity.refresh import repository
 from trinity.refresh.router import service
-from trinity.refresh.schemas import Counter, FailureWarning
+from trinity.refresh.schemas import Counter, FailureWarning, ActionReceipt
 from trinity.refresh.service import _authorize, admin_context
 from trinity.refresh.tracking import candidate_view, safe_error, warning_view
 from trinity.settings.repository import read_settings
@@ -185,3 +185,45 @@ async def detail(version_id: str, request: Request, response: Response):
         version_id,request.query_params.multi_items(),body=await request.body())
     response.headers['ETag'] = f'"candidate-{result.revision}"'
     return result
+
+
+async def _command(version_id, action, request, response):
+    """Delegate current-authority checks and return only committed receipts."""
+    from trinity.publication.commands import PublicationCommands
+    result = await run_in_threadpool(PublicationCommands(service(request).database).command,
+        bearer_token(request),version_id,action,await request.body(),
+        request.headers.getlist('idempotency-key'),request.headers.getlist('if-match'),
+        request.query_params.multi_items())
+    response.status_code = 200 if result.replayed or result.result=='discarded' else 202
+    response.headers['Location'] = result.status_url
+    if response.status_code == 202:
+        response.headers['Retry-After'] = '2'
+    return result
+
+
+COMMAND_CONTRACT = {
+    'requestBody': {'required': True, 'content': {'application/json': {'schema': {'type': 'object', 'additionalProperties': False}}}},
+    'parameters': [
+        {'name': 'Idempotency-Key', 'in': 'header', 'required': True, 'schema': {'type': 'string', 'format': 'uuid'}},
+        {'name': 'If-Match', 'in': 'header', 'required': True, 'schema': {'type': 'string'}},
+    ],
+    'responses': {'202': {'description': 'Background publication accepted.'}},
+}
+
+
+@router.post('/{version_id}/approval', response_model=ActionReceipt, openapi_extra=COMMAND_CONTRACT)
+async def approve(version_id: str, request: Request, response: Response):
+    """Bind an Admin approval to the exact frozen candidate."""
+    return await _command(version_id,'approve',request,response)
+
+
+@router.post('/{version_id}/publication-retry', response_model=ActionReceipt, openapi_extra=COMMAND_CONTRACT)
+async def retry(version_id: str, request: Request, response: Response):
+    """Accept one explicit new publication generation without re-extraction."""
+    return await _command(version_id,'publication_retry',request,response)
+
+
+@router.post('/{version_id}/discard', response_model=ActionReceipt, openapi_extra={k:v for k,v in COMMAND_CONTRACT.items() if k!='responses'})
+async def discard(version_id: str, request: Request, response: Response):
+    """Abandon an eligible unpublished candidate while preserving its files."""
+    return await _command(version_id,'discard',request,response)

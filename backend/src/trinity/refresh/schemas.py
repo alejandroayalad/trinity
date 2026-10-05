@@ -16,12 +16,12 @@ Counter = Annotated[str, Field(pattern=r'^(0|[1-9][0-9]*)$')]
 class ActionReceipt(StrictModel):
     """Describe the original accepted command, not its current execution state."""
     operation_id: UUID
-    action: Literal['start_refresh']
+    action: Literal['start_refresh','approve','publication_retry','discard']
     accepted_at: datetime
     run_id: UUID
     version_id: UUID | None
     status_url: str = Field(pattern=r'^/api/v1/refresh-runs/[0-9a-f-]{36}$')
-    result: Literal['queued']
+    result: Literal['queued','discarded']
     replayed: bool
 
 

@@ -163,24 +163,13 @@ def admin_context(settings, run, version, warning, approval, step):
         code = "publication_in_progress"
     elif status in ("failed", "publication_failed"):
         code = "failure_unresolved"
-    eligible = bool(version and version["status"] == "validated" and version["disposition"] == "active"
-                    and version["diagnostics_frozen_at"] and step and step["status"] == "succeeded"
-                    and step["stage"] == "validate" and step["run_id"] == run["id"])
-    approved = bool(eligible and (not version["approval_required"] or
-                    (approval and approval["manifest_sha256"] == version["manifest_sha256"]
-                     and approval["validation_step_id"] == version["validation_step_id"]
-                     and approval["review_warning_digest"] == version["review_warning_digest"])))
-    # Publication retry is enabled only for known recoverable operational failures.
-    recoverable = bool(warning and warning["code"] in
-                       ("dependency_unavailable", "storage_unavailable", "publication_unavailable"))
+    publication_actions = run.get('_publication_actions', {}) if run else {}
     enabled = {
         "start_refresh": setup and run is None,
-        "rerun": setup and status in ("failed", "publication_failed") and bool(warning),
-        "delete_warning": setup and status in ("failed", "publication_failed") and bool(warning),
-        "approve": setup and status == "awaiting_approval" and eligible and bool(version["approval_required"]),
-        "publication_retry": setup and status == "publication_failed" and approved and recoverable,
-        "discard": setup and status in ("awaiting_approval", "publication_failed")
-                   and bool(version and version["disposition"] == "active"),
+        "rerun": False,
+        "delete_warning": False,
+        **{name: setup and publication_actions.get(name,False)
+           for name in ('approve','publication_retry','discard')},
     }
     actions = [Action(action=name, enabled=bool(allowed),
                       reason_code=None if allowed else (code or "not_applicable"))

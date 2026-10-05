@@ -112,4 +112,7 @@ def read_context(connection):
         raise Problem(503, "dependency_unavailable")
     if run and run["status"] in ("failed", "publication_failed") and warning is None:
         raise Problem(503, "dependency_unavailable")
+    if run and version:
+        from trinity.publication.checks import actions
+        run['_publication_actions'] = actions(connection,run,version,warning)
     return run, version, warning, approval, step

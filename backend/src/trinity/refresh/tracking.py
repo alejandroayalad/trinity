@@ -6,6 +6,10 @@ from trinity.refresh.schemas import CandidateRef, FailureWarning, Progress, Run,
 # Database summaries can contain adapter details. Only stable application codes
 # and fixed public text may cross this boundary, including for historical rows.
 ERRORS = {
+    **{code: 'Publication could not complete.' for code in (
+        'storage_temporary','storage_deadline','storage_denied','storage_configuration',
+        'evidence_missing','evidence_invalid','unknown_failure','coverage_regression',
+        'publication_interrupted','publication_dispatch_exhausted','publication_deadline')},
     'dependency_unavailable': 'A required service is unavailable.',
     'storage_unavailable': 'Candidate storage is unavailable.',
     'publication_unavailable': 'Publication could not complete.',
