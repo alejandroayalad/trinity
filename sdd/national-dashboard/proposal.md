@@ -36,11 +36,13 @@ Example: a synthetic national row with capacity `1000` MW and outage `125` MW pr
 | Selected facility detail and sparkline | Use the returned source ID with facility preview over a bounded date range. No Plant choice-list endpoint is needed for an already returned facility. Absent dates become display gaps. Sparkline duration remains a frontend choice. |
 | Publication and freshness | Use the response publication/freshness and national diagnostics. A failed newer refresh must not hide the valid publication. Never expose Admin errors or facility diagnostics to Viewer. |
 
-### One screen detail to resolve in the specification
+### Card date: resolved
 
 The handoff keeps “Latest observation” cards independent of the chart range. A16 requires `summary` to equal the requested range's end date. The concurrent frontend draft R24 uses range-end summary for the cards. These differ when the user selects a historical custom range.
 
-Recommendation: preserve the handoff's latest cards using the default dashboard response, and obtain a separate range response only when needed. This uses the existing endpoint and does not change `summary`. Align frontend R24 after review; this proposal does not overwrite the concurrent draft. The alternative is to make cards follow the selected range and label them “Range end observation.”
+Selected (alayala, October 5, 2026): cards follow the selected range and show its end date. Example: for Jan 1–31, the cards show January 31 and the label “Range end: Jan 31.” The cards answer: “What was the fleet state at the end of this selected range?” This is the current A16 contract (`docs/api-contract.md`, `summary` equals the requested range's end date and the matching last day point). The API does not change and the client makes no separate latest request. Presets end at the latest published national observation, so the default cards still show the latest data. The handoff's “Latest observation” label is replaced by the range-end label. Frontend R24 already matches.
+
+The rejected alternative was latest cards from the default response, with a separate range request for the chart.
 
 All combined national, metric and facility panels must have matching `publication_event_id` and `version_id`. On mismatch or preview `publication_changed`, reload the affected group instead of mixing versions. Specify bounded reload behavior before implementation; clients cannot choose arbitrary historical publications.
 

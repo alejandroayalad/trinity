@@ -31,3 +31,11 @@ Next action: [ME] Review the latest-card recommendation in the proposal.
 ## Subsequent branch delivery authorization
 
 [ME] Alayala requested `pending-endpoints-frontend` from `main`, cherry-picking this work, followed by Schedule settings, Plant filter and failed-run recovery in separate commits and a push. [YOU] verified `main` and refreshed `origin/main` both resolve to `eed2ab6`. The dashboard proposal, this session and its NOTES contribution form the focused source commit. Design references use the inspected frontend commit so the endpoint branch does not require unrelated frontend files. This Git authorization supersedes the earlier no-delivery boundary; the planning-versus-implementation scope for subsequent slices is being clarified separately.
+
+## Card date resolved on `feat/national-dashboard`
+
+[ME] Alayala requested one branch per proposal from `pending-endpoints-frontend` (`8746bb8`) and pushed `feat/national-dashboard` as the working branch. He then rejected the latest-card recommendation and selected range-end cards: for Jan 1–31, the cards show January 31 with the label “Range end: Jan 31.” He cited the A16 contract as the reason.
+
+[YOU] Verified that `docs/api-contract.md` defines `summary` as the requested range's end date, equal to the last day point. The choice needs no API change and no new decision entry; it applies A16. Updated the proposal's card section. Documentation only; no tests were run because no code changed.
+
+Next action: [ME] Approve writing the dashboard specification.

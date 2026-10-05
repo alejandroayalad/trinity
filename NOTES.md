@@ -12,6 +12,8 @@
 
 [ME] Alayala prioritized dashboard backend planning, then schedule settings, Plant filter and failed-run recovery. [YOU] Codex mapped the designed screen to the two existing national API contracts and implemented preview flow, and drafted the [dashboard proposal](sdd/national-dashboard/proposal.md). The [session](ai/sessions/2026-10-05-dashboard-backend-priority.md) records the latest-card/range-end distinction, publication consistency and verification boundaries. Concurrent frontend work is preserved. This is planning only; no endpoint implementation or runtime readiness is claimed.
 
+[ME] Alayala rejected the AI's latest-card recommendation and selected range-end cards, citing the A16 `summary` rule. [YOU] Verified that rule in the API contract and recorded the choice in the proposal and session. No API change.
+
 Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions
