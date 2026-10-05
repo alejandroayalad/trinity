@@ -606,7 +606,89 @@ Login throttling is atomic in PostgreSQL, with 60-second windows of five attempt
 
 **Evidence:** [implementation session](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md), [design](sdd/fastapi-local-auth/design.md), [backend setup](backend/README.md#local-api-and-three-personas). Native PostgreSQL/HTTP and offline tests passed. Docker/Compose startup, a new locked install and evaluator-owned execution remain unverified. Full analytical and refresh routes are separate slices. Reference: [OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Python hashlib](https://docs.python.org/3/library/hashlib.html#hashlib.scrypt), [official PostgreSQL image](https://hub.docker.com/_/postgres).
 
+### A22 — Refresh evidence writer and Preview compatibility
+
+Category: **Technical / code**.
+
+Status: initial persistence/registration implementation under alayala's instruction
+to correct the Preview compatibility findings and start implementation. This does
+not claim completion of Build Refresh or a live publication.
+
+**Choice:** extend merged baseline `aea1eda`, preserving the linear chain through
+`0004_preview_evidence`. Add `0005_refresh_evidence` and `0006_refresh_dispatch`.
+Reuse `data_versions.evidence_bundle_sha256` and `validation_attempt_id`; bind the
+latter to the selected same-run validation step's `validation_attempt_id`.
+Retain receipt/summary hashes, analytical artifacts and all check/diagnostic rows.
+New verified receipt-bearing records have frozen evidence and deferred selected-step
+checks. Legacy Preview rows remain unchanged; migration never fabricates receipts.
+
+**Reason and rejected alternative:** a parallel bundle field leaves Preview's required
+column empty, and another 0003 migration creates two heads. Both were flaws in the
+original draft. The corrected writer uses the existing reader's identities and
+the actual completed migration head. Full legacy hardening and approval/publication
+constraints remain later work; do not present this as a new guarantee for old rows.
+
+**Flow and failure:** trusted retained receipt hash → saved/remote evidence verification
+outside SQL → fenced ownership check → one transaction for artifacts, results,
+Preview identities and review/publication intent. A wrong attempt or commit failure
+leaves the candidate unvalidated and the active publication unchanged. Zero warnings
+creates publication intent; warnings retain review state. Neither path publishes.
+
+**Evidence and limits:** [implementation record](ai/sessions/2026-10-04-refresh-evidence-implementation.md)
+records loader, real PostgreSQL upgrade/rollback and actual Preview-service provenance
+checks with a synthetic publication effect. Admission routes, dispatcher, worker,
+failed/partial import and publisher remain pending. Worker settings in the SDD remain
+proposals until implemented and verified. No new dependency or live EIA/S3 run occurred.
+
+### A23 — Durable refresh dispatch and one fenced preparation execution
+
+Category: **Technical / code**.
+
+Status: implemented under alayala's explicit task 3–4 authorization, with task 2
+acceptance closure. Synthetic/disposable verification is recorded in the
+[dispatch and worker session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+This is not live full-history acceptance or publication completion.
+
+**Choice:** reuse pinned BullMQ 3.3.0 and Redis. PostgreSQL owns claims and counts.
+Use colon-free run/generation queue IDs; three total durable dispatch attempts,
+ten seconds per enqueue, one/three-second retry waits and sixty-second crash leases.
+Recovery repairs only unclaimed transport and never resets the attempt count.
+Once claimed, a run gets one pipeline execution, one frozen discovery end and one
+reserved version. Preserve the proposed worker limits: 1,530 seconds total,
+sixty-second discovery, 1,440-second preparation with existing stage limits,
+thirty-second worker lease and five-second heartbeat. SQL prevents budget resets.
+These are initial engineering bounds, not a full-history throughput guarantee.
+
+**Ownership and failure:** parent and child hold shared lifetime locks on the same
+trusted local inode. Recovery requires exclusive ownership on the recorded host;
+an expired lease or reused PID alone proves nothing. The live supervisor stops,
+kills when needed, and confirms child exit on lease loss. Unknown ownership keeps
+the slot blocked. Persist each external attempt before allowing it, bind the actual
+validation UUID before checking, and import only complete measured journal results.
+An incomplete pipeline becomes failed/rejected with one unresolved warning, never
+ready. No automatic extraction restart or second candidate is permitted.
+
+**Boundary:** completed preparation retains original receipt custody for task 5.
+The existing candidate registration boundary still needs normal worker/recovery
+wiring; until then, `receipt_pending` retains the slot without granting readiness.
+Publisher, setup writes and Admin review/recovery commands remain separate.
+The [current tasks](sdd/refresh-publication/tasks.md) state the tested boundary.
+
 ## Proposed decisions
+
+### P1 — Refresh integration and Build Refresh: implementation authorized
+
+[ME] Alayala requested a new branch, an integration contract, and the Build Refresh
+SDD before implementation, then authorized implementation after the Preview corrections.
+[YOU] AI traced current preparation outputs and
+0001/0002 migrations, and proposed explicit receipt/attempt bindings, missing
+artifact/result/outbox/command persistence, bounded worker ownership/deadlines and
+conservative recovery of a completed receipt. See the [contract](sdd/refresh-publication/integration-contract.md)
+and [SDD design](sdd/refresh-publication/design.md) for exact fields, proposed values,
+tradeoffs and acceptance cases. A22 records the implemented boundary; other details
+remain proposals without changing A9/A16. Setup writes, publication execution, review/recovery
+commands and daily scheduling remain separate dependencies. No runtime verification
+or approval of these new details is claimed.
 
 A16 accepts the API flow and A19 accepts the security design. Remaining implementation details are listed in [the security contract](docs/security-contract.md#remaining-implementation-details); A21 now records the implemented local API pooling/synchronous execution defaults; other remaining details stay in [backend architecture](docs/backend.md#proposed-database-execution-model). This heading is retained for historical links.
 

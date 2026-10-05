@@ -64,9 +64,9 @@ def _date(text: str) -> date:
     return value
 
 
-def _reserve(output_root: Path, start: date, end: date) -> Path:
+def _reserve(output_root: Path, start: date, end: date, *, version_id=None) -> Path:
     """Reserve owner-only version/evidence directories without following links."""
-    version = str(uuid4())
+    version = str(UUID(str(version_id))) if version_id is not None else str(uuid4())
     with parquet._directory(output_root) as parent:
         os.mkdir(version, mode=0o700, dir_fd=parent)
         os.fsync(parent)
@@ -97,6 +97,34 @@ def _send_stage(connection, event: str, stage: str, status: str | None) -> None:
         raise PreparationError(stage, "supervisor_protocol")
 
 
+def _send_detail(connection, message):
+    """Block external work until the supervisor retains its identity."""
+    connection.send(message)
+    if connection.recv() != "saved":
+        raise PreparationError("supervisor", "supervisor_protocol")
+
+
+def _child_entry(request, connection, worker):
+    """Hold a lifetime lock and await durable launch permission before work.
+
+    Recovery needs the exclusive lock. It cannot declare a stopped execution
+    while either this child or its supervisor still holds a shared lock.
+    """
+    import fcntl
+    from contextlib import ExitStack
+    with ExitStack() as stack:
+        if request.get("ownership_lock"):
+            descriptor = os.open(request["ownership_lock"], os.O_RDONLY | os.O_NOFOLLOW)
+            lock = stack.enter_context(os.fdopen(descriptor, "rb"))
+            fcntl.flock(lock, fcntl.LOCK_SH)
+        try:
+            if connection.recv() != "launch":
+                return
+        except EOFError:
+            return  # The supervisor died before authorizing any external work.
+        worker(request, connection)
+
+
 def _run_worker(request: dict, connection, *, transport=None, storage_factory=None) -> None:
     """Run the shared pipeline; allow only trusted in-process test injection."""
     root = request["root"]
@@ -106,6 +134,14 @@ def _run_worker(request: dict, connection, *, transport=None, storage_factory=No
             storage_factory=storage_factory or (lambda: S3Storage(request["s3"])),
             stage_event=lambda event, stage, status: _send_stage(connection, event, stage, status),
             transport=transport,
+            operation_event=(lambda data: _send_detail(connection, {"event": "attempt", **data}))
+                if request.get("durable_hooks") else None,
+            progress_event=(lambda count, total: _send_detail(connection, {
+                "event": "progress", "processed_count": count, "total_count": total}))
+                if request.get("durable_hooks") else None,
+            validation_start=(lambda attempt, digest: _send_detail(connection, {
+                "event": "validation_attempt", "attempt_id": attempt, "manifest_sha256": digest}))
+                if request.get("durable_hooks") else None,
         ))
         # This is a child receipt, not command completion. Only the parent may
         # write result.json after it confirms child exit and checks these bytes.
@@ -208,7 +244,8 @@ def _verify_receipt(root: Path, digest: str, start: date, end: date) -> dict:
         return result
 
 
-def supervise(request: dict, *, worker=_worker, limits: Limits = Limits()) -> tuple[int, dict]:
+def supervise(request: dict, *, worker=_worker, limits: Limits = Limits(),
+              on_event=None, heartbeat=None, on_spawn=None) -> tuple[int, dict]:
     """Run one spawned child with stage/overall deadlines and retained evidence.
 
     Each stage transition must follow the known sequence. The parent fsyncs
@@ -221,7 +258,7 @@ def supervise(request: dict, *, worker=_worker, limits: Limits = Limits()) -> tu
     # with fork. The pipe joins trusted parent/child code, never a public client.
     context = multiprocessing.get_context("spawn")
     parent, child = context.Pipe()
-    process = context.Process(target=worker, args=(request, child))
+    process = context.Process(target=_child_entry, args=(request, child, worker))
     stage, index, active = "startup", 0, False
     started = stage_started = time.monotonic()
     receipt_digest = None
@@ -239,6 +276,8 @@ def supervise(request: dict, *, worker=_worker, limits: Limits = Limits()) -> tu
                     journal.flush()
                     os.fsync(journal.fileno())
                     saved_events.append(data)
+                    if on_event is not None:
+                        on_event(event)
 
                 record({"event": "started", "version_id": root.name})
                 with parquet._parent(descriptor, f"{EVIDENCE}/journal.jsonl") as (directory, _name):
@@ -246,8 +285,15 @@ def supervise(request: dict, *, worker=_worker, limits: Limits = Limits()) -> tu
                 process.start()
                 launched = True
                 child.close()
+                if on_spawn is not None:
+                    on_spawn(process.pid)
+                parent.send("launch")
+                last_heartbeat = 0
                 while True:
                     now = time.monotonic()
+                    if heartbeat is not None and now - last_heartbeat >= 5:
+                        heartbeat()
+                        last_heartbeat = now
                     if now - started >= limits.overall or now - stage_started >= limits.stage_seconds(stage):
                         raise PreparationError(stage, "deadline_exceeded")
                     if parent.poll(0.05):
@@ -256,6 +302,12 @@ def supervise(request: dict, *, worker=_worker, limits: Limits = Limits()) -> tu
                         except EOFError:
                             break
                         event = message.get("event")
+                        if event in ("attempt", "validation_attempt", "progress"):
+                            if not active:
+                                raise PreparationError(stage, "stage_protocol")
+                            record(message)
+                            parent.send("saved")
+                            continue
                         if event == "started":
                             if active or index >= len(STAGES) or message.get("stage") != STAGES[index]:
                                 raise PreparationError(stage, "stage_protocol")

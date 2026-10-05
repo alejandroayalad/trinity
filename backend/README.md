@@ -520,3 +520,67 @@ Keep the fixture outside Git. The terminal prompts privately for each password.
 Tokens/cursors stay in memory; the checker attempts logout on failure and checks
 revocation after successful checks. Output contains safe summaries only. This
 command neither configures nor enables preview and makes no publication changes.
+
+## Refresh evidence registration — initial implementation
+
+`refresh.evidence.load_candidate` reconstructs and rechecks a retained parent receipt,
+validation report and stored bundle. `refresh.registration.CandidateRegistration`
+then atomically stores artifacts/results and Preview's existing `evidence_bundle_sha256`
+and `validation_attempt_id`, with the selected validation step. Zero warnings creates
+publication intent; review warnings wait for approval. This is an internal trusted
+worker boundary, not a public upload endpoint. The task 4 worker retains completion for the task 5 routing gate.
+
+Migrations `0005_refresh_evidence` and `0006_refresh_dispatch` extend
+`0004_preview_evidence`; existing Preview evidence remains unchanged. Do not run
+migrations against a retained database as part of the disposable test command.
+From `backend/`, the focused checks are:
+
+```bash
+uv run --locked python -m unittest discover -s tests -p test_refresh_evidence.py -v
+uv run --locked python tests/run_local_sql_checks.py --refresh
+```
+
+The second command creates and removes only its own PostgreSQL 17.11 cluster and
+uses synthetic storage. It checks upgrade from Preview, writer rollback/identity,
+and actual Preview-service provenance with a test-only publication effect. It does
+not prove a running publisher or execute query containers. Admin admission/read
+routes, dispatch, supervised refresh execution and failure import are implemented;
+see the additional Redis/process acceptance below.
+See [current implementation status](../sdd/refresh-publication/tasks.md).
+
+
+## Refresh dispatch and preparation — tasks 2–4
+
+`POST /api/v1/refresh-runs` accepts an empty object with a UUID `Idempotency-Key`
+from a current Admin after shared setup. It commits a run, admission reservation,
+outbox intent and receipt together. The returned tracking URL works before enqueue.
+Exact replay returns the original receipt. History and step cursors use explicitly
+configured `TRINITY_REFRESH_CURSOR_KEYS_JSON` and `TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID`,
+with the same 32-byte base64url key format as Preview but separate keys/purpose.
+
+From `backend/`, run real disposable-service acceptance:
+
+```bash
+uv run --locked python tests/run_local_refresh_checks.py --failfast
+```
+
+The runner requires Docker and the existing PostgreSQL 17.11 binaries. It starts
+only a disposable Redis 8.10.2 container on a random loopback port and a private
+PostgreSQL Unix-socket cluster, then removes both. Preload `redis:8.10.2` if needed.
+`TRINITY_DOCKER_BIN` and `TRINITY_PG_BIN` can select the installed executables.
+No EIA key or cloud access is used. The Redis-only cases intentionally skip when
+using `run_local_sql_checks.py --refresh` without the Redis runner.
+
+Background entrypoints are `python -m trinity.workers outbox`, `refresh`, and
+`recovery`. They use `TRINITY_DATABASE_URL` and trusted `TRINITY_REDIS_URL`.
+Refresh/recovery also require an existing private durable `TRINITY_REFRESH_ROOT`;
+refresh alone loads the existing EIA and S3 settings. Keep this root on the same
+host/filesystem for recovery and preserve its lock/evidence files. Never place
+credentials in command arguments or queue payloads.
+
+Do not enable a live refresh walkthrough yet: task 5 must wire successful receipt
+custody into candidate registration and completed-receipt recovery. Task 4 leaves
+successful preparation unvalidated in application state with admission retained.
+Failure import is implemented: measured results stay available, readiness stays
+false, and an unresolved warning blocks a new run. Publisher, setup writes and
+Admin resolution commands remain separate. See the [implementation record](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).

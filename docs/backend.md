@@ -200,3 +200,14 @@ The accepted tree locates responsibilities; it does not complete these contracts
 No application code, packages, processes, migrations, or runtime tests were created or run for this document. Add runnable commands only after implementation and verification.
 
 Sources: [A4 and A6–A15](../DECISIONS.md), [data contract v1](schema.md), alayala's proposed tree, and the [review/correction history](../ai/sessions/2026-10-03-backend-stack-review-and-layout.md). The reviewed [Python subprocess documentation](https://docs.python.org/3/library/subprocess.html) explains environment inheritance and timeout behavior; [DataFusion runtime/SQL options](https://datafusion.apache.org/python/autoapi/datafusion/context/index.html) describe engine controls. These sources do not constitute runtime verification of Trinity.
+
+
+## Refresh dispatch/preparation implementation mapping
+
+The current [A23 slice](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
+uses `adapters/queue.py` for BullMQ, `refresh/dispatch.py` and `refresh/execution.py`
+for service-owned transactions, and `workers/outbox.py`, `workers/refresh.py`,
+`workers/recovery.py` with a `workers/__main__.py` command entrypoint. These concrete
+names refine the earlier roadmap tree; they do not add a second queue stack.
+Connector hooks reuse the existing preparation process and evidence formats.
+Successful receipt routing and publisher completion remain separate tasks.

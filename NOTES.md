@@ -464,3 +464,42 @@ PostgreSQL tests were skipped. See the main-integration section in the
 [YOU] Read-only inspection confirmed retained migration 0002 and zero publication events/active pointers. Hash-checked the existing candidate's Parquet bytes and described a concrete two-day Palisades fixture, extending AN-02 supporting evidence without changing the selected anomaly list. The [Step 5 handoff](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) records measured tests, commit/push authorization and the exact incomplete operator boundary. No retained migration, publication, key setup or live EIA/S3 call was performed. Closure delivers implemented tooling; it does not certify retained preview readiness or alayala's conceptual understanding.
 
 [YOU] Final Step 5 regression: seven focused checker tests passed; the offline suite passed 363 with 77 opt-in skips; the explicit combined PostgreSQL/HTTP/Docker suite passed 72 with no skips. Including unchanged Step 4 standalone container evidence, 440 distinct tests have passing evidence. Retained operator success is not claimed.
+
+## Refresh integration and Build Refresh SDD — October 4, 2026
+
+[ME] Alayala requested a new branch, the integration contract and then the Build
+Refresh SDD, with design/acceptance review before implementation. [YOU] AI created
+`feat/refresh-publication` from clean local `main` at `82a4af7`, traced
+preparation receipts/manifests/results/diagnostics and existing migrations, and
+drafted the [contract and SDD](sdd/refresh-publication/proposal.md). P1 records the
+unapproved physical bindings, worker limits and recovery proposals. Static document
+checks are recorded in the [session](ai/sessions/2026-10-04-refresh-publication-contract-and-sdd.md).
+No application code, migrations, live calls, commits or remote changes were made.
+
+## Refresh evidence implementation — October 4, 2026
+
+[ME] Alayala corrected the Preview evidence-field mapping and migration baseline,
+then authorized implementation. [YOU] AI preserved the drafts while fast-forwarding
+`feat/refresh-publication` to merged main `aea1eda`, corrected the contract, and
+implemented 0005/0006 plus verified candidate registration using Preview's existing
+bundle/attempt fields. A22 records scope and the [implementation session](ai/sessions/2026-10-04-refresh-evidence-implementation.md)
+records checks and corrections. Five loader checks and nine new PostgreSQL checks
+passed. Broader runs passed 368 offline checks and 55 PostgreSQL checks, with 84 and
+17 opt-in/container skips respectively. Preview compatibility uses its actual service
+and evidence reader with a test-only publication effect, not a production publisher.
+Remaining admission/worker/dispatch/publication work stays open. No live source/cloud
+operation, retained-database migration, commit or push occurred.
+
+
+## Refresh admission closure and tasks 3–4 — October 4, 2026
+
+[ME] Alayala requested checking task 2 and finishing durable dispatch plus fenced
+preparation, with real disposable Redis/PostgreSQL and real child-process tests.
+[YOU] Preserved the dirty implementation, added missing admission acceptance,
+reused pinned BullMQ without dependency changes, and connected durable dispatch,
+one-execution fencing, frozen discovery/version, attempt custody, supervised
+preparation and failed/partial evidence import. Synthetic source/storage tests do
+not establish live EIA/S3 or full-history capacity. Successful receipts remain at
+the task 5 routing/recovery gate. Commands, measured results, corrections and
+remaining boundaries are in the [session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+No retained migration, commit, push or PR occurred. Maintain data evidence — ongoing.

@@ -176,6 +176,33 @@ The immutable policy snapshot contains `settings_revision`, `workflow_policy=war
 
 A20 replaces external Clerk actor references with stable local text user IDs. Human actor fields reference `local_users.id`; nullable automatic/scheduled actors remain null under the existing rules. Disable users instead of deleting their action history; no cascade may remove audit evidence. API actor fields remain output-only, and clients cannot set `requested_by`, `approved_by` or a role. Local auth records are application state, never available to user SQL. The [security contract](security-contract.md#authentication-and-trusted-roles) defines session/current-role checks. A future Clerk integration must map identities without rewriting historical actors.
 
+### Refresh writer and Preview evidence binding
+
+Implementation amendment under [A22](../DECISIONS.md#a22--refresh-evidence-writer-and-preview-compatibility).
+The physical chain extends `0004_preview_evidence` with `0005_refresh_evidence`
+and `0006_refresh_dispatch`; it does not fork from `0002_app_entry`.
+
+| Record | Added or reused physical fields | Binding |
+|---|---|---|
+| `data_versions` | Existing Preview `evidence_bundle_sha256?`, `validation_attempt_id?`; new `preparation_receipt_sha256?`, `storage_verified_at?` | Map receipt `bundle_sha256` to the existing bundle column. Receipt-bearing validated candidates require both Preview fields and exact selected-step attempt identity. |
+| `refresh_steps` | `validation_attempt_id?`, `validation_sha256?`, `diagnostics_sha256?`, `deadline_at?` | Attempt UUID is unique and allowed only for validate steps; distinct from the database step ID and numeric attempt ordinal. Successful registration freezes summary hashes and selected step. |
+| `validation_results` | Canonical fields plus `details_path`, `details_sha256` | Details retain their original canonical-byte hash; JSONB rendering is not hash authority. Same-run validate-step ownership is checked. |
+| `refresh_runs` | `execution_deadline_at?`, `worker_owner_id?`, `worker_execution_ref?` | Reserved for the pending supervised worker. No secrets in execution references. Worker timing/ownership behavior is not implemented by adding columns. |
+
+The new migrations create `dataset_artifacts`, `validation_results`, `job_outbox`
+and `api_commands`. Existing rows receive no invented proof. A non-null preparation
+receipt enables stronger selected-step and immutable-evidence constraints on new
+registered candidates. Historical Preview records without that receipt retain their
+existing validation rules and values; this migration does not retroactively verify them.
+
+`CandidateRegistration.register` verifies the original saved/remote evidence before
+its SQL transaction, then checks current run/fence/slot and freezes the existing
+Preview fields. It stores 16 required and 23 diagnostic results. Automatic readiness
+queues publication; review readiness retains the slot without an approval. Preparation
+lease is released at either handoff. Registration never changes the active pointer.
+The broader lifecycle and remaining constraints below remain requirements, not proof
+that the full refresh/publisher path is implemented.
+
 ### Application relationships
 
 Split diagrams show one shared model. Repeated entities refer to the same table. Application FKs connect metadata, never outage rows. Delete cascades must not remove published evidence or actors' historical actions.
@@ -319,3 +346,30 @@ The detailed SQL grammar, resource limits, table-reference detection, and authen
 - [Parquet logical types](https://parquet.apache.org/docs/file-format/types/logicaltypes/) and [Arrow Parquet mappings](https://arrow.apache.org/docs/cpp/parquet.html): decimal, date, and string representation. The chosen precision and validation thresholds are Trinity decisions.
 
 Maintain data evidence — ongoing. Source methodology and omissions common to all routes remain evidence limits. No API data extraction, migration, worker, query, or authentication test was executed while authoring this specification.
+
+
+## Refresh execution implementation — A23
+
+The task 3–4 implementation uses the worker ownership/deadline fields added by
+`0006_refresh_dispatch`. `execution_deadline_at` is set once at first claim;
+`refresh_steps.deadline_at` is set at stage start. Triggers reject later changes
+to those budgets and to a frozen end/window timestamp or started policy/start.
+Worker-created candidate coverage and latest discovery date must match the frozen
+run bounds. The registration reader also compares the saved national maximum.
+
+`worker_execution_ref` retains trusted host/owner, lock inode, child PID for
+observability, stage/step identity, operation count and last attempt, sanitized
+discovery evidence, validation attempt/step, original receipt hash and confirmed
+stop/completion flags. These fields are private worker custody, not public progress.
+The PID alone cannot authorize recovery: local exclusive lifetime-lock acquisition
+is required after supervisor/child shared locks have ended. Unknown ownership holds
+the slot. External operation details are fsynced in the local preparation journal
+before the database counter and child acknowledgment.
+
+Preparation stage mapping follows the integration contract: route extraction,
+`prepare/files`, `validate/candidate`, then `prepare/storage`. Unknown source totals
+remain null. Failure import preserves actual completed result rows and rejects the
+candidate; absent manifest/checks remain absent. A completed parent receipt retains
+custody for task 5 and does not independently grant readiness or publication.
+See [A23](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
+and the [measured session](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).

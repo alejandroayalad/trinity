@@ -94,6 +94,9 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Delivery and working practices
 
+- [2026-10-04 — Refresh evidence implementation and Preview reconciliation](2026-10-04-refresh-evidence-implementation.md)
+- [2026-10-04 — Refresh integration contract and Build Refresh SDD](2026-10-04-refresh-publication-contract-and-sdd.md)
+
 - [2026-10-04 — Catalog, SQL and preview task status correction](2026-10-04-slice-task-status-correction.md)
 - [2026-10-02 — Session log — Document baseline](2026-10-02-document-baseline.md)
 - [2026-10-02 — Session — Trinity repository import](2026-10-02-trinity-repository-import.md)
@@ -101,3 +104,5 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-03 — Session — Vault reconciliation and handoff](2026-10-03-vault-reconciliation-and-handoff.md)
 - [2026-10-04 — Catalog, SQL and preview branch reconciliation](2026-10-04-catalog-sql-preview-reconciliation.md)
 - [2026-10-04 — Docker local setup — API and PostgreSQL](2026-10-04-docker-local-setup.md)
+
+- [2026-10-04 — Refresh admission, durable dispatch and fenced worker](2026-10-04-refresh-dispatch-and-worker.md)
