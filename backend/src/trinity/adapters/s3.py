@@ -32,8 +32,11 @@ _TEMPORARY = (ConnectionClosedError, ConnectTimeoutError, EndpointConnectionErro
 class StorageError(RuntimeError):
     """Expose a fixed safe code, never SDK exception text or infrastructure URLs."""
 
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, *, cause: str | None = None) -> None:
         self.code = code
+        # Keep the existing outward code stable. Publication uses the internal
+        # cause to distinguish safe retry from permanent or unknown failures.
+        self.cause = cause or code
         super().__init__(f"Candidate storage failed: {code}.")
 
 
@@ -65,6 +68,8 @@ def _error_kind(error: Exception) -> str:
         code = error.response.get("Error", {}).get("Code")
         if status == 412 or code == "PreconditionFailed":
             return "exists"
+        if status == 403 or code in ("AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"):
+            return "denied"
         if code == "NoSuchKey":
             return "missing"
         if status in (409, 429, 500, 502, 503, 504) or code in (
@@ -91,6 +96,9 @@ class S3Storage:
                  sleep: Callable[[float], None] = time.sleep) -> None:
         self.settings = settings
         self.clock, self.sleep = clock, sleep
+        # Refresh supplies a durable custody callback. CLI callers leave it
+        # unset. A callback failure must stop before any remote side effect.
+        self.before_attempt = None
         try:
             self.client = client if client is not None else boto3.client(
                 "s3", region_name=settings.region, endpoint_url=settings.endpoint_url,
@@ -166,6 +174,8 @@ class StorageOperation:
         for attempt in range(1, 4):
             self.checkpoint()
             body = None
+            if self.storage.before_attempt is not None:
+                self.storage.before_attempt({"kind": "s3_get", "path": artifact.storage_path, "attempt": attempt})
             try:
                 response = self.storage.client.get_object(Bucket=self.storage.settings.bucket, Key=key)
                 body = response["Body"]
@@ -193,7 +203,10 @@ class StorageOperation:
                 if kind == "missing" and allow_missing:
                     return False
                 if kind != "temporary" or attempt == 3:
-                    raise StorageError("object_read_failed") from None
+                    raise StorageError("object_read_failed", cause={
+                        "temporary": "storage_temporary", "missing": "evidence_missing",
+                        "denied": "storage_denied", "configuration": "storage_configuration",
+                    }.get(kind, "unknown_failure")) from None
             finally:
                 if body is not None:
                     try:
@@ -217,6 +230,8 @@ class StorageOperation:
         ambiguous = False
         for attempt in range(1, 4):
             self.checkpoint()
+            if self.storage.before_attempt is not None:
+                self.storage.before_attempt({"kind": "s3_put", "path": path, "attempt": attempt})
             try:
                 self.storage.client.put_object(
                     Bucket=self.storage.settings.bucket, Key=key, Body=data,

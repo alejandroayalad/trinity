@@ -680,6 +680,7 @@ def _cancel_if_requested(cancelled: Callable[[], bool] | None) -> None:
 
 def validate_candidate(
     root: Path, expected_sha256: str, *, cancelled: Callable[[], bool] | None = None,
+    on_start=None,
 ) -> ValidationReport:
     """Validate saved Parquet and source evidence in one independent attempt.
 
@@ -710,6 +711,10 @@ def validate_candidate(
             with parquet._parent(descriptor, f"evidence/{attempt_id}") as (parent, name):
                 os.mkdir(name, mode=0o700, dir_fd=parent)
                 os.fsync(parent)
+            # Bind the attempt before the first validation check. Failed custody
+            # stops validation while preserving its reserved local directory.
+            if on_start is not None:
+                on_start(attempt_id, manifest.digest)
             return _validate_reserved(descriptor, Path(root), manifest, attempt_id, cancelled)
     except (KeyboardInterrupt, asyncio.CancelledError):
         raise

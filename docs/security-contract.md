@@ -118,7 +118,18 @@ Allow up to **three total attempts**, not three retries, for temporary external 
 
 Do not retry invalid SQL, denied access or failed validation. Invalid credentials/session/role are denials, not temporary provider outages. Do not blindly replay external writes: retries use the same durable operation/object identity and existing duplicate-safe rules. Recovery of an uncertain write first checks its recorded outcome. Queue redelivery is not permission to reset an exhausted attempt budget.
 
-Authentication and refresh-stage deadlines, and concrete temporary-error classification, remain to be implemented. Do not apply the 30-second query deadline to the entire refresh. Exhausted/permanent refresh failures follow A16's failure-warning and Admin recovery rules. Explicit Admin Run again creates a new run; publication retry reuses the exact eligible candidate and its original approval requirement.
+A23 selects implemented Refresh preparation/registration bounds; A24 selects the first-delivery Publication bounds below. Remaining authentication/stage settings and concrete publication error classification still require implementation verification. Do not apply the 30-second query deadline to the entire refresh. Exhausted/permanent refresh failures follow A16's failure-warning and Admin recovery rules. Explicit Admin Run again creates a new run; publication retry reuses the exact eligible candidate and its original approval requirement.
+
+**A24 publication attempt boundary:** each publication generation permits one
+verification invocation with a fixed 300-second cooperative deadline. Keep existing
+three-total-attempt S3 read and durable enqueue limits; do not add whole-verifier or
+final-commit automatic retries. Only an eligible explicit Admin retry grants a new
+publication generation/budget, preserving the original evidence/approval. Queue
+redelivery and operator reconciliation cannot reset budgets or reverify that attempt.
+Typed internal failure causes must distinguish temporary outages from denied access,
+missing/changed bytes and invalid evidence; generic dependency errors cannot grant
+retry. Recorded integrity/coverage/contract violations remain ineligible even if
+bytes are later restored. These selected rules require tests; no runtime claim is made.
 
 ## File identity and publication
 
@@ -133,6 +144,17 @@ Keep A9's SHA-256 file checksums and deterministically ordered manifest digest. 
 Incomplete diagnostics cannot be treated as zero warnings. Keep A5's known facility-total metadata issue informational after required checks pass. Review warnings and operational failure warnings remain different records.
 
 The publication worker rechecks file identity, required evidence, approval when needed, active candidate disposition and current worker ownership before activation. Preserve the schema's atomic publication event/pointer/run transition and nonregressing coverage. No configurable publication mode remains. `publication_events.publication_mode` is only a derived historical outcome, not an editable setting.
+
+Under [A24](../DECISIONS.md#a24--build-publication-first-delivery), the operator recovery capability requires the
+trusted worker OS service account, private retained root and database privileges on
+the recorded worker host. It is distinct from current Admin/session authorization.
+Acquire the original lifetime-lock inode exclusively and hold it through guarded
+SQL reconciliation; host/inode mismatch, missing/held locks or unknown commit state
+cannot authorize mutation. No PID/lease/manual SQL override exists. Preserve an
+existing publication or record safely stopped failure; never grant approval/retry
+or release the slot. The required CLI has no EIA/S3/Redis dependency. Automatic
+publication crash recovery and multi-host failover are deferred; query-container
+stop confirmation and A23 Refresh recovery are unchanged.
 
 A16's single refresh lifecycle remains reserved during preparation, review, publication and unresolved failures. Approval/discard cannot both succeed. Duplicate requests reuse recorded work; stale workers cannot change state or publish. Preserve settings/action revisions, durable command receipts, outbox dispatch, same-candidate publication retry and permanent discard. Queries keep using the previous publication until the new version is active.
 
@@ -160,7 +182,7 @@ Use HTTPS outside local development and only configured frontend origins. Enforc
 | SQL | Allowed arithmetic/CASE/function fixtures agree between SQLGlot and DataFusion; whole-input rejection of unsupported constructs, writes, hidden tables, file readers and URLs; exact decimal behavior. |
 | Isolation and cleanup | Container cannot reach network, S3, credentials, Docker control, unrelated mounts or unpublished files; mounts reject writes; timeout stops execution; memory bound holds; temporary resources are removed. |
 | Admission and limits | Cross-process user/global reservations; no slot release before termination; supervisor crash recovery; byte/row limits and truncation; 30/minute counter excludes polling; no partial results on resource failure. |
-| Publication and recovery | Required failures/incompletion block; changed files invalidate approval; no double approval/publication or publication after discard; stale ownership rejected; settings revisions and failed-run recovery preserved. |
+| Publication and recovery | Required failures/incompletion block; changed files invalidate approval; no double approval/publication or publication after discard; stale ownership rejected. A24 requires real operator CLI stop/reconciliation and separate same-candidate retry tests with fresh verification and preserved approval. |
 
 Also test the three-attempt external failure schedule within deadlines, denied/invalid/validation non-retries, Viewer-safe errors and sanitized logs. Measure cold downloads, previews, dashboard calculations and grouped SQL locally. Run main flows with all three test accounts before the live session. None of these tests has run for this design update.
 
@@ -169,7 +191,7 @@ Also test the three-attempt external failure schedule within deadlines, denied/i
 1. Password-hash library/parameters, session lifetime, browser token handling, login throttling and seed commands; local account/session storage and current role checks are specified under A20.
 2. SQL dialect/AST forms, argument/type/numeric semantics and parser/engine compatibility fixtures; function names are selected.
 3. Container hardening, supervisor protocol/crash cleanup, S3 policies/local configuration and temporary-file handling; no-network read-only data access is selected.
-4. Query-slot physical schema, rate-window accounting and authentication/refresh-stage deadlines/error classification; slot authority, limits and attempt schedule are selected.
+4. Query-slot physical schema, rate-window accounting and remaining authentication/stage settings and publication error classification; A23/A24 worker bounds, slot authority, limits and attempt schedule are selected.
 5. Dependency compatibility and local capacity measurements; hosting remains undecided and no public application URL is required by the supplied brief.
 
 Source: alayala's agreed security rules and explicit follow-up choices. Read-only challenge evidence and documentation checks: [contract split session](../ai/sessions/2026-10-03-security-contract-and-api-split.md). This specification is not security validation.

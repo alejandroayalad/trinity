@@ -464,3 +464,105 @@ PostgreSQL tests were skipped. See the main-integration section in the
 [YOU] Read-only inspection confirmed retained migration 0002 and zero publication events/active pointers. Hash-checked the existing candidate's Parquet bytes and described a concrete two-day Palisades fixture, extending AN-02 supporting evidence without changing the selected anomaly list. The [Step 5 handoff](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) records measured tests, commit/push authorization and the exact incomplete operator boundary. No retained migration, publication, key setup or live EIA/S3 call was performed. Closure delivers implemented tooling; it does not certify retained preview readiness or alayala's conceptual understanding.
 
 [YOU] Final Step 5 regression: seven focused checker tests passed; the offline suite passed 363 with 77 opt-in skips; the explicit combined PostgreSQL/HTTP/Docker suite passed 72 with no skips. Including unchanged Step 4 standalone container evidence, 440 distinct tests have passing evidence. Retained operator success is not claimed.
+
+## Refresh integration and Build Refresh SDD — October 4, 2026
+
+[ME] Alayala requested a new branch, the integration contract and then the Build
+Refresh SDD, with design/acceptance review before implementation. [YOU] AI created
+`feat/refresh-publication` from clean local `main` at `82a4af7`, traced
+preparation receipts/manifests/results/diagnostics and existing migrations, and
+drafted the [contract and SDD](sdd/refresh-publication/proposal.md). P1 records the
+unapproved physical bindings, worker limits and recovery proposals. Static document
+checks are recorded in the [session](ai/sessions/2026-10-04-refresh-publication-contract-and-sdd.md).
+No application code, migrations, live calls, commits or remote changes were made.
+
+## Refresh evidence implementation — October 4, 2026
+
+[ME] Alayala corrected the Preview evidence-field mapping and migration baseline,
+then authorized implementation. [YOU] AI preserved the drafts while fast-forwarding
+`feat/refresh-publication` to merged main `aea1eda`, corrected the contract, and
+implemented 0005/0006 plus verified candidate registration using Preview's existing
+bundle/attempt fields. A22 records scope and the [implementation session](ai/sessions/2026-10-04-refresh-evidence-implementation.md)
+records checks and corrections. Five loader checks and nine new PostgreSQL checks
+passed. Broader runs passed 368 offline checks and 55 PostgreSQL checks, with 84 and
+17 opt-in/container skips respectively. Preview compatibility uses its actual service
+and evidence reader with a test-only publication effect, not a production publisher.
+Remaining admission/worker/dispatch/publication work stays open. No live source/cloud
+operation, retained-database migration, commit or push occurred.
+
+
+## Refresh admission closure and tasks 3–4 — October 4, 2026
+
+[ME] Alayala requested checking task 2 and finishing durable dispatch plus fenced
+preparation, with real disposable Redis/PostgreSQL and real child-process tests.
+[YOU] Preserved the dirty implementation, added missing admission acceptance,
+reused pinned BullMQ without dependency changes, and connected durable dispatch,
+one-execution fencing, frozen discovery/version, attempt custody, supervised
+preparation and failed/partial evidence import. Synthetic source/storage tests do
+not establish live EIA/S3 or full-history capacity. Successful receipts remain at
+the task 5 routing/recovery gate. Commands, measured results, corrections and
+remaining boundaries are in the [session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+No retained migration, commit, push or PR occurred. Maintain data evidence — ongoing.
+
+## Publication proposal — October 4, 2026
+
+[ME] Alayala requested the Publication proposal. [YOU] drafted the separate
+[sdd/publication/proposal.md](sdd/publication/proposal.md) against current contracts,
+with Refresh Task 5 as a prerequisite. No implementation or live activation was
+authorized or performed. Checks and scope are recorded in the
+[session](ai/sessions/2026-10-04-publication-proposal.md).
+
+## Publication specification and design — October 4, 2026
+
+[ME] Alayala supplied his proposal and requested specification and design together;
+he will review them before tasks. [YOU] preserved that proposal and drafted the
+[specification](sdd/publication/spec.md) and [design](sdd/publication/design.md),
+including exact evidence binding, command replay, atomic activation, separate
+publication ownership/budgets, safe retry classification and reader acceptance.
+P2 records proposed settings without marking them accepted. Concurrent Task 5
+implementation and its new handoff were preserved; its test results are attributed
+to that record, not rerun here. Documentation checks and limits are in the
+[session](ai/sessions/2026-10-04-publication-specification-design.md).
+No tasks, backend implementation, runtime checks, live activation or Git delivery
+were performed by this documentation task. Maintain data evidence — ongoing.
+
+## Refresh Task 5 — October 4, 2026
+
+[ME] Alayala requested receipt routing/recovery and canonical Admin candidate detail,
+with no commit or push for this task. [YOU] connected successful and stopped-worker
+receipts to existing verification/registration, persisted nonresetting budgets and
+added candidate detail from actual results. The earlier five delivery commits were
+pushed before Task 5 began. Alayala subsequently authorized the Task 5 commit and
+push; concurrent Publication documents remain outside that delivery. Synthetic child-process,
+HTTP, PostgreSQL and Redis evidence, corrections and remaining limits are in the
+[Task 5 session](ai/sessions/2026-10-04-refresh-task5-receipt-routing.md). No publisher,
+live EIA/S3, retained migration or active data change was performed.
+
+## Publication scope approval and tasks — October 4, 2026
+
+[ME] Alayala approved the reduced Publication scope: one worker host, executable
+operator recovery and separate Admin retry of the same eligible candidate. He
+requested canonical reconciliation and tasks, not implementation or Git delivery.
+[YOU] Recorded A24, explicitly superseded P2/conflicting automatic-publication
+recovery expectations while preserving history, updated the affected contracts and
+prepared [six bounded tasks](sdd/publication/tasks.md) covering PUB-R01–R09/PUB-E01–E10.
+Operator recovery and full same-candidate re-verification are required executable
+acceptance, not deferred resilience. The [approval session](ai/sessions/2026-10-04-publication-scope-approval-and-tasks.md)
+records inspection, checks and limits. No runtime evidence or implementation approval
+is inferred from this documentation work. Maintain data evidence — ongoing.
+
+
+## Publication implementation — October 4, 2026
+
+[ME] Authorized all approved Build Publication Tasks 1–6, code and disposable local
+checks, with no intermediate approval stops. Live/retained changes, commits, pushes
+and a PR remain excluded. [YOU] implemented atomic publication, exact approval,
+same-candidate retry/discard, bounded queue execution and executable stop-proof
+operator recovery. See the [implementation/acceptance record](ai/sessions/2026-10-04-publication-implementation-acceptance.md)
+for actual commands, final gate status, corrections and limits. Synthetic tests do
+not establish EIA findings or live deployment. Maintain data evidence — ongoing.
+
+[ME] Subsequently authorized focused implementation commits and push before live-system
+testing. [YOU] preserved the approved Publication scope and drafted the
+[full-system acceptance plan](docs/live-system-acceptance-plan.md). No live execution
+or retained-data changes occurred during Git delivery.

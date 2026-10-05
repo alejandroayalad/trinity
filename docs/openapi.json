@@ -6365,7 +6365,7 @@
         "tags": [
           "admin"
         ],
-        "description": "Only publication_failed with retryable eligibility and no disposition. Atomically resolve current warning, increment publication generation/fence, rearm existing outbox and move to publishing. Existing approval stays bound; automatic path stays automatic. No extraction.",
+        "description": "Only publication_failed with retryable eligibility and no disposition. Atomically resolve current warning, increment publication generation/fence, rearm existing outbox and move to publishing. Existing approval stays bound; automatic path stays automatic. No extraction. A24: after a crash, the separate worker-host operator CLI must first prove stop and reconcile publication; it never starts retry. An explicit eligible Admin retry creates a new attempt that rechecks exact evidence/files with the original approval. Duplicate delivery cannot repeat verification in that generation. Unknown causes and recorded integrity/coverage/contract violations cannot enable retry. No public operator-recovery endpoint.",
         "x-minimum-role": "admin",
         "parameters": [
           {
@@ -10025,6 +10025,14 @@
     "required_checks_pass_review_warnings": "admin_approval_bound_to_exact_validated_files",
     "required_checks_fail_or_incomplete": "blocked_without_override",
     "configurable_mode": false,
-    "identity": "Existing SHA-256 manifests/checksums; changed files require new validation and required approval"
+    "identity": "Existing SHA-256 manifests/checksums; changed files require new validation and required approval",
+    "first_delivery_decision": "A24",
+    "worker_hosts": 1,
+    "verification_invocations_per_publication_generation": 1,
+    "publication_work_deadline_seconds": 300,
+    "crash_recovery": "Explicit tested same-host operator CLI with original exclusive lifetime-lock proof and locked outcome reconciliation; never starts another attempt",
+    "admin_retry": "Separate eligible same-candidate attempt; preserves evidence and original approval; fully reverifies bytes; duplicate delivery cannot restart it",
+    "automatic_delivered_job_repair_and_crash_resume": "deferred",
+    "scope_status": "Approved specification, implementation not authorized or proven"
   }
 }

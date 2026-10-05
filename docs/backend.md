@@ -11,7 +11,7 @@ Use one Python package at `backend/src/trinity/`, organized by feature. Keep inf
 | Entrypoint | Responsibility |
 |---|---|
 | `main.py` | Create the FastAPI application, configure its lifecycle, and register feature routers. |
-| `workers/main.py` | Start background-job consumers that delegate refresh/publication work to feature services. Scheduling, outbox dispatch, and recovery have explicit worker modules; their process topology remains open. |
+| `workers/main.py` | Start background-job consumers that delegate refresh/publication work to feature services. Scheduling, outbox dispatch, and recovery have explicit worker modules. Publication uses A24's one-host model; other process topology remains open. |
 | `queries/runtime/main.py` | Execute permitted analytical work in a separate process, with query-only configuration and enforced limits. |
 
 Sharing a package does not mean sharing process credentials or global mutable state. Runtime imports must not initialize API/worker configuration, PostgreSQL connections, or privileged integrations. Package initialization must have no such side effects.
@@ -175,11 +175,23 @@ A16 derives automatic readiness versus required approval from the frozen warning
 |---|---|
 | `workers/scheduler.py` | Convert due occurrences into requests through feature services, respecting setup/settings and stable occurrence identity. |
 | `workers/outbox.py` | Dispatch committed outbox work and record delivery through the persistence helpers; handle the enqueue/acknowledgment gap safely. |
-| `workers/recovery.py` | Periodically reconcile unfinished durable runs with queue/progress state and delegate recovery decisions to feature services. |
+| `workers/recovery.py` | Retain periodic Refresh recovery under A23. Publication uses the separate explicit operator mode in the existing worker entrypoint under A24; feature services own reconciliation. |
 
-Recovery covers requested/running/publishing work lost from Redis, expired worker leases, and the dispatch-generation rules in A9. Do not replay terminal runs or candidates awaiting approval or publication-failed Admin recovery. A16 explicit publication retry rearms only the same eligible candidate; rerun creates a new run; warning resolution/discard prevents revival of abandoned candidates. Services own retries, fences, and legal state transitions; worker loops do not duplicate these rules.
+[A24](../DECISIONS.md#a24--build-publication-first-delivery) supersedes the earlier requested/running/publishing
+automatic recovery scope only for Publication. Keep A23 Refresh recovery and bounded
+pending/unacknowledged publication enqueue. Lost delivered publication jobs and
+publisher crashes require the tested operator CLI, not an automatic replay. Admin
+retry then rearms the same eligible candidate in a new publication generation;
+operator reconciliation cannot grant this new attempt. Never revive terminal or
+abandoned work. Services own transactions, eligibility, fences and recovery rules;
+worker/queue adapters only delegate.
 
-**Failure example:** Redis acknowledges enqueue and the outbox becomes delivered, then the queued job is lost. Pending-outbox dispatch alone does not find that run. The recovery trigger identifies eligible unfinished work and invokes the durable recovery path without creating duplicate publication effects.
+**Failure example:** Redis acknowledges a publication job, then loses it. The
+operator proves no publisher owns the retained lock and reconciles database state.
+A committed event remains unchanged; otherwise the run becomes safely publication-failed
+and retains its slot. An Admin may retry the same eligible candidate and original
+approval. No EIA extraction repeats. Earlier automatic redispatch for this scenario
+is historical under A24.
 
 ## Proposed database execution model
 
@@ -200,3 +212,41 @@ The accepted tree locates responsibilities; it does not complete these contracts
 No application code, packages, processes, migrations, or runtime tests were created or run for this document. Add runnable commands only after implementation and verification.
 
 Sources: [A4 and A6–A15](../DECISIONS.md), [data contract v1](schema.md), alayala's proposed tree, and the [review/correction history](../ai/sessions/2026-10-03-backend-stack-review-and-layout.md). The reviewed [Python subprocess documentation](https://docs.python.org/3/library/subprocess.html) explains environment inheritance and timeout behavior; [DataFusion runtime/SQL options](https://datafusion.apache.org/python/autoapi/datafusion/context/index.html) describe engine controls. These sources do not constitute runtime verification of Trinity.
+
+
+## Refresh dispatch/preparation implementation mapping
+
+The current [A23 slice](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
+uses `adapters/queue.py` for BullMQ, `refresh/dispatch.py` and `refresh/execution.py`
+for service-owned transactions, and `workers/outbox.py`, `workers/refresh.py`,
+`workers/recovery.py` with a `workers/__main__.py` command entrypoint. These concrete
+names refine the earlier roadmap tree; they do not add a second queue stack.
+Connector hooks reuse the existing preparation process and evidence formats.
+Successful receipt routing and stopped-worker receipt recovery now call the
+existing registration service. `refresh/candidates.py` exposes the Admin-only
+persisted detail snapshot. Publication completion now uses the service described below.
+
+## Publication first-delivery implementation boundary
+
+[A24](../DECISIONS.md#a24--build-publication-first-delivery) accepts one supported worker host and one publication
+consumer. Reuse A23's queue/outbox pattern, original same-host lifetime lock,
+run fence/lease and publish step records. The 300-second step deadline is fixed for
+one verifier invocation per publication generation; no heartbeat or publication
+child supervisor is added. Async cancellation and lease expiration do not prove a
+thread stopped. Keep the lock inside the actual synchronous execution.
+
+Add publication services/command handling and job-kind routing to the current
+feature structure. Do not call Refresh's terminal failure helper or preparation
+claim/reclaim methods for publishing. Preserve receipt custody and preparation
+budgets. Extend existing verification with typed safe causes so generic errors
+cannot grant retry. No production dependency or new persistence table is selected.
+
+The executable `publication-recover` mode must branch before the current entrypoint
+loads Redis/S3 configuration. Require the trusted worker OS account, original host/root
+and database access, but no EIA/S3/Redis access. It performs inspection or guarded
+stop-proof reconciliation; it does not run HTTP Admin actions or verify remote files.
+The [design](../sdd/publication/design.md#operator-interface--required-executable-delivery)
+defines exact arguments, outcomes and exit codes. [Tasks](../sdd/publication/tasks.md)
+require real CLI, retry, crash, concurrency and reader tests before completion.
+The mode and publisher are implemented locally. Actual acceptance gates and
+deployment limits are tracked in the [implementation record](../ai/sessions/2026-10-04-publication-implementation-acceptance.md).

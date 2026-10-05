@@ -33,6 +33,7 @@ async def retrieve_all(
     on_route_start: Callable[[str], None] | None = None,
     settings: EIASettings | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    operation_event=None,
 ) -> list[RetrievalResult]:
     """Fetch all three routes for an inclusive date window with one shared client.
 
@@ -55,7 +56,7 @@ async def retrieve_all(
 
     try:
         # One client owns the connection pool for this entire extraction.
-        client = EIAClient(settings, transport=transport)
+        client = EIAClient(settings, transport=transport, before_attempt=operation_event)
     except ConfigurationError:
         # A missing key prevents every route, so record all three without HTTP calls.
         for dataset in DATASETS:
@@ -436,6 +437,7 @@ async def prepare_candidate(
     storage_factory: Callable[[], S3Storage],
     stage_event: Callable[[str, str, str | None], None],
     transport: httpx.AsyncBaseTransport | None = None,
+    operation_event=None, validation_start=None, progress_event=None,
 ) -> dict:
     """Connect extraction, freezing, validation and storage for one new version.
 
@@ -478,13 +480,15 @@ async def prepare_candidate(
                     stream.write(canonical_json(result.metadata.to_dict()) + b"\n")
                     stream.flush()
                     os.fsync(stream.fileno())
+                    if progress_event is not None:
+                        progress_event(result.metadata.records_fetched, None)
                     stage_event("finished", f"extract:{result.metadata.dataset}",
                                 result.metadata.final_status)
 
                 results = await retrieve_all(
                     start=start, end=end, settings=settings, transport=transport,
                     page_size=5000, max_pages=1000, timeout_seconds=300,
-                    on_result=save, on_route_start=route_start,
+                    on_result=save, on_route_start=route_start, operation_event=operation_event,
                 )
             if len(results) != 3 or any(item.metadata.final_status != "success" for item in results):
                 failed = next((item.metadata.dataset for item in results
@@ -495,11 +499,15 @@ async def prepare_candidate(
             stage_event("started", stage, None)
             frozen = parquet._freeze_reserved(descriptor, root, root.name, start, end,
                                                [item.metadata for item in results])
+            if progress_event is not None:
+                progress_event(len(frozen.manifest.entries), len(frozen.manifest.entries))
             stage_event("finished", stage, "success")
 
         stage = "validation"
         stage_event("started", stage, None)
-        report = validate_candidate(root, frozen.manifest_sha256)
+        report = validate_candidate(root, frozen.manifest_sha256, on_start=validation_start)
+        if progress_event is not None:
+            progress_event(len(report.results) + len(report.diagnostics), 39)
         stage_event("finished", stage, report.status)
         if report.status != "passed":
             raise PreparationError(stage, "validation_failed")
@@ -507,6 +515,7 @@ async def prepare_candidate(
         stage = "storage"
         stage_event("started", stage, None)
         storage = storage_factory()
+        storage.before_attempt = operation_event
         try:
             receipt = store_candidate(report, storage)
         finally:
@@ -515,6 +524,8 @@ async def prepare_candidate(
             close = getattr(storage.client, "close", None)
             if close is not None:
                 close()
+        if progress_event is not None:
+            progress_event(len(receipt.artifacts), len(receipt.artifacts))
         stage_event("finished", stage, "success")
         return {
             **_storage_binding(report), "status": "stored_unpublished",

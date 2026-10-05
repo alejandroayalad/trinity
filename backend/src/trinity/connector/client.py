@@ -270,9 +270,11 @@ class EIAClient:
         settings: EIASettings | None = None,
         *,
         transport: httpx.AsyncBaseTransport | None = None,
+        before_attempt=None,
     ) -> None:
         # Explicit settings support tests; otherwise read the process environment.
         self._settings = settings if settings is not None else load_eia_settings()
+        self.before_attempt = before_attempt
         # Keep the filter installed: removing it when one client closes could
         # expose URLs from another active client. It stores no credential.
         logging.getLogger("httpx").addFilter(_LOG_FILTER)
@@ -299,6 +301,29 @@ class EIAClient:
     async def aclose(self) -> None:
         """Close the shared HTTP client when used without a context manager."""
         await self._http.aclose()
+
+    async def discover_latest(self, *, start: date, timeout_seconds=60):
+        """Read one newest national observation; empty or malformed data fails.
+
+        Descending period and length one follow EIA API v2's documented query
+        form. The clock only rejects future observations; it never supplies the
+        candidate end. The caller persists the measured row before extraction.
+        """
+        from datetime import UTC, datetime
+        params = {"api_key": self._settings.eia_api_key.get_secret_value(),
+                  "frequency": "daily", "start": start.isoformat(), "offset": "0", "length": "1",
+                  "data[0]": "capacity", "data[1]": "outage", "data[2]": "percentOutage",
+                  "sort[0][column]": "period", "sort[0][direction]": "desc"}
+        async with asyncio.timeout(timeout_seconds):
+            reply = await self._request_with_retries(_ROUTES["national"][0], params)
+            try:
+                payload = _sanitize(reply.json(), self._settings.eia_api_key.get_secret_value())
+                page = _validate_page(payload, ("period",), start, datetime.now(UTC).date(), 1)
+                if len(page.data) != 1:
+                    raise ValueError
+                return date.fromisoformat(page.data[0]["period"]), page.response
+            except (ValueError, TypeError):
+                raise EIAClientError("invalid_discovery") from None
 
     async def fetch_national_page(
         self, *, start: date, end: date, offset: int = 0, length: int = 5000
@@ -556,6 +581,11 @@ class EIAClient:
         Return the response for status and page checks. On failure, retain attempt
         evidence in the tracker and propagate the exception to retry handling.
         """
+        # Retain only fixed route/offset identity, never the credential params.
+        # Callback failure precedes HTTP and must not trigger external retries.
+        if self.before_attempt is not None:
+            self.before_attempt({"kind": "eia", "route": route,
+                                 "offset": int(params["offset"]), "attempt": attempt})
         if tracker is None:
             return await self._http.get(route, params=params)
         started = utc_now()

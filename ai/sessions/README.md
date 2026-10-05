@@ -10,7 +10,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Authentication](#authentication) | 5 |
 | [Data evidence and findings](#data-evidence-and-findings) | 5 |
 | [Connector, Parquet and storage](#connector-parquet-and-storage) | 8 |
-| [Architecture and contracts](#architecture-and-contracts) | 13 |
+| [Architecture and contracts](#architecture-and-contracts) | 15 |
 | [SQL implementation](#sql-implementation) | 9 |
 | [Dataset previews](#dataset-previews) | 7 |
 | [Delivery and working practices](#delivery-and-working-practices) | 7 |
@@ -54,6 +54,9 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Architecture and contracts
 
+- [2026-10-04 — Publication scope approval and implementation tasks](2026-10-04-publication-scope-approval-and-tasks.md)
+
+- [2026-10-04 — Publication specification and design](2026-10-04-publication-specification-design.md)
 - [2026-10-04 — Next slice: Refresh and publication](2026-10-04-refresh-publication-next-slice.md)
 - [2026-10-02 — Session log — A4: application state and outage queries](2026-10-02-a4-state-and-outage-queries.md)
 - [2026-10-02 — Session — Data contract v1](2026-10-02-data-contract-v1.md)
@@ -94,6 +97,9 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 
 ## Delivery and working practices
 
+- [2026-10-04 — Refresh evidence implementation and Preview reconciliation](2026-10-04-refresh-evidence-implementation.md)
+- [2026-10-04 — Refresh integration contract and Build Refresh SDD](2026-10-04-refresh-publication-contract-and-sdd.md)
+
 - [2026-10-04 — Catalog, SQL and preview task status correction](2026-10-04-slice-task-status-correction.md)
 - [2026-10-02 — Session log — Document baseline](2026-10-02-document-baseline.md)
 - [2026-10-02 — Session — Trinity repository import](2026-10-02-trinity-repository-import.md)
@@ -101,3 +107,9 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-03 — Session — Vault reconciliation and handoff](2026-10-03-vault-reconciliation-and-handoff.md)
 - [2026-10-04 — Catalog, SQL and preview branch reconciliation](2026-10-04-catalog-sql-preview-reconciliation.md)
 - [2026-10-04 — Docker local setup — API and PostgreSQL](2026-10-04-docker-local-setup.md)
+
+- [2026-10-04 — Refresh admission, durable dispatch and fenced worker](2026-10-04-refresh-dispatch-and-worker.md)
+
+- [2026-10-04 — Refresh Task 5 receipt routing and recovery](2026-10-04-refresh-task5-receipt-routing.md)
+
+- [Publication implementation and acceptance](2026-10-04-publication-implementation-acceptance.md) — authorized Tasks 1–6, executable recovery and measured acceptance boundaries.

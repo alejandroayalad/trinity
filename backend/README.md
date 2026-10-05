@@ -520,3 +520,150 @@ Keep the fixture outside Git. The terminal prompts privately for each password.
 Tokens/cursors stay in memory; the checker attempts logout on failure and checks
 revocation after successful checks. Output contains safe summaries only. This
 command neither configures nor enables preview and makes no publication changes.
+
+## Refresh evidence registration and candidate detail
+
+`refresh.evidence.load_candidate` reconstructs and rechecks a retained parent receipt,
+validation report and stored bundle. `refresh.registration.CandidateRegistration`
+then atomically stores artifacts/results and Preview's existing `evidence_bundle_sha256`
+and `validation_attempt_id`, with the selected validation step. Zero warnings creates
+publication intent; review warnings wait for approval. This is an internal trusted
+worker boundary, not a public upload endpoint. Both successful preparation and
+confirmed stopped-worker recovery call this service with retained receipt custody.
+`GET /api/v1/candidates/{version_id}` returns the canonical Admin-only panel from
+actual persisted evidence, with `ETag: "candidate-<revision>"` and no-store headers.
+
+Migrations `0005_refresh_evidence`, `0006_refresh_dispatch` and
+`0007_refresh_registration` extend
+`0004_preview_evidence`; existing Preview evidence remains unchanged. Do not run
+migrations against a retained database as part of the disposable test command.
+From `backend/`, the focused checks are:
+
+```bash
+uv run --locked python -m unittest discover -s tests -p test_refresh_evidence.py -v
+uv run --locked python tests/run_local_sql_checks.py --refresh
+```
+
+The second command creates and removes only its own PostgreSQL 17.11 cluster and
+uses synthetic storage. It checks upgrade from Preview, writer rollback/identity,
+and actual Preview-service provenance with a test-only publication effect. It does
+not prove a running publisher or execute query containers. Admin admission/read
+routes, dispatch, supervised refresh execution and failure import are implemented;
+see the additional Redis/process acceptance below.
+See [current implementation status](../sdd/refresh-publication/tasks.md).
+
+
+## Refresh dispatch and preparation — tasks 2–4
+
+`POST /api/v1/refresh-runs` accepts an empty object with a UUID `Idempotency-Key`
+from a current Admin after shared setup. It commits a run, admission reservation,
+outbox intent and receipt together. The returned tracking URL works before enqueue.
+Exact replay returns the original receipt. History and step cursors use explicitly
+configured `TRINITY_REFRESH_CURSOR_KEYS_JSON` and `TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID`,
+with the same 32-byte base64url key format as Preview but separate keys/purpose.
+
+From `backend/`, run real disposable-service acceptance:
+
+```bash
+uv run --locked python tests/run_local_refresh_checks.py --failfast
+```
+
+The runner requires Docker and the existing PostgreSQL 17.11 binaries. It starts
+only a disposable Redis 8.10.2 container on a random loopback port and a private
+PostgreSQL Unix-socket cluster, then removes both. Preload `redis:8.10.2` if needed.
+`TRINITY_DOCKER_BIN` and `TRINITY_PG_BIN` can select the installed executables.
+No EIA key or cloud access is used. The Redis-only cases intentionally skip when
+using `run_local_sql_checks.py --refresh` without the Redis runner.
+
+Background entrypoints are `python -m trinity.workers outbox`, `refresh`, and
+`recovery`. They use `TRINITY_DATABASE_URL` and trusted `TRINITY_REDIS_URL`.
+Refresh/recovery also require an existing private durable `TRINITY_REFRESH_ROOT`;
+refresh loads existing EIA and S3 settings; recovery loads S3 settings only. Keep this root on the same
+host/filesystem for recovery and preserve its lock/evidence files. Never place
+credentials in command arguments or queue payloads.
+
+Successful preparation and stopped-worker recovery verify/import the retained
+receipt and end at `publishing` with one obligation or `awaiting_approval`.
+Registration shares its saved 30-second deadline and at most three invocations
+across crashes; neither extraction nor budgets restart. Recovery requires proven
+process termination, valid fenced ownership and the original evidence bytes.
+Live enablement remains a separate gate.
+Failure import is implemented: measured results stay available, readiness stays
+false, and an unresolved warning blocks a new run. Publisher, setup writes and
+Admin resolution commands remain separate. See the [implementation record](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+
+## Publication worker and operator recovery
+
+Publication consumes the registered candidate from Refresh. It verifies the retained
+receipt, complete validation/diagnostic evidence and exact local/S3 bytes once per
+publication generation. One transaction activates the version and releases admission.
+A failure preserves the previous publication, candidate files and admission slot.
+Use one supported worker host, the original private `TRINITY_REFRESH_ROOT`, and one
+publication consumer. These commands do not authorize activation against retained data.
+
+The configured worker OS account must own the root and its original lock files;
+the root and locks must deny group/other access. Never replace a missing lock to
+make recovery pass. Storage overwrite/delete protection and host custody require
+separate deployment verification. The 300-second deadline is cooperative: expiry
+blocks publication but does not terminate a thread or prove that execution stopped.
+
+From `backend/`, with the locked environment and authorized deployment configuration:
+
+```sh
+uv run --locked python -m trinity.workers publication-outbox
+uv run --locked python -m trinity.workers publication
+```
+
+The first role uses `TRINITY_DATABASE_URL`, `TRINITY_REFRESH_ROOT` and
+`TRINITY_REDIS_URL`. The consumer additionally uses the existing S3 configuration
+and credential provider; neither publication role needs an EIA key. Refresh's
+existing outbox/recovery roles remain separate. Delivered publication jobs are
+never repaired automatically. An explicit Admin retry creates the next generation.
+
+Admin commands accept `{}`, a UUID `Idempotency-Key`, and the exact candidate
+`If-Match` returned by `GET /api/v1/candidates/{version_id}`:
+
+- `POST /api/v1/candidates/{version_id}/approval` binds the current Admin and frozen evidence.
+- `POST /api/v1/candidates/{version_id}/publication-retry` retains that approval and evidence, then queues fresh verification.
+- `POST /api/v1/candidates/{version_id}/discard` permanently abandons unpublished, stopped work and releases admission without deleting files.
+
+New approval/retry returns 202; discard and authorized receipt replay return 200.
+Retry cannot waive missing/changed evidence or a recorded permanent failure.
+Run again, warning deletion and setup/schedule writes remain disabled/unimplemented.
+
+After a crash or lost delivered job, run the executable on the recorded host as
+the trusted worker OS account. It requires only database configuration and the
+private retained root, with no EIA/S3/Redis configuration or access:
+
+```sh
+uv run --locked python -m trinity.workers publication-recover --help
+uv run --locked python -m trinity.workers publication-recover --run-id <UUID> --inspect
+uv run --locked python -m trinity.workers publication-recover --run-id <UUID> --expected-generation <N> --expected-fence <F>
+```
+
+Use the exact generation/fence from inspection. Inspection is read-only and does
+not prove stop. Mutation requires exclusive acquisition of the original lock inode,
+expired leases and current SQL authority. A live or hung worker must first end under
+normal host service controls; this CLI does not kill it. Do not substitute manual SQL.
+
+The CLI emits sanitized JSON. Exit 0 means inspected, recovered failure, already
+failed or already published; 2 means invalid input, missing target or not applicable;
+3 means blocked (including held/missing/replaced lock, wrong host, access denial,
+unexpired lease or stale target); 4 means dependency unavailable or uncertain commit.
+Only `already_published` establishes earlier committed publication. A repeat reconciles
+a lost response without another warning. Recovery never approves, retries or releases
+the slot. After `recovered_failure`, the Admin separately retries if eligible or discards.
+
+Disposable acceptance uses the existing service runner, now including `test_publication*.py`:
+
+```sh
+uv run --locked python -m unittest discover -s tests -p 'test_publication*.py' -v
+uv run --locked python tests/run_local_refresh_checks.py --failfast
+uv run --locked python -m unittest discover -s tests -v
+```
+
+Set `TRINITY_TEST_QUERY_IMAGE` to the existing immutable `sha256:...` image ID and
+`TRINITY_TEST_DOCKER_SOCKET` to the actual local socket to include container acceptance.
+Without them, container tests skip and do not establish that gate. The service runner
+owns only its temporary PostgreSQL cluster and disposable Redis container. Synthetic
+storage fixtures establish no new EIA finding or live S3 protection claim.
