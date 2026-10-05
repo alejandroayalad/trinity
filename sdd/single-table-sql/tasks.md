@@ -4,6 +4,8 @@ Date: 2026-10-04
 Status: Backend implemented, committed and pushed. Completed implementation and measured checks are marked below; remaining verification is listed separately.
 Branch: `feat/catalog-permissions` (the synchronized delivery branch is a reference, not a separate workstream).
 Basis: approved [specification](spec.md), [design](design.md), [proposal](proposal.md), A16/A19.
+Current local follow-up on `main`: [query-guarantee acceptance](../../ai/sessions/2026-10-04-query-guarantees-fault-acceptance.md) closes T15-V/T16-V for the named disposable-runtime scenarios. Alayala reviewed and authorized Git delivery; deployed/live and broader HTTP gates remain separate.
+
 Evidence: [policy/engine implementation](../../ai/sessions/2026-10-04-sql-full-implementation.md), [isolation/HTTP delivery](../../ai/sessions/2026-10-04-sql-delivery-commits.md), and [combined-branch verification](../../ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md).
 
 ## Human
@@ -55,10 +57,10 @@ Requirements: R07, R10–R15, R18–R23. Scenarios: S09, S13–S16, S20–S26.
 - [x] T14 [YOU] Implement durable create/start state, fixed image/config checks, request-only read-only volume subpath, network/credential isolation, memory/process limits and bounded messages/results. SQL stays out of Docker argv/environment/labels/logs.
 - [x] T15 [YOU] Implement ownership fencing, stop/kill/inspect/removal, conditional capacity release and query-only recovery. Lifecycle tests cover absent ambiguous create, removal-before-release, daemon/cleanup failures, wrong daemon and revoked owner. Real PostgreSQL/container recovery covers an expired running reservation, duplicate recovery and stale-owner denial.
 - [x] T16 [YOU] Run the seven standalone Docker/frame checks: real query results, fixed restriction inspection, network/mount/sibling/credential denial probes, kernel memory ceiling, timeout removal, wrong-owner rejection and bounded framing. Platform/image/API details and probe limitations are recorded in [delivery evidence](../../ai/sessions/2026-10-04-sql-delivery-commits.md).
-- [ ] T15-V [YOU] Complete the remaining late-create/start and lost-connection/interleaving acceptance cases. Existing failure tests do not establish every lifecycle race.
-- [ ] T16-V [YOU] Inject an actual API/supervisor-process crash and verify recovery/termination. The current real recovery test abandons a running reservation; it does not kill the supervisor process.
+- [x] T15-V [YOU] Verified delayed create after ownership change, late start after removal, start before recovery, start between stopped inspection and DELETE, lost real Docker create/start/kill/delete replies, and lost PostgreSQL COMMIT acknowledgement. Capacity remains occupied on ambiguity; real container absence and staged cleanup are checked before release writes. Ten focused acceptance tests passed; see [precise cases and boundaries](../../ai/sessions/2026-10-04-query-guarantees-fault-acceptance.md). This does not claim every possible interleaving.
+- [x] T16-V [YOU] Killed an actual spawned supervisor immediately after Docker start, then ran the production recovery entry point in a separate process with natural deadline expiry. The occupied reservation remains until recovery confirms removal; stale-owner cleanup is rejected. Measured 30.305 seconds from owner death to recovery completion in the ten-case run. See [evidence](../../ai/sessions/2026-10-04-query-guarantees-fault-acceptance.md); deployed Compose wiring remains T20-V.
 
-Result: isolated execution/recovery code and the listed real-container checks are complete; the remaining failure-injection cases are explicit.
+Result: isolated execution/recovery and the named T15-V/T16-V fault cases passed local acceptance; the follow-up combined runtime run passed 82/82 with zero skips. This is synthetic storage with real Docker/PostgreSQL, not deployed Compose or live S3 proof.
 
 ### Step 5 — HTTP integration, regression and operator handoff
 
@@ -67,7 +69,7 @@ Requirements: R01–R24. Scenarios: S01–S28 and the API portion of S29; fronte
 - [x] T17 [YOU] Register `POST /api/v1/queries`, bounded request/response models, lazy trusted configuration, disconnect cancellation and supervised execution. The route inventory retains both catalog and SQL.
 - [x] T18 [YOU] Run real PostgreSQL + loopback HTTP + Docker with synthetic immutable publication fixtures. Verify Viewer denial, Analyst/Admin exact results, pinned publication, safe errors/headers and confirmed cleanup. Record the test-only staging-volume bridge and synthetic GET client rather than claiming live storage/Compose proof.
 - [ ] T18-V [YOU] Complete the full original HTTP acceptance matrix: all three datasets, additional session/publication race cases, serialized OpenAPI conformance and row/column/byte boundary scenarios through the complete HTTP/container path. Existing engine/service tests prove only their own tested boundaries.
-- [x] T19 [YOU] Run focused and full regression suites, separate opt-in database/container evidence from skips, review diffs and preservation, and commit/push the reconciled histories. Latest combined run: 344 discovered, 292 passed and 52 opt-in skips; separately, 70 auth/catalog checks and all 11 SQL database/HTTP/container checks passed. Earlier standalone Docker evidence remains recorded; those five real probes were not rerun during reconciliation.
+- [x] T19 [YOU] Run focused and full regression suites, separate opt-in database/container evidence from skips, review diffs and preservation, and commit/push the reconciled histories. Delivery-time combined run: 344 discovered, 292 passed and 52 opt-in skips; separately, 70 auth/catalog checks and all 11 SQL database/HTTP/container checks passed. Earlier standalone Docker evidence remains recorded; those five real probes were not rerun during reconciliation.
 - [x] T20 [YOU] Deliver [SQL operator instructions](../../backend/SQL.md) and record setup/configuration requirements, recovery behavior, tested commands and limits.
 - [ ] T20-V [ME] Verify the full deployed SQL Compose wiring, retained-account query and dedicated published-object read authority. Existing catalog operator evidence and connector S3 evidence do not establish SQL's live execution path. Preserve publication rules; do not promote a candidate merely to make the check run.
 - [ ] T20-UI [YOU] In the later frontend slice, verify hidden Viewer SQL controls and denied direct SQL-screen access. Backend Viewer denial is already tested.
@@ -75,7 +77,7 @@ Requirements: R01–R24. Scenarios: S01–S28 and the API portion of S29; fronte
 ## Current checkpoint
 
 Done: SQL backend implementation, the recorded policy/engine/storage/admission/container/HTTP checks, operator documentation and Git delivery.
-Pending: T15-V, T16-V, T18-V, T20-V and later frontend T20-UI; T04 remains an ongoing duty.
+Pending: T18-V, T20-V and later frontend T20-UI; T04 remains an ongoing duty. The follow-up combined regression passed 82/82; earlier intermittent setup-login failures remain recorded with unknown cause.
 Blocker: none for acknowledging completed implementation or beginning preview groundwork. The unchecked items remain real verification work.
 
 Next: [ME] take up Step 5, Refresh and publication, under the [accepted sequencing decision](../../DECISIONS.md#a16--approved-api-flow-and-detailed-contract). Preview remains plan-only; publication activation is a separate implementation dependency, not a SQL test task.

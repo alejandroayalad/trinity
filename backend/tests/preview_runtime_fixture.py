@@ -51,6 +51,10 @@ class BridgeDocker(Docker):
             cli('cp',str(self.sandbox.stage/request),helper+':/staging/'+request)
         finally:
             cli('rm',helper)
+        # Suspend before the real daemon request to test late creation after
+        # recovery has claimed ownership and inspected an absent container.
+        if self.sandbox.before_create:
+            self.sandbox.before_create(reservation)
         identifier = super().create(reservation)
         self.sandbox.created.append(identifier)
         if self.sandbox.after_create:
@@ -93,7 +97,8 @@ class RuntimeSandbox:
         self.volume = volume or 'trinity-preview-test-'+uuid4().hex
         self.deployment = deployment or uuid4()
         self.created = []
-        self.command = self.after_create = self.before_start = self.after_start = self.before_remove = None
+        self.command = self.before_create = self.after_create = None
+        self.before_start = self.after_start = self.before_remove = None
         self.client = ObjectClient()
         self.sleep = None
         if volume is None:

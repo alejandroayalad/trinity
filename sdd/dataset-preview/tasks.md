@@ -60,6 +60,8 @@ Scope: R01–R24; all R evidence scenarios below. This is the automated runtime 
 
 Gate passed for automated evidence: all required preview and shared-runtime checks pass with no unresolved test failure. This proves the synthetic fixture and isolated test runtime, not retained publication provenance. Readiness requires both trusted published provenance and matching deployed runtime protocol. Test success does not authorize publishing retained data or starting the user's operator flow with a fabricated publication.
 
+**Shared-runtime follow-up:** [Ten query-guarantee cases](../../ai/sessions/2026-10-04-query-guarantees-fault-acceptance.md) passed with real Docker/PostgreSQL: distinct V1/V2 values and cross-request cleanup, SQL plus sandbox isolation, lifecycle races, actual reply loss and natural-expiry recovery through a separate entry point. These checks strengthen Step 4; they do not enable Preview or close the retained-account gate. The final combined regression passed 82/82 with zero skips; the record preserves earlier intermittent setup-login failures without claiming their cause was fixed.
+
 ### Step 5 — Operator check and handoff
 
 [ME] Authorized Step 5, closure and commit/push to this branch. [YOU] Added the optional checker and a concrete candidate fixture description. The retained operator gate remains incomplete: read-only inspection found migration 0002 and zero publications. See the [handoff](../../ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md). Closure must preserve this boundary.

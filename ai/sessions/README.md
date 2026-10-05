@@ -11,7 +11,7 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 | [Data evidence and findings](#data-evidence-and-findings) | 5 |
 | [Connector, Parquet and storage](#connector-parquet-and-storage) | 8 |
 | [Architecture and contracts](#architecture-and-contracts) | 15 |
-| [SQL implementation](#sql-implementation) | 9 |
+| [SQL implementation](#sql-implementation) | 10 |
 | [Dataset previews](#dataset-previews) | 7 |
 | [Delivery and working practices](#delivery-and-working-practices) | 7 |
 
@@ -72,6 +72,8 @@ The [catalog delivery guide](../../sdd/catalog-permissions/README.md) separates 
 - [2026-10-03 — Session Security contract and API split](2026-10-03-security-contract-and-api-split.md)
 
 ## SQL implementation
+
+- [2026-10-04 — Query guarantees and fault acceptance](2026-10-04-query-guarantees-fault-acceptance.md)
 
 - [2026-10-03 — Session SQL scope by stage](2026-10-03-sql-scope-by-stage.md)
 - [2026-10-04 — One-table read-only SQL — design and tasks](2026-10-04-single-table-sql-design-tasks.md)

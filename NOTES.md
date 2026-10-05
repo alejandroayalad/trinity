@@ -566,3 +566,23 @@ not establish EIA findings or live deployment. Maintain data evidence — ongoin
 testing. [YOU] preserved the approved Publication scope and drafted the
 [full-system acceptance plan](docs/live-system-acceptance-plan.md). No live execution
 or retained-data changes occurred during Git delivery.
+
+
+## Query guarantee verification — October 4, 2026
+
+[ME] Authorized focused implementation, local runtime tests and checklist updates
+for consistent data, isolation and bounded query execution; excluded commits,
+pushes, deployment and remote-resource changes. [YOU] reused the shared supervisor
+and added ten deterministic acceptance cases, a local reply-loss proxy and a
+pre-create fixture barrier. The tests passed with real Docker/PostgreSQL, including
+natural-expiry recovery through a separate process. No production lifecycle or
+security rule needed changing in the tested cases. T15-V/T16-V now link the
+[precise evidence and regression boundaries](ai/sessions/2026-10-04-query-guarantees-fault-acceptance.md).
+The final combined runtime passed 82/82 with zero skips; the production-writer
+reader test also passed. The record preserves earlier intermittent combined-suite
+login setup failures and does not claim their cause was fixed. Synthetic data is not a new EIA finding; maintain data evidence — ongoing.
+
+[ME] Reviewed this result and subsequently authorized commits, push and merge to
+`main`. [YOU] separated test infrastructure from acceptance documentation for
+reviewable commits and preserved history without squashing. Deployment remains
+outside this Git delivery.

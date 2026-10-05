@@ -67,7 +67,9 @@ class PostgresFixture:
 
     def login(self, role):
         response = self.client.post("/api/v1/auth/login", json={"username":role,"password":self.passwords[role]})
-        self.assertEqual(response.status_code, 200)
+        # Report only the public problem code on failure, never a successful
+        # login body containing a session token.
+        self.assertEqual(response.status_code, 200, response.json().get('code'))
         return {"Authorization":"Bearer " + response.json()["access_token"]}
 
     def setup_done(self):
