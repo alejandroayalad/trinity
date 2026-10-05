@@ -1,5 +1,49 @@
 # Engineering Notes — Trinity
 
+## Retained persona password rotation — October 5, 2026
+
+[ME] Alayala lost the retained persona passwords and asked for the safest bounded rotation, with no change to setup or refresh state, stopping before the mutation. He approved the design. [YOU] Claude (OpenCode) added `python -m trinity.auth.rotate`, which updates only the chosen password hashes, and tests that compare every table before and after. [ME] He ran the rotation on the retained database. [YOU] Read-only snapshots before and after show only the rotated hashes plus the expected effects of his S20 check. See the [rotation session](ai/sessions/2026-10-05-retained-persona-password-rotation.md) and the A20 refinement.
+
+## Schedule settings implementation, Steps 2–4 — October 5, 2026
+
+[ME] Alayala authorized Steps 2, 3 and 4 one at a time. [YOU] Claude (OpenCode) implemented the clock rules, `PUT /api/v1/settings`, `GET /api/v1/settings/schedule-status` and the secret-free `scheduler` worker role, and wrote their tests. Manual Start and the scheduler now share one run-insert function. Measured results, scope corrections and one design correction are in the [tasks](sdd/schedule-settings/tasks.md) and the [implementation evidence](ai/sessions/2026-10-05-schedule-settings-implementation.md). Disposable PostgreSQL and Redis only; nothing ran against retained data.
+
+[ME] Alayala authorized Step 5. [YOU] The S16 outbox dispatch test passed. The S19 image check found that the Linux image lists `localtime` as a timezone, so the server accepted it. [ME] He approved one explicit guard and one test; [YOU] added them, rebuilt the image and S19 passed. [ME] He rotated the retained persona passwords and ran the retained Admin check (S20); it passed: revision 0 → 1, next check at 06:15 New York time, no run started. [YOU] Confirmed this with read-only database checks.
+
+## Schedule settings specification and design — October 5, 2026
+
+[ME] Alayala chose to complete each pending proposal on its own branch, starting with Schedule settings. He did not merge the `frontend` branch into it. [YOU] Claude (OpenCode) traced the settings, refresh admission, migration, transport and worker code and drafted the [specification](sdd/schedule-settings/spec.md).
+
+[ME] Alayala accepted D01 (300-second due window) and D03 (PostgreSQL clock; secret-free `scheduler` role). He rejected the AI's D02 recommendation and set the no-op save rule: check `If-Match` first, so a stale client never gets `200`; identical values then return the current record without a write. [YOU] Recorded D01–D03 under A16/A19 and in the API contract, then drafted the [design](sdd/schedule-settings/design.md) and [tasks](sdd/schedule-settings/tasks.md). The [session](ai/sessions/2026-10-05-schedule-settings-specification.md) has the evidence. Planning only; no code or test was run.
+
+## Pending endpoint proposals — October 5, 2026
+
+[ME] Alayala requested a main-based `pending-endpoints-frontend` branch, one commit per proposal and a push; he clarified planning only. [YOU] Codex cherry-picked the dashboard proposal and drafted [Schedule settings](sdd/schedule-settings/proposal.md) from the current API and admission flow. The [delivery session](ai/sessions/2026-10-05-pending-endpoints-proposals-delivery.md) records scope and checks. Endpoint code and runtime behavior remain unchanged.
+
+[YOU] Added the separate [Plant filter proposal](sdd/plant-filter/proposal.md), covering exact facility/generator IDs, distinct published choices, label/search semantics, authenticated pagination and shared query isolation. Name tie-breaking and search details remain specification decisions.
+
+[YOU] Added [failed-run recovery](sdd/failed-run-recovery/proposal.md), separating rerun, warning resolution and existing publication retry/discard. It covers atomic receipts, revision checks, stopped-writer evidence, new-run linkage and read-side action eligibility. The three additions are proposals only and retain implementation/runtime gates.
+
+## Dashboard backend planning — October 5, 2026
+
+[ME] Alayala prioritized dashboard backend planning, then schedule settings, Plant filter and failed-run recovery. [YOU] Codex mapped the designed screen to the two existing national API contracts and implemented preview flow, and drafted the [dashboard proposal](sdd/national-dashboard/proposal.md). The [session](ai/sessions/2026-10-05-dashboard-backend-priority.md) records the latest-card/range-end distinction, publication consistency and verification boundaries. Concurrent frontend work is preserved. This is planning only; no endpoint implementation or runtime readiness is claimed.
+
+[ME] Alayala rejected the AI's latest-card recommendation and selected range-end cards, citing the A16 `summary` rule. [YOU] Verified that rule in the API contract and recorded the choice in the proposal and session. No API change.
+
+[ME] Alayala asked to begin the dashboard specification. [YOU] Drafted the [specification](sdd/national-dashboard/spec.md) from the traced preview, publication and catalog code. D01–D03 (input order, rounding of negative values, diagnostics scope) await his decision. Planning only.
+
+[ME] Alayala accepted D01–D03. [YOU] Recorded them under A16/A19 and in the API contract, and marked the specification approved. No runtime or implementation claim.
+
+[ME] Alayala requested push, design and tasks. [YOU] Drafted the [design](sdd/national-dashboard/design.md) and [tasks](sdd/national-dashboard/tasks.md): reuse the national preview read with no runtime or migration change, exact fraction rounding, four authorized steps. Offline design checks only; no implementation.
+
+[ME] Alayala selected a separate `dashboard/` backend folder instead of `queries/` and approved the shared preview execution switch. [YOU] Created the empty package, updated design, tasks, `docs/backend.md` and A15.
+
+[ME] Requested continuation of dashboard Steps 2–3. [YOU] Implemented pure inputs/calculation/models and service/routes with the shared preview execution path. Offline checks: 16 dashboard pure, 23 service/HTTP and 28 existing preview unit tests passed; full regression: 414 passed, 176 integration tests skipped. Two necessary additions to the original file list registered the exact transport paths and updated the health route inventory. Query/runtime/staging source and dependency pins remain unchanged. [ME] explained that two-place rounding removes the useful meaning of the negative sign for rounded zero; [YOU] confirmed this case. [ME] also explained that the summary answers for the selected end date; substituting an earlier observation would make missing data look valid. [YOU] recorded both observed explanations and completed the Step 2 understanding checkbox. Execution stays disabled by default. See the [implementation evidence and limits](ai/sessions/2026-10-05-dashboard-pure-and-service-implementation.md).
+
+[ME] Authorized dashboard Steps 4–5 and requested a handoff. [YOU] Added real engine, disposable PostgreSQL, HTTP and container acceptance and `--dashboard` runner support. The combined run passed 101 tests with zero skips, including 19 national cases. The final offline run passed 415 tests and skipped 194 opt-in cases. No production source change or image build was needed for Step 4. Read-only retained checks found no active publication and an older running API without national/preview routes or the preview switch. Stopped the operator check as not ready; no retained data or service change. [ME] Retained Viewer/Analyst actions remain unobserved. See the [runtime acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md) for precise results and remaining prerequisites.
+
+[ME] Subsequently authorized focused commits, push and merge of the dashboard work into `pending-endpoints-frontend`. [YOU] separated pure code, service/routes, real acceptance and documentation for review, and verified the clean target branch was an ancestor. This Git delivery does not activate retained execution or complete the blocked operator check.
+
 Current status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026. Alayala owns S3 configuration next. See the [current closure record](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md). This is the Engineering Notes document required by Arkham. The dated entries below preserve their original scope and evidence; early no-code/no-test statements describe the October 2 planning discussion.
 
 ## Human and AI contributions
@@ -586,3 +630,37 @@ login setup failures and does not claim their cause was fixed. Synthetic data is
 `main`. [YOU] separated test infrastructure from acceptance documentation for
 reviewable commits and preserved history without squashing. Deployment remains
 outside this Git delivery.
+
+## Failed-run recovery specification — October 5, 2026
+
+[ME] Selected recovery next after settings and authorized proposal/specification commit and push. [YOU] updated the proposal priority and drafted the two-command specification with 12 requirements and 12 acceptance scenarios, based on current code and A16/A19/A20/A23/A24. P01 (current-settings snapshot for a new run) is a recommendation awaiting review, not an accepted decision. Design, implementation and runtime acceptance remain pending. See the [delivery record](ai/sessions/2026-10-05-failed-run-recovery-specification-delivery.md).
+
+[ME] Accepted recovery P01 and authorized design/tasks after acceptance delivery. [YOU] recorded the decision under A16 and reconciled proposal/specification status. Implementation remains pending.
+
+[YOU] After pushing P01 acceptance as `7d6199b`, drafted recovery design D01–D07 and five bounded task steps. Source tracing distinguished Refresh child-stop evidence from Publication stop evidence and identified the lock-order reconciliation required before implementation. See the [design/tasks record](ai/sessions/2026-10-05-failed-run-recovery-design-and-tasks.md). Design review and implementation authorization remain pending; no runtime checks were performed.
+
+## Failed-run recovery Step 2 — October 5, 2026
+
+[ME] Accepted the design and asked to start tasks. [YOU] implemented strict recovery command parsing, canonical receipt values and a read-only evidence-based eligibility helper; traced failure producers and documented the lock-order reconciliation needed for Step 3. Affected suites discovered 175 tests: 61 passed, 114 opt-in runtime skips, zero failures/errors, including 29 new recovery tests. The first broader launch failed because a spawned auth process could not reload stdin; the normal unittest module launch passed without auth changes. See [Step 2 evidence](ai/sessions/2026-10-05-failed-run-recovery-step-2.md). No recovery routes, live changes, migrations, commits or pushes were made. Human explanation and Step 3 authorization remain pending.
+
+## Failed-run recovery Step 3 — October 5, 2026
+
+[ME] Explained lease expiry versus generation fencing and explicitly authorized Step 3. [YOU] implemented both recovery routes, one-transaction abandonment/rerun orchestration, current-policy admission, common Admin recovery projections and candidate command lock-order alignment. The full offline suite discovered 662 tests: 462 passed, 200 opt-in skips, zero failures/errors. Six new PostgreSQL rollback/linkage/outbox tests are authored but unexecuted. See [Step 3 evidence](ai/sessions/2026-10-05-failed-run-recovery-step-3.md). No migration, dependency, retained runtime action, commit or push occurred. Step 4 acceptance and the human failure-case explanation remain pending.
+
+## Failed-run recovery Step 4 — October 5, 2026
+
+[ME] Authorized Step 3 commit/push and Step 4 disposable acceptance. [YOU] pushed `bff8446` (implementation/tests) and `da8be15` (design/evidence), and verified the remote head. Added 22 runtime acceptance cases for competing commands, real HTTP response loss, Redis outage/delivery, measured worker termination, stale publisher commits and database lock timeout. The final focused suite passed 75 checks with no skips; PostgreSQL auth passed 25 and Publication database checks passed 18. The final combined Refresh/Publication run discovered 121: 120 passed, 1 query-image-dependent published-reader check skipped, zero failures/errors. Disposable services were cleaned up; retained containers remained healthy. One old Publication assertion was updated for the newly accepted recovery actions while retaining its invalid-evidence retry rejection. See [Step 4 evidence](ai/sessions/2026-10-05-failed-run-recovery-step-4.md) for broader results and corrections. The user subsequently authorized slice delivery. [YOU] committed/pushed runtime acceptance as `2812ab9` and verified the matching remote head; the handoff documents are delivered in a following documentation commit. Full settings mutation/scheduler integration and Step 5 retained operator acceptance remain open; no retained state, live EIA/S3, migrations or dependencies changed.
+
+
+## Plant filter implementation — October 5, 2026
+
+[ME] Requested direct completion without new SDD and authorized commit, push and
+merge into `pending-endpoints-frontend`. [YOU] implemented the two typed filter
+choice endpoints, isolated full-range distinct computation, latest-label search,
+purpose-separated cursors and shared permission/rate/capacity supervision. No new
+dependency, migration or live EIA/S3 access was used. The [implementation record](ai/sessions/2026-10-05-plant-filter-implementation.md)
+records automated checks, corrections, integration and the retained/frontend
+boundary. The pre-integration combined runtime passed 128 checks with no skips.
+After preserving the latest schedule work, 27 choice and 112 auth/catalog/settings
+checks passed without skips; the offline suite passed 532 with 258 opt-in skips. Synthetic fixtures do not create new EIA findings; maintain data
+evidence — ongoing.

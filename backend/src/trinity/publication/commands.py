@@ -24,7 +24,8 @@ class PublicationCommands(PublicationService):
         """Return an original receipt or apply one eligible candidate action."""
         fingerprint = sha256(canonical_json({}))
         with self.transaction() as c:
-            actor = _authorize(c,token,'candidate:review' if action=='approve' else 'refresh:recover',lock=True)
+            capability = 'candidate:review' if action == 'approve' else 'refresh:recover'
+            _authorize(c, token, capability)
             key = parse_command(raw,keys,pairs)
             try:
                 parsed = UUID(version_id)
@@ -33,7 +34,10 @@ class PublicationCommands(PublicationService):
                 version_id = parsed
             except (ValueError,TypeError,AttributeError):
                 raise Problem(422,'invalid_request') from None
+            # All Admin lifecycle commands lock admission before user/session
+            # rows. This avoids reversed waits against Start and Run again.
             lock_control(c)
+            actor = _authorize(c, token, capability, lock=True)
             receipt = read_command(c,key)
             if receipt:
                 if any(receipt[k] != value for k,value in (

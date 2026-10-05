@@ -100,16 +100,26 @@ class SafeTransport:
                     if not message.get("more_body", False):
                         break
             preview = scope['method'] == 'GET' and re.fullmatch(
-                r'/api/v1/datasets/[^/]+/preview', scope.get('path', '')) is not None
+                r'/api/v1/datasets/[^/]+/(?:preview|facilities|generators)', scope.get('path', '')) is not None
             refresh = scope['method'] == 'GET' and re.fullmatch(
                 r'/api/v1/refresh-runs(?:/[^/]+)?', scope.get('path', '')) is not None
+            recovery = ((scope['method'] == 'POST' and re.fullmatch(
+                r'/api/v1/refresh-runs/[^/]+/rerun', scope.get('path', '')) is not None)
+                or (scope['method'] == 'DELETE' and re.fullmatch(
+                r'/api/v1/refresh-runs/[^/]+/warning', scope.get('path', '')) is not None))
+            # These exact paths validate pairs and bodies after session checks.
+            # Keep transport size limits here and reject all other query paths.
+            national = scope['method'] == 'GET' and scope.get('path', '') in (
+                '/api/v1/dashboard/national', '/api/v1/metrics/offline-share',
+            )
             if len(scope.get('query_string', b'')) > 65536:
                 raise Problem(413, "request_too_large")
-            if scope.get("query_string") and not (preview or refresh):
+            if scope.get("query_string") and not (preview or refresh or national or recovery):
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "GET" and body and not (preview or refresh):
+            if scope["method"] == "GET" and body and not (preview or refresh or national or recovery):
                 raise Problem(422, "invalid_request")
-            if scope["method"] == "POST":
+            # JSON bodies arrive only through POST commands and PUT /settings.
+            if scope["method"] in ("POST", "PUT"):
                 headers = [v for k, v in scope["headers"] if k.lower() == b"content-type"]
                 if len(headers) != 1 or headers[0].split(b";", 1)[0].strip().lower() != b"application/json":
                     raise Problem(415, "unsupported_media_type")

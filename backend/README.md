@@ -1,6 +1,6 @@
 # Trinity Python backend
 
-The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). Preview/dashboard rows and refresh workers remain pending.
+The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). See the national dashboard acceptance and handoff section below for the implemented read routes and their retained-readiness boundary.
 
 ## Setup
 
@@ -83,6 +83,8 @@ All host clients reach the containerized API through one Docker gateway address.
    ```
 
    The seed command prompts only for missing `viewer`, `analyst` and `admin` passwords, 15–1024 characters. It stores salted hashes. Reruns preserve IDs, passwords, roles, account status and history. An existing persona with a different role or inactive status produces a safe failure; there is no automatic reset. Seed and migration commands must finish before product requests can succeed.
+
+   If you no longer know a persona password, rotate it explicitly instead: `python -m trinity.auth.rotate viewer analyst admin` (name only the personas you need). It asks twice for each new password with hidden input and updates only that persona's password hash in one transaction. It refuses a missing, inactive or wrong-role persona. It does not revoke sessions, reset login limits or change settings, runs or publication state. It prints only the rotated names.
 
 3. Start one API process from `backend/`:
 
@@ -452,6 +454,23 @@ TestClient checks; PostgreSQL/loopback HTTP/container cases skip. Use the explic
 Step 4 commands below for that separate evidence. See [Step 3 evidence](../ai/sessions/2026-10-04-dataset-preview-step-3.md).
 
 
+## National dashboard acceptance and handoff
+
+`GET /api/v1/dashboard/national` and `GET /api/v1/metrics/offline-share` are implemented in `dashboard/`. All three authenticated roles can read national data. The dashboard accepts the default 30-day range, `preset=30d|90d|1y`, or both `start` and `end`; the metric requires `period`. Dates and source decimal strings remain exact. Missing selected dates produce `not_reported`; the summary always represents the selected end date.
+
+Both routes reuse the preview execution switch. `create_app(enable_preview=False)` keeps execution disabled by default. No new environment switch or cursor key is needed for the national routes. Normal startup does not enable them automatically; retained deployment and legitimate publication setup are separate work.
+
+From the repository root, with the existing matched-image settings described below:
+
+```sh
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --dashboard --failfast
+backend/.venv/bin/python backend/tests/run_local_sql_checks.py --all --failfast
+```
+
+`--dashboard` selects real DataFusion, disposable PostgreSQL and national container/HTTP acceptance. `--all` includes these alongside SQL, preview, auth and catalog. The database runner always creates its own private Unix-socket cluster and overrides the test DSN; never replace that guard with a retained database. Container checks require `TRINITY_TEST_QUERY_IMAGE` and `TRINITY_TEST_DOCKER_SOCKET`. A run with skipped container tests is not full acceptance. Tests use synthetic stored bytes and a disposable staging bridge; they do not prove live S3 access or deployed Compose wiring.
+
+The current worktree checks use the existing sibling Python environment with `PYTHONPATH` set to this checkout's source/tests because this worktree has no `.venv`. Fresh locked installation remains unverified. See the [Step 4–5 handoff](../ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md) for actual commands, final counts, fault timings and retained-readiness observations.
+
 ## Preview acceptance — Step 4
 
 Automated acceptance passed: 432 distinct tests across offline, disposable
@@ -460,7 +479,7 @@ were covered by the explicit suites. Retained publication linkage and the
 operator check are still pending; preview execution remains disabled.
 
 The disposable SQL runner accepts `--preview` for SQL/preview acceptance and
-`--all` to include auth/catalog database regressions. `--runtime-only` selects the
+`--all` to include auth/catalog database regressions and national dashboard acceptance. `--runtime-only` selects the
 15 preview container cases (including the Step 5 checker); `--failfast` stops at the first failure. It initializes a fresh local
 PostgreSQL 17.11 cluster, migrates that temporary database through 0004, seeds
 complete synthetic producer evidence, and stops only its own cluster. It does
@@ -667,3 +686,49 @@ Set `TRINITY_TEST_QUERY_IMAGE` to the existing immutable `sha256:...` image ID a
 Without them, container tests skip and do not establish that gate. The service runner
 owns only its temporary PostgreSQL cluster and disposable Redis container. Synthetic
 storage fixtures establish no new EIA finding or live S3 protection claim.
+
+
+## Plant and generator filter choices
+
+Analyst/Admin can use `GET /api/v1/datasets/{dataset_key}/facilities` for
+`facility_outages` or `generator_outages`. The generator route is
+`GET /api/v1/datasets/generator_outages/generators?facility=0046`; the source ID
+is exact, so `0046` and `46` are different values. Viewer and unsupported
+dataset/route combinations receive `404 dataset_not_found` before file access.
+
+Both routes accept `start`, `end`, `limit` and `cursor`. Dates use preview's
+30-day defaults and maximum 366-day inclusive range. Page size defaults to 50
+and caps at 100. Facilities also accept `search`; generators require `facility`
+and reject `search`. Duplicate, empty and unsupported parameters are rejected.
+
+Choices come from all matching published observations before page slicing.
+Facilities display the latest non-null name in the range, using binary ascending
+name order for same-date ties. Search matches the ID or that displayed name by
+literal Unicode case folding, with no normalization. `%` and `_` are ordinary
+characters. Earlier names do not match. Generator IDs are distinct within the
+selected Plant. Empty results return `items: []` and `next_cursor: null`.
+
+Repeat the same effective inputs with `next_cursor` to continue. A changed
+publication returns `409 publication_changed`; restart from the first page.
+Changing range, search, page size or parent invalidates a cursor. These choices
+never modify submitted SQL. The frontend must clear an obsolete generator
+selection when its parent Plant changes.
+
+The API reuses `enable_preview`, its configured cursor key ring, published S3
+reader, query image, staging volume and network-disabled execution supervisor.
+Execution remains disabled by default; a current API and matching query image
+plus an active publication are required. No dependency or migration is added.
+
+From `backend`, use the repository's locked Python environment:
+
+```bash
+uv run --locked python -m unittest discover -s tests -p 'test_choice*.py' -v
+uv run --locked python tests/run_local_sql_checks.py --choices
+```
+
+The second command always creates a disposable PostgreSQL cluster. Set the
+existing `TRINITY_TEST_QUERY_IMAGE` to an immutable image ID built from this
+source and `TRINITY_TEST_DOCKER_SOCKET` to the local socket to include the real
+container checks. `--all` also includes choices with SQL, preview, national,
+auth and catalog regression checks. Skipped runtime tests are not acceptance.
+See [measured evidence](../ai/sessions/2026-10-05-plant-filter-implementation.md).

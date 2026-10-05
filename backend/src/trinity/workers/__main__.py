@@ -4,6 +4,8 @@ Refresh requires the EIA/storage settings and can perform external work. Operato
 must complete setup and deployment gates before enabling roles for retained data.
 Publication verifies registered evidence and activates it atomically. Its outbox
 and operator recovery modes load no EIA key and never activate publication.
+The scheduler admits due daily occurrences in PostgreSQL only; it loads no
+EIA key, S3 credential or Redis URL.
 """
 import argparse
 import asyncio
@@ -30,6 +32,14 @@ async def serve(role):
     consumer=None
     database.open()
     try:
+        if role=='scheduler':
+            # The scheduler only writes PostgreSQL rows. Branch before any
+            # Redis, EIA or S3 setting is read, so the role starts with
+            # TRINITY_DATABASE_URL alone and cannot do external work.
+            from trinity.workers import scheduler
+            scheduler.configure_logging()
+            await scheduler.run(scheduler.SchedulerService(database),stop)
+            return
         if role in ('publication','publication-outbox'):
             from trinity.publication.dispatch import PublicationDispatch
             from trinity.workers.publication import PublicationWorker
@@ -68,7 +78,8 @@ def main(argv=None):
         from trinity.publication.recovery import cli
         return cli(arguments[1:])
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('role',choices=('outbox','refresh','recovery','publication','publication-outbox','publication-recover'))
+    parser.add_argument('role',choices=('outbox','refresh','recovery','publication','publication-outbox',
+                                        'publication-recover','scheduler'))
     args=parser.parse_args(arguments)
     try:
         asyncio.run(serve(args.role))

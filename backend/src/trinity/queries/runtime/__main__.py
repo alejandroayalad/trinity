@@ -6,12 +6,13 @@ import sys
 from trinity.contracts.queries import BINDING_FIELDS, MAX_REQUEST_BYTES, read_request
 from trinity.queries.runtime.engine import execute_local, QueryExecutionError
 from trinity.queries.runtime.preview import execute_preview
+from trinity.queries.runtime.choices import execute_choices
 
 
 def run_request(raw, directory):
     """Validate kind/digest before execution and echo the exact request binding."""
     request, operation = read_request(raw)
-    execute = execute_preview if request['operation_kind'] == 'preview' else execute_local
+    execute = {'preview': execute_preview, 'choices': execute_choices, 'sql': execute_local}[request['operation_kind']]
     result = execute(operation, directory)
     return {**{key: request[key] for key in BINDING_FIELDS}, 'result': result}
 
