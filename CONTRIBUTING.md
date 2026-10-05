@@ -3,6 +3,8 @@
 Write code that a human can understand, review, and debug.
 These rules apply to human-written and AI-generated code.
 
+For design work, follow the shared [design authorship rules](AGENTS.md#design-authorship-across-documents) and [A25](DECISIONS.md#a25--figma-design-and-brand-handoff). Record human Figma design, ChatGPT brand work and any later Claude adaptation separately in Engineering Notes and the relevant session. Keep attribution in those records, not in code comments.
+
 Write for a backend developer who is learning Python and this project.
 The reader should be able to follow a slice from its source files without
 needing the chat history. Prefer enough explanation to teach the flow over

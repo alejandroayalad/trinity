@@ -38,6 +38,9 @@ def main():
                             "trinity_test_auth"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             os.environ["TRINITY_TEST_DATABASE_URL"] = (
                 "postgresql://trinity_test_owner@/trinity_test_auth?host=" + quote(str(socket), safe=""))
+            if "--frontend-browser" in sys.argv or "--frontend-data" in sys.argv:
+                from run_frontend_browser import main as browser_checks
+                return browser_checks()
             suite = unittest.TestSuite([
                 unittest.defaultTestLoader.discover(str(backend / "tests"), pattern=pattern)
                 for pattern in ("test_auth*.py", "test_catalog*.py", "test_settings*.py")

@@ -1,5 +1,56 @@
 # Local development only: PostgreSQL and the API, published on loopback.
 # Supply TRINITY_POSTGRES_PASSWORD in the shell; see backend/README.md.
+#
+# DRAFT for review: Redis and the background workers use the opt-in "workers"
+# profile, so `docker compose up` still starts only postgres and api.
+# Use with: docker compose --profile workers up ...
+# Worker variables use ${VAR:-} rather than ${VAR:?}: Compose resolves required
+# variables for every service, including inactive profiles, which would break the
+# default up. Missing settings make the worker exit with a safe message instead.
+#
+# UNRESOLVED, not decided by this draft:
+# - Redis persistence (A7 open question). The redis_data volume keeps whatever
+#   the image default writes; that default is not an accepted choice.
+# - PostgreSQL version: this file uses 17.11; DECISIONS A17 selects 18.6.
+# - Redis authentication and TLS: Redis has no published port and no password.
+# - Restart policy for workers: none set; recovery needs proof that a worker stopped.
+x-worker: &worker
+  image: trinity-api:local
+  profiles: [workers]
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  environment: &worker-env
+    TRINITY_DATABASE_URL: postgresql://trinity@postgres:5432/trinity
+    TRINITY_POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    # No credentials in this URL; Redis is reachable only on the Compose network.
+    TRINITY_REDIS_URL: redis://redis:6379/0
+  secrets: [postgres_password]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+# Roles that also hold refresh custody files and use S3. TRINITY_S3_ENDPOINT_URL
+# is left out on purpose: an empty value is rejected; add it only for a non-AWS
+# endpoint. AWS credentials come from the host ~/.aws (see x-aws-volumes).
+x-custody-env: &custody-env
+  <<: *worker-env
+  TRINITY_REFRESH_ROOT: /var/lib/trinity/refresh
+  TRINITY_S3_BUCKET: ${TRINITY_S3_BUCKET:-}
+  TRINITY_S3_PREFIX: ${TRINITY_S3_PREFIX:-}
+  TRINITY_S3_REGION: ${TRINITY_S3_REGION:-}
+  # The profile used by the October 4 live S3 flow.
+  AWS_PROFILE: trinity-writer
+
+# Only refresh, recovery and publication use S3. The whole host ~/.aws is
+# mounted writable at the image user's HOME (/home/trinity) because `aws login`
+# refreshes its token cache there. Tradeoff: these containers see every host
+# AWS profile.
+x-aws-volumes: &aws-volumes
+  - refresh_root:/var/lib/trinity/refresh
+  - ${HOME}/.aws:/home/trinity/.aws
+
 services:
   postgres:
     image: postgres:17.11-bookworm
@@ -46,9 +97,118 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:8.10.2
+    profiles: [workers]
+    # BullMQ needs noeviction: an evicted key silently loses a job.
+    # Persistence flags are intentionally absent (UNRESOLVED, see the header).
+    command: ["redis-server", "--maxmemory-policy", "noeviction"]
+    # The image's redis account; running as it skips the root start-up step.
+    user: "999:999"
+    # No ports: only services on the Compose network can reach Redis.
+    volumes:
+      - redis_data:/data
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Custody checks require the worker account (10001) to own the refresh root
+  # with no group/other access. Same pattern as query_stage_init.
+  refresh_root_init:
+    image: trinity-api:local
+    profiles: [workers]
+    user: "0:0"
+    read_only: true
+    network_mode: none
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: [no-new-privileges:true]
+    entrypoint: ["python", "-c"]
+    command:
+      - |
+        import os, stat
+        current = os.stat('/refresh')
+        if current.st_uid == 0 and not os.listdir('/refresh'):
+            os.chmod('/refresh', 0o700)
+            os.chown('/refresh', 10001, 10001)
+        elif current.st_uid != 10001 or current.st_gid != 10001 or stat.S_IMODE(current.st_mode) != 0o700:
+            raise SystemExit('Refresh root ownership requires operator review.')
+    volumes:
+      - refresh_root:/refresh
+
+  # Starts due scheduled runs. Needs PostgreSQL only.
+  scheduler:
+    <<: *worker
+    command: ["python", "-m", "trinity.workers", "scheduler"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Sends committed refresh outbox rows to BullMQ.
+  outbox:
+    <<: *worker
+    command: ["python", "-m", "trinity.workers", "outbox"]
+
+  # Runs the refresh pipeline. The only role that loads the EIA key.
+  refresh:
+    <<: *worker
+    # Read the key from the secret file so it is not in `docker inspect`.
+    entrypoint:
+      - sh
+      - -c
+      - 'EIA_API_KEY="$$(cat /run/secrets/eia_api_key)"; export EIA_API_KEY; exec docker-entrypoint.sh "$$@"'
+      - refresh-entrypoint
+    command: ["python", "-m", "trinity.workers", "refresh"]
+    depends_on: &custody-depends
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      refresh_root_init:
+        condition: service_completed_successfully
+    environment: *custody-env
+    secrets: [postgres_password, eia_api_key]
+    volumes: *aws-volumes
+
+  # Redispatches or imports work from stopped refresh workers. No EIA key.
+  recovery:
+    <<: *worker
+    command: ["python", "-m", "trinity.workers", "recovery"]
+    depends_on: *custody-depends
+    environment: *custody-env
+    volumes: *aws-volumes
+
+  # Sends committed publication outbox rows to BullMQ. No S3 or EIA access.
+  publication-outbox:
+    <<: *worker
+    command: ["python", "-m", "trinity.workers", "publication-outbox"]
+    depends_on: *custody-depends
+    environment:
+      <<: *worker-env
+      TRINITY_REFRESH_ROOT: /var/lib/trinity/refresh
+    volumes:
+      - refresh_root:/var/lib/trinity/refresh
+
+  # Verifies and activates candidates. Run exactly one; do not scale.
+  publication:
+    <<: *worker
+    command: ["python", "-m", "trinity.workers", "publication"]
+    depends_on: *custody-depends
+    environment: *custody-env
+    volumes: *aws-volumes
+
 secrets:
   postgres_password:
     environment: TRINITY_POSTGRES_PASSWORD
+  # Used only with the workers profile.
+  eia_api_key:
+    environment: EIA_API_KEY
 
 volumes:
   postgres_data:
+  redis_data:
+  refresh_root:

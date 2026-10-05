@@ -1,0 +1,53 @@
+# Trinity frontend
+
+React, TypeScript and Vite implement the approved steps 3–9 on top of the
+existing scaffold. See the [task record](../sdd/frontend/tasks.md) and
+[implementation evidence](../ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md).
+Human visual acceptance and retained-system enablement remain separate.
+
+## Run locally
+
+Use Node.js **24.21.0** (`.nvmrc`). From this directory:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open the URL Vite prints. `/api` proxies to `http://127.0.0.1:8000` by default.
+Start the [backend and provision local personas](../backend/README.md#local-api-and-three-personas)
+first. Enter your own provisioned account and password. No password or EIA key
+belongs in frontend configuration. `TRINITY_API_TARGET` overrides the proxy for
+disposable tests. An absent publication produces the waiting state; this UI does
+not activate query execution or publish a dataset.
+
+## Verify
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+The build command also checks the bundle for forbidden prototype controls,
+fixtures and test identities. Component tests replace HTTP and are offline evidence.
+
+Browser checks use real loopback HTTP and their own native PostgreSQL 17.11
+cluster. From `backend/`, after the locked environment and frontend packages exist:
+
+```sh
+uv run --locked python tests/run_local_auth_checks.py --frontend-browser
+uv run --locked python tests/run_local_auth_checks.py --frontend-data
+```
+
+Install the pinned test browser first with `npx playwright install chromium`
+from `frontend/`. The data command additionally requires a matching query image
+and local Docker socket through `TRINITY_TEST_QUERY_IMAGE` (immutable `sha256:…`
+ID) and `TRINITY_TEST_DOCKER_SOCKET`. Rebuild the existing backend query Dockerfile
+when its runtime code changes. These tests use synthetic Parquet and synthetic
+object storage with real isolated execution, never retained accounts or EIA.
+
+The runner supplies generated persona credentials only to the test process
+environment. Traces and videos are disabled. Selected data screenshots go to
+ignored `test-results/`; they are examples, not Figma approval or data findings.

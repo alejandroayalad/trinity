@@ -48,12 +48,27 @@ Current status: Parquet preparation Steps 1–5 implemented and offline-tested; 
 
 ## Human and AI contributions
 
+Current design attribution: see [Figma mockups, brand and Claude handoff](#figma-mockups-brand-and-claude-handoff--october-4-2026). The table below retains the original planning discussion's scope.
+
 | Contributor | Observed contribution |
 |---|---|
 | Alayala | Set the product direction, challenged the DuckDB recommendation, selected A1–A4, defined shared initial setup, corrected refresh scope, and chose Obsidian for these drafts. Fetched the EIA data, analyzed it, and wrote the original findings. Reconfirmed A4 after discussing daily data. |
 | AI | Read the brief and existing notes, checked official technical documentation during the discussion, explained alternatives, and drafted decisions, session summaries, and these documents. Formatted alayala's findings, added evidence limits, ran separate read-only CSV checks, and wrote the session handoff. |
 
 No application code was written in this discussion. There is no generated-versus-handwritten code inventory yet. Update this section with concrete files or changes once code exists. AI-drafted prose is not evidence that the author wrote code or independently debugged it.
+
+## Figma mockups, brand and Claude handoff — October 4, 2026
+
+| Contributor | Contribution and status |
+|---|---|
+| [ME] Alayala | Created the interface mockups himself in Figma. Supplied eleven screenshots covering login, no-publication, role-specific dashboards, catalog, plant preview, SQL, refresh history/review and schedule settings. Selected these mockups and the earlier brand reference for the planned Claude handoff. |
+| [YOU] ChatGPT | Contributed the earlier Trinity brand reference, as stated by alayala. The supplied board contains the symbol, wordmark, palette and nuclear imagery. This contribution is separate from alayala's Figma interface design. |
+| [YOU] Claude — planned | Will receive the mockups and brand reference to apply the brand to the interface. No completed Claude adaptation or frontend implementation is claimed in this record. |
+| [YOU] Codex — this documentation task | Recorded authorship, preserved the twelve supplied images, updated relevant current documents and added shared attribution guidance for subsequent work. |
+
+The workflow is **human Figma design → ChatGPT brand reference → planned Claude adaptation → human review**. [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) records the selected direction. Preserve alayala's layouts and flows while applying the brand; identify later AI design changes and generated code separately. Use this attribution in every document that describes the work, with links here instead of duplicate histories.
+
+Evidence: alayala's explicit authorship statement and the [twelve retained references](ai/sessions/2026-10-04-figma-brand-handoff.md#supplied-references). Each image copy matched its original by SHA-256. Native Figma history and the earlier ChatGPT conversation were not inspected. Screenshots contain illustrative data, not new EIA findings or working-application proof. Claude adaptation and human review remain pending. Documentation verification is recorded in the [session](ai/sessions/2026-10-04-figma-brand-handoff.md#corrections-and-verification).
 
 ## Concrete AI mistakes and corrections
 
@@ -664,3 +679,64 @@ boundary. The pre-integration combined runtime passed 128 checks with no skips.
 After preserving the latest schedule work, 27 choice and 112 auth/catalog/settings
 checks passed without skips; the offline suite passed 532 with 258 opt-in skips. Synthetic fixtures do not create new EIA findings; maintain data
 evidence — ongoing.
+
+## Frontend steps 3–9 continuation — October 5, 2026
+
+[ME] Asked to continue and finish frontend steps 3–9. [YOU] Codex implemented
+the application pages and their missing national, settings, choices and recovery
+backend routes, plus the explicit scheduler role. The work was initially local
+and uncommitted. [ME] subsequently requested a branch push; [YOU] prepared focused
+backend, frontend and evidence commits. No EIA key or retained-data mutation was
+part of this continuation.
+
+[YOU] Ran the frontend build/checks, offline Python regression, disposable
+PostgreSQL checks, isolated Docker queries and real browser scenarios. See the
+[measured evidence and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+and [updated tasks](sdd/frontend/tasks.md). Human visual review and the complete
+acceptance matrix remain open; synthetic data and screenshots are not EIA findings.
+Maintain data evidence — ongoing.
+
+This is Codex implementation work, separate from the earlier Claude scaffold and
+alayala's original Figma design. Preserve the
+[canonical design attribution](#figma-mockups-brand-and-claude-handoff--october-4-2026)
+and A25. No later AI contribution changes the authorship of the original mockups.
+
+
+### Recovery and schedule component coverage — October 5, 2026
+
+[ME] Prioritized positive recovery and basic schedule behavior.
+[YOU] Added eight component tests; the full frontend suite passed 77 tests.
+See [scope, corrections and evidence limits](ai/sessions/2026-10-05-recovery-schedule-component-coverage.md).
+This is synthetic API/component evidence. Real-browser recovery and extended
+schedule editing remain open; original design attribution is unchanged.
+
+### Redis and worker Compose services — October 5, 2026
+
+[ME] Asked for Redis and BullMQ services under A6/A7, reviewed the draft and
+approved `compose.yaml`. Kept Redis persistence and the PostgreSQL 17.11 vs A17
+18.6 mismatch unresolved.
+[YOU] Drafted the opt-in `workers` profile: `redis:8.10.2` (noeviction, no
+published port), `refresh_root_init`, and the six `trinity.workers` roles with
+per-role settings. `docker compose config` passed with and without the profile,
+with EIA/AWS/S3 variables unset. No container ran; no EIA or AWS access was used.
+Open: Redis persistence (A7), PostgreSQL version, Redis auth/TLS, worker restart
+policy, and the API refresh cursor keys. Runtime behavior is unverified.
+
+[ME] Ran live refreshes #1–#4 from the UI; all stopped at S3 storage with
+`storage_configuration`. Selected the fix: mount `~/.aws` writable into the S3
+workers with `AWS_PROFILE=trinity-writer`.
+[YOU] Traced the cause (an AWS config file was mounted as a credentials file) and
+changed `compose.yaml`. Fixed `Diagnostics` in `frontend/src/pages/shared.tsx`:
+it showed passed D01–D06 checks (`affected_count` 0) as review warnings. Added a
+regression test; the frontend suite (78 tests), typecheck and lint passed.
+Credential resolution in the container and a successful S3 save remain unverified.
+
+### Frontend and main integration — October 5, 2026
+
+[ME] Requested merging `frontend` into `main` and decided that main's reviewed
+backend wins every conflict. [YOU] Merged on `integrate/frontend-main` without
+squashing. The frontend branch's parallel backend for dashboard, settings, choices
+and recovery was replaced by main's versions from PR #13. Its frontend-only backend
+tests (`test_frontend_*`) and modules were removed; the browser runner hook was kept.
+Frontend code was then checked against main's API. Measured checks are in the
+merge commit; nothing was pushed.
