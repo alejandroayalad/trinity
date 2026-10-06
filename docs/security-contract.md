@@ -158,6 +158,44 @@ stop confirmation and A23 Refresh recovery are unchanged.
 
 A16's single refresh lifecycle remains reserved during preparation, review, publication and unresolved failures. Approval/discard cannot both succeed. Duplicate requests reuse recorded work; stale workers cannot change state or publish. Preserve settings/action revisions, durable command receipts, outbox dispatch, same-candidate publication retry and permanent discard. Queries keep using the previous publication until the new version is active.
 
+## Verified diagnostic-summary cache
+
+[A19's October 6 refinement](../DECISIONS.md#a19--security-contract-and-local-execution-closed)
+permits this bounded reuse of immutable evidence verification. It is not a query-row
+or HTTP-response cache.
+
+- Keep at most 16 entries per trusted API process, including in-progress fills. A
+  successful fill expires 60 seconds after complete verification. Hits do not
+  extend its life. These initial bounds may change after measured review.
+- Bind each entry to the trusted storage/deployment namespace and the complete
+  pinned publication/evidence metadata: event, version, publication time, coverage,
+  latest observation, contract, manifest/bundle hashes, validation attempt/checkset,
+  warning digest/count and approval requirement. Changed metadata never reuses an
+  entry. Restart clears it; eviction/expiry requires verification again.
+- Verify one evidence identity once for concurrent callers (single-flight). The
+  three datasets use the same evidence, so share the verification internally, then
+  project only the requested authorized dataset. Store only immutable safe note
+  summaries, at most 32 per dataset; never raw evidence, D09, rows, auth or errors.
+  Return separate objects to callers so they cannot change a cached result.
+- Authenticate, authorize, pin publication and perform rate/capacity admission on
+  every request before cache access. A warm entry grants no permission. Keep the
+  HTTP `no-store` policy and per-query isolated containers/Parquet checks.
+- Perform full existing checksum, canonical-byte, binding and complete-checkset
+  verification on misses. Current waiters share a failure; later requests may try
+  again. Do not store failures or serve an expired result after a failed fill.
+- Each waiter checks its own cancellation/deadline while waiting. The fill uses
+  the initiating request's remaining budget; new waiters do not extend it. A
+  cancelled waiter departs independently. If the initiating request disconnects
+  while another live waiter needs the fill, its synchronous owner retains its
+  reservation/reader until the fill stops, then returns its cancellation. If no
+  live caller remains, stop at the next verifier/reader deadline check. Unknown
+  or still-running work never releases its owner's capacity early.
+
+Cold/expired reads still pay full evidence verification. Successful verification
+is trusted for at most this lifetime under the immutable-publication contract;
+the cache does not continuously recheck storage during that interval. Tests and
+before/after measurements must distinguish this from full-request latency.
+
 ## Exposure and deployment
 
 Viewer catalogs, data, diagnostics and errors contain national information only. Public errors expose no hidden schemas, storage paths, credentials or internal traces. Logs record actor, action, outcome and request/run ID; exclude tokens, raw SQL and raw source payloads. Use `Cache-Control: no-store` for authenticated responses. Any future result cache needs separate permission and invalidation rules.

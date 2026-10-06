@@ -2,6 +2,32 @@
 
 The backend exposes process liveness at `GET /health`, the existing evidence-only extraction command, and a separate preparation command. Preparation retrieves a fixed window, freezes exact Parquet, validates saved files and stores a verified unpublished bundle through a trusted S3 adapter. Offline command tests pass; [October 1–2 live preparation and independent S3 readback](../evidence/live-preparation/2026-10-04-october-1-2/README.md) also passed with the recorded uncommitted parser correction. The candidate remains unpublished; full-history and fresh locked setup are not established. Local login/logout, `/me`, catalog metadata, Admin settings reads, PostgreSQL migrations and three-persona provisioning are implemented. The SQL backend is implemented separately; see [SQL setup and verification limits](SQL.md). See the national dashboard acceptance and handoff section below for the implemented read routes and their retained-readiness boundary.
 
+## Verified diagnostic-summary cache
+
+Dashboard/preview execution reuses verified publication diagnostic summaries in
+the trusted API process. Initial bounds are 16 entries (including pending fills)
+and a fixed 60-second lifetime from successful verification. Concurrent requests
+for the same evidence share one verification, including across datasets; each
+request receives only its permitted dataset's notes. Authorization, publication
+pinning, rate/capacity admission and analytical containers still run per request.
+Failures are not cached. Cold, expired and evicted entries require full evidence
+verification. These are starting values under [A19](../DECISIONS.md#a19--security-contract-and-local-execution-closed).
+
+To compare the evidence stage against the retained publication before rebuilding,
+run from the repository root with the existing API container available:
+
+```bash
+python3 scripts/profile_query_evidence.py --container trinity-api-1 --compare
+```
+
+This trusted operator probe loads four working-tree modules into an isolated
+Python interpreter inside that container. It does not install files, restart the
+API or change published data. It reads evidence through the configured profile
+and prints timings/counts only. Compare uncached, cold, warm and four concurrent
+cold reads; the script checks identical national outputs and one shared set of
+evidence GETs. The API image still needs rebuilding to serve the cache in HTTP
+requests. See [measurements and limits](../ai/sessions/2026-10-06-qa-03-cache-implementation.md).
+
 ## Setup
 
 Use CPython **3.14.8** and **uv 0.12.23**, as selected in A17. The Python patch is recorded in `.python-version`; `pyproject.toml` enforces the uv version. From the repository root:

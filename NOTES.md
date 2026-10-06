@@ -1,5 +1,13 @@
 # Engineering Notes — Trinity
 
+## QA-03 verified evidence cache — October 6, 2026
+
+[ME] Alayala approved 60-second expiry and a 16-entry bound as initial values, and required concurrent requests to share one evidence download/verification. [YOU] OpenCode added the process-owned cache, publication-wide shared verification and fresh dataset-scoped projections. Current permissions and query capacity are checked per request; the fill owner retains its reservation until shared work stops. The backend suite ran 814 checks: 556 passed and 258 opt-in checks skipped. In an isolated interpreter using the retained evidence, warm reads took 0.10–0.11 ms with zero evidence GETs; four concurrent cold callers shared three GETs totaling 14,974,928 bytes. This measures the evidence stage, not the full HTTP request. The running API still needs an operator rebuild. See [implementation, setup correction and evidence limits](ai/sessions/2026-10-06-qa-03-cache-implementation.md) and the accepted [A19 cache rules](DECISIONS.md#a19--security-contract-and-local-execution-closed).
+
+## QA-03 slow-read profiling — October 5, 2026
+
+[ME] Alayala requested backend profiling and optimization for slow dashboard/preview reads. [YOU] OpenCode measured the production evidence verifier against the retained publication: four unprofiled calls took 2.52–10.39 s, downloading about 15 MB each before analytical execution. The [profile and proposed cache rules](ai/sessions/2026-10-05-qa-03-evidence-read-profile.md) separate measured evidence-read cost from unmeasured full-request/container latency. A reproducible operator probe is included and was run successfully. A bounded cache of verified diagnostic summaries is proposed under A19; no cache implementation, deployment or latency improvement is claimed yet.
+
 ## Retained persona password rotation — October 5, 2026
 
 [ME] Alayala lost the retained persona passwords and asked for the safest bounded rotation, with no change to setup or refresh state, stopping before the mutation. He approved the design. [YOU] Claude (OpenCode) added `python -m trinity.auth.rotate`, which updates only the chosen password hashes, and tests that compare every table before and after. [ME] He ran the rotation on the retained database. [YOU] Read-only snapshots before and after show only the rotated hashes plus the expected effects of his S20 check. See the [rotation session](ai/sessions/2026-10-05-retained-persona-password-rotation.md) and the A20 refinement.
