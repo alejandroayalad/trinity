@@ -151,10 +151,11 @@ test('dashboard distinguishes zero capacity and rejects invalid custom ranges be
 test('generator choices never combine pages from different publications', async () => {
   stubFetch({ 'GET /api/v1/datasets/generator_outages/generators': [json(200, { publication, items: [{ generator: '01' }], next_cursor: 'next' }), json(200, { publication: { ...publication, publication_event_id: 'new' }, items: [{ generator: '02' }], next_cursor: null })] })
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><GeneratorChoices filters={{ facility: '001' }} onChange={() => undefined} /></QueryClientProvider>)
+  fireEvent.focus(screen.getByLabelText('Generator'))
   fireEvent.click(await screen.findByRole('button', { name: 'More generators' }))
-  await screen.findByText('Data changed. Reload generator choices.')
+  await screen.findByRole('option', { name: '02' })
   expect(screen.queryByRole('option', { name: '01' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('option', { name: '02' })).not.toBeInTheDocument()
+  expect(screen.getByRole('option', { name: '02' })).toBeInTheDocument()
 })
 
 test('an explicit facility link overrides filters retained from an earlier visit', async () => {

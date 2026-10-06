@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Cell, Column, Diagnostic } from '../api/types'
 import { isApiError } from '../api/client'
 import { Button } from '../components/controls/Button'
@@ -7,13 +8,31 @@ import { Callout } from '../components/feedback/Callout'
 import { Waiting } from './unavailable/Waiting'
 import { formatExact, formatFixed, isOutOfRange, offlineShare, parseDecimal } from '../lib/decimal'
 
-/**
- * A failed read. `data_unavailable` is a server state with its own Waiting
- * screen. Every other error can offer a Retry when the caller can refetch.
- */
-export function PageError({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+/** Keep unavailable and denied reads separate from recoverable failures. */
+export function PageError({ error, onRetry, busy = false }: { error: unknown; onRetry?: () => unknown; busy?: boolean }) {
   if (isApiError(error, 'data_unavailable')) return <Waiting />
-  return <div className="stack"><ErrorState error={error} />{onRetry !== undefined && <Button onClick={onRetry}>Retry</Button>}</div>
+  const denied = isApiError(error) && (error.status === 401 || error.status === 403 || error.status === 404)
+  return <div className="stack"><ErrorState error={error} />{onRetry !== undefined && !denied && <ReadRetry error={error} busy={busy} onRetry={onRetry} />}</div>
+}
+
+/** A manual read retry waits for the server and shares one in-flight action. */
+function ReadRetry({ error, busy, onRetry }: { error: unknown; busy: boolean; onRetry: () => unknown }) {
+  const [expired, setExpired] = useState<unknown>(null)
+  const [pending, setPending] = useState(false)
+  const active = useRef(false)
+  const seconds = isApiError(error) ? error.retryAfter ?? 0 : 0
+  const waiting = seconds > 0 && expired !== error
+  useEffect(() => {
+    if (!waiting) return
+    const timer = window.setTimeout(() => setExpired(error), seconds * 1000)
+    return () => window.clearTimeout(timer)
+  }, [error, seconds, waiting])
+  const retry = async () => {
+    if (active.current || busy || waiting) return
+    active.current = true; setPending(true)
+    try { await onRetry() } finally { active.current = false; setPending(false) }
+  }
+  return <Button disabled={busy || pending || waiting} onClick={() => void retry()}>{waiting ? `Retry after ${seconds}s` : 'Retry'}</Button>
 }
 // Show only review warnings. A review warning has severity 'warning' and
 // affected_count above zero. The backend counts warnings with the same rule.

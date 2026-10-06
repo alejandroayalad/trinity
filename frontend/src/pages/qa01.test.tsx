@@ -99,13 +99,15 @@ test('facility choices load only when the control first opens', async () => {
   await screen.findByRole('option', { name: 'Example Plant (0046)' })
 })
 
-test('a 429 shows Retry and the click refetches', async () => {
+test('a 429 waits for Retry-After before the click refetches', async () => {
   const { calls } = stubFetch({
     'GET /api/v1/me': json(200, { ...me, capabilities: ['national:read'] }),
-    'GET /api/v1/dashboard/national': [problem(429, 'rate_limited', {}, { 'Retry-After': '30' }), json(200, dashboardBody)],
+    'GET /api/v1/dashboard/national': [problem(429, 'rate_limited', {}, { 'Retry-After': '1' }), json(200, dashboardBody)],
   })
   mount('/dashboard')
-  await screen.findByText('Too many requests. Try again in 30 seconds.')
+  await screen.findByText('Too many requests. Try again in 1 seconds.')
+  expect(screen.getByRole('button', { name: 'Retry after 1s' })).toBeDisabled()
+  await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 })
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   await screen.findByRole('heading', { name: 'Range end observation · 2026-10-02' })
   expect(calls.filter(isDashboard)).toHaveLength(2)
