@@ -19,9 +19,10 @@ from trinity.queries.staging import stage_query, StagedQuery
 
 class QueryExecution:
     """Hold trusted deployment configuration; no request controls Docker or S3."""
-    def __init__(self,database,docker,reader,root,deployment_id):
+    def __init__(self,database,docker,reader,root,deployment_id,*,evidence_cache=None,evidence_namespace=()):
         self.database,self.docker,self.reader,self.root=database,docker,reader,Path(root)
         self.deployment_id,self.daemon_id=deployment_id,docker.daemon_id
+        self.evidence_cache,self.evidence_namespace=evidence_cache,evidence_namespace
 
     def close(self):
         """Close trusted transports after success, denial or recovery work."""
@@ -72,8 +73,16 @@ class QueryExecution:
             reservation=self.change(reservation,('reserved',),'staging')
             diagnostics = None
             if isinstance(prepared.query, PreviewOperation):
-                diagnostics = read_preview_diagnostics(prepared.pinned, prepared.query.dataset,
-                                                       self.reader, prepared.deadline)
+                # Services authorize, pin and reserve before execution. Reuse
+                # only verified evidence; staging and container work stay owned
+                # by this reservation, including while a shared fill is pending.
+                if self.evidence_cache is None:
+                    diagnostics = read_preview_diagnostics(prepared.pinned, prepared.query.dataset,
+                                                           self.reader, prepared.deadline)
+                else:
+                    diagnostics = self.evidence_cache.read(prepared.pinned, prepared.query.dataset,
+                                                          self.reader, prepared.deadline,
+                                                          namespace=self.evidence_namespace)
             stage_query(self.root,reservation['request_id'],prepared.pinned,prepared.query,self.reader,prepared.deadline)
             reservation=self.change(reservation,('staging',),'creating')
             identifier=self.docker.create(reservation)

@@ -1,14 +1,18 @@
 """Exercise shared cleanup for preview with fake lifecycle transports."""
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import replace
 import json
 from pathlib import Path
 import tempfile
+import threading
 from unittest.mock import Mock, patch
 import unittest
 from uuid import uuid4
 
 from trinity.contracts.queries import BINDING_FIELDS, canonical_message, request_message
 from trinity.errors import Problem
+from trinity.publication.evidence_cache import EvidenceCache
 from trinity.queries.client import QueryExecution
 from trinity.queries.service import PreparedPreview, QueryDeadline
 from trinity.queries.staging import stage_query, PublishedReader
@@ -63,6 +67,62 @@ class PreviewLifecycleTests(unittest.TestCase):
         self.assertEqual(self.events[-4:],['stopping','removed','cleaning','released'])
         self.attached.close.assert_called_once()
         self.docker.client.close.assert_called_once()
+
+    def test_warm_evidence_still_stages_and_runs_a_separate_container_per_request(self):
+        self.pinned, objects = frozen_fixture()
+        self.prepared = replace(self.prepared, pinned=self.pinned)
+        self.execution.evidence_cache = EvidenceCache()
+        self.execution.reader = PublishedReader(Client(objects), SimpleNamespace(bucket='synthetic', prefix='versions'))
+        for _ in range(2):
+            reservation = self.reservation | {'request_id': uuid4()}
+            prepared = replace(self.prepared, reservation=reservation)
+            binding = request_message(reservation['request_id'], self.pinned.publication.version_id, prepared.query)
+            self.response.update({key: binding[key] for key in BINDING_FIELDS})
+            self.assertEqual(self.execution.execute(prepared).diagnostics[0].code, 'D02')
+        self.assertEqual(len(self.execution.reader.client.calls), 3)
+        self.assertEqual(self.mocks['stage_query'].call_count, 2)
+        self.assertEqual(self.docker.create.call_count, 2)
+        self.assertEqual(self.docker.remove_stopped.call_count, 2)
+        self.assertEqual(self.mocks['repository.release_removed'].call_count, 2)
+
+    def test_cancelled_fill_owner_keeps_reservation_until_shared_verification_stops(self):
+        from test_evidence_cache import GateReader, wait_for_callers
+        self.pinned, objects = frozen_fixture()
+        reader, cache = GateReader(objects), EvidenceCache()
+        self.execution.reader, self.execution.evidence_cache = reader, cache
+        cancelled = threading.Event()
+        self.prepared.deadline.cancelled = cancelled
+        prepared = replace(self.prepared, pinned=self.pinned)
+        connection = Mock()
+
+        @contextmanager
+        def transaction(deadline, **kwargs):
+            deadline.remaining()
+            yield connection
+
+        self.execution.database.transaction = transaction
+        with patch('trinity.queries.client.repository.release_unlaunched', return_value=True) as release, \
+                ThreadPoolExecutor(max_workers=2) as pool:
+            owner = pool.submit(self.execution.execute, prepared)
+            try:
+                self.assertTrue(reader.entered.wait(2))
+                waiter = pool.submit(cache.read, self.pinned, 'facility', reader, QueryDeadline(30), namespace=())
+                wait_for_callers(cache, 2)
+                cancelled.set()
+                release.assert_not_called()
+                self.docker.client.close.assert_not_called()
+                self.assertFalse(owner.done())
+            finally:
+                reader.proceed.set()
+            with self.assertRaises(Problem) as caught:
+                owner.result(timeout=2)
+            self.assertEqual(caught.exception.code, 'query_timeout')
+            self.assertEqual(waiter.result(timeout=2)[0].scope, 'facility')
+            release.assert_called_once()
+            self.assertEqual(release.call_args.args[2], 'query_timeout')
+            self.mocks['stage_query'].assert_not_called()
+            self.docker.create.assert_not_called()
+            self.docker.client.close.assert_called_once()
 
     def test_bad_result_and_signing_failure_still_confirm_removal_before_release(self):
         self.response['operation_kind'] = 'sql'
@@ -121,6 +181,26 @@ class PreviewLifecycleTests(unittest.TestCase):
                 self.execution.execute(replace(self.prepared,deadline=deadline))
             self.assertEqual(caught.exception.code,'query_resource_limit' if oom else 'query_timeout')
             self.assertEqual(self.events[-4:],['stopping','removed','cleaning','released'])
+
+
+    def test_disconnect_while_container_runs_ends_it_and_releases_capacity(self):
+        # supervised_call sets this event when the browser aborts its request.
+        # The event is set from inside inspect() so the container is already
+        # running when the cancel arrives. The next poll must stop the wait.
+        cancelled = threading.Event()
+        deadline = QueryDeadline(30)
+        deadline.cancelled = cancelled
+        def running(_identifier):
+            cancelled.set()
+            return {'State': {'Running': True, 'ExitCode': 0, 'OOMKilled': False}}
+        self.docker.inspect.side_effect = running
+        with self.assertRaises(Problem) as caught:
+            self.execution.execute(replace(self.prepared, deadline=deadline))
+        self.assertEqual((caught.exception.status, caught.exception.code), (504, 'query_timeout'))
+        # Cleanup removes the container before it releases the slot.
+        self.docker.remove_stopped.assert_called_once()
+        self.assertEqual(self.events[-4:], ['stopping', 'removed', 'cleaning', 'released'])
+        self.attached.close.assert_called_once()
 
 
 class PreviewStagingTests(unittest.TestCase):

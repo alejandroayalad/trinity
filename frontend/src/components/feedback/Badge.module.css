@@ -1,0 +1,82 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--radius-badge);
+  font-size: var(--text-label);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.large {
+  height: 24px;
+  padding: 0 9px;
+  font-size: var(--text-xs);
+}
+
+.success {
+  background: var(--color-success-bg);
+  color: var(--color-success-fg);
+}
+
+.warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-fg);
+}
+
+.error {
+  background: var(--color-error-bg);
+  color: var(--color-error-fg);
+}
+
+.neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral-fg);
+}
+
+.running {
+  background: var(--color-running-bg);
+  color: var(--color-running-fg);
+}
+
+/* Small outline tag, for example "Latest" in the daily values table. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-badge);
+  color: var(--color-muted);
+  font-size: var(--text-tiny);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.tagPinned {
+  border-color: var(--color-orange-tint);
+  background: var(--color-orange-tint);
+  color: var(--color-ink);
+}
+
+/* Missing value: dashed border, never a zero. */
+.missing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px dashed var(--color-missing-border);
+  border-radius: var(--radius-badge);
+  color: var(--color-ink-2);
+  font-size: var(--text-label);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.unavailable {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}

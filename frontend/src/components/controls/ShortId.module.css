@@ -1,0 +1,16 @@
+.shortId {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  white-space: nowrap;
+  cursor: copy;
+}
+
+.shortId:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}

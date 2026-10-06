@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+html,body{margin:0;background:#F0F0F0;color:#1E1D1D;font-family:Geist,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+:focus-visible{outline:2px solid #F8642B;outline-offset:2px}
+a{color:#243237}a:hover{color:#1E1D1D}
+button{font-family:inherit}
+input,select,textarea{font-family:inherit}
+::selection{background:#FCD3C1}
+</style>
+</helmet>
+
+<sc-if value="{{ isSignin }}" hint-placeholder-val="{{ true }}">
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:24px">
+  <div ref="{{ signRef }}" style="width:100%;max-width:400px;background:#FFFFFF;border:1px solid #E4E4E4;border-radius:10px;padding:32px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="assets/mark-orange.png" alt="" style="width:36px;height:auto">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <img src="assets/wordmark-letters.png" alt="Trinity" style="width:112px;height:auto;display:block">
+        <span style="font-size:11px;letter-spacing:0.14em;color:#5F6366;text-transform:uppercase">Nuclear Outage Explorer</span>
+      </div>
+    </div>
+    <p style="margin:28px 0 0;font-size:20px;font-weight:500;letter-spacing:-0.015em;color:#243237;line-height:1.3">Three levels. One clear view.</p>
+    <p style="margin:6px 0 0;font-size:14px;color:#5F6366">Sign in with your account.</p>
+    <form onSubmit="{{ signIn }}" style="display:flex;flex-direction:column;gap:16px;margin-top:24px">
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Account
+        <input value="{{ acct }}" onChange="{{ onAcct }}" autocomplete="username" style="height:40px;border:1px solid #D6D6D6;border-radius:6px;padding:0 12px;font-size:14px;color:#1E1D1D;background:#FFFFFF" style-focus="border-color:#243237">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Password
+        <input type="password" value="{{ pw }}" onChange="{{ onPw }}" autocomplete="current-password" style="height:40px;border:1px solid #D6D6D6;border-radius:6px;padding:0 12px;font-size:14px;color:#1E1D1D;background:#FFFFFF" style-focus="border-color:#243237">
+      </label>
+      <sc-if value="{{ hasSignErr }}">
+        <div role="alert" style="display:flex;gap:8px;font-size:13px;color:#A13A2C;background:#FBEAE8;border-radius:6px;padding:8px 10px">✕ {{ signErr }}</div>
+      </sc-if>
+      <button type="submit" style="height:40px;border-radius:6px;border:1px solid #E5571F;background:#F8642B;color:#1E1D1D;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="background:#F2581D">Sign in</button>
+    </form>
+    <p style="margin:16px 0 0;font-size:13px;color:#5F6366">Already set up: viewer, analyst, admin.</p>
+  </div>
+  <div style="width:100%;max-width:400px;border:1px dashed #B9BDBF;border-radius:10px;padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;letter-spacing:0.08em;color:#4A4F51;background:#E4E4E4;padding:2px 6px;border-radius:4px">PROTOTYPE</span><span style="font-size:13px;color:#4A4F51">Preview a role without credentials</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <sc-for list="{{ rolePreview }}" as="r" hint-placeholder-count="3">
+        <button onClick="{{ r.go }}" style="height:32px;padding:0 12px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:13px;font-weight:500;color:#1E1D1D;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">{{ r.label }}</button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:#4A4F51">Data state
+      <sc-for list="{{ dataOpts }}" as="o" hint-placeholder-count="2">
+        <button onClick="{{ o.go }}" aria-pressed="{{ o.on }}" style="height:28px;padding:0 10px;border-radius:6px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:12px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ o.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+  <p style="margin:0;font-size:12px;color:#6B7072">All data in this prototype is illustrative.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}">
+<div style="display:flex;min-height:100vh">
+  <sc-if value="{{ showBackdrop }}"><div ref="{{ backdropRef }}" onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(30,29,29,0.32);z-index:40"></div></sc-if>
+  <aside aria-label="Main navigation" style="display:flex;position:{{ sb.pos }};transform:translateX({{ sb.tx }});visibility:{{ sb.vis }};box-shadow:{{ sb.shadow }};transition:transform .3s cubic-bezier(.2,.7,.2,1),visibility .3s,box-shadow .3s;top:0;left:0;height:100vh;width:224px;flex:none;flex-direction:column;background:#F0F0F0;border-right:1px solid #E4E4E4;padding:20px 12px 16px;z-index:50;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 8px 24px">
+      <img src="assets/mark-orange.png" alt="" style="width:28px;height:auto">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <img src="assets/wordmark-letters.png" alt="Trinity" style="width:84px;height:auto;display:block">
+        <span style="font-size:9.5px;letter-spacing:0.12em;color:#5F6366;text-transform:uppercase">Outage Explorer</span>
+      </div>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ navMain }}" as="n" hint-placeholder-count="3">
+        <button onClick="{{ n.go }}" aria-current="{{ n.current }}" style="display:flex;align-items:center;height:36px;padding:0 10px;border-radius:6px;border:1px solid {{ n.bd }};background:{{ n.bg }};color:#1E1D1D;font-size:14px;font-weight:{{ n.fw }};text-align:left;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="background:#FFFFFF">{{ n.label }}</button>
+      </sc-for>
+      <sc-if value="{{ isAdmin }}">
+        <div style="font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:#6B7072;padding:20px 10px 6px">Administration</div>
+        <sc-for list="{{ navAdmin }}" as="n" hint-placeholder-count="2">
+          <button onClick="{{ n.go }}" aria-current="{{ n.current }}" style="display:flex;align-items:center;justify-content:space-between;width:100%;height:36px;padding:0 10px;border-radius:6px;border:1px solid {{ n.bd }};background:{{ n.bg }};color:#1E1D1D;font-size:14px;font-weight:{{ n.fw }};text-align:left;cursor:pointer;margin-bottom:2px" style-hover="background:#FFFFFF">{{ n.label }}<sc-if value="{{ n.hasCount }}"><span style="font-size:11px;font-weight:600;background:#FBF0E2;color:#8A4A0B;border-radius:10px;padding:1px 7px">{{ n.count }}</span></sc-if></button>
+        </sc-for>
+      </sc-if>
+    </nav>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 8px;border-top:1px solid #E4E4E4">
+      <div aria-hidden="true" style="width:30px;height:30px;border-radius:50%;background:#243237;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">{{ initial }}</div>
+      <div style="display:flex;flex-direction:column;min-width:0;flex:1">
+        <span style="font-size:13px;font-weight:600">{{ role }}</span>
+        <span style="font-size:12px;color:#5F6366">{{ roleLabel }}</span>
+      </div>
+      <button onClick="{{ signOut }}" style="height:28px;padding:0 8px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:12px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">Sign out</button>
+    </div>
+    <div style="border:1px dashed #B9BDBF;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <span style="font-family:'Geist Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:0.08em;color:#4A4F51">PROTOTYPE CONTROLS</span>
+      <div style="display:flex;gap:4px">
+        <sc-for list="{{ roleSwitch }}" as="r" hint-placeholder-count="3">
+          <button onClick="{{ r.go }}" aria-pressed="{{ r.on }}" style="flex:1;height:26px;border-radius:5px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.fg }};font-size:11.5px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ r.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:4px">
+        <sc-for list="{{ dataOpts }}" as="o" hint-placeholder-count="2">
+          <button onClick="{{ o.go }}" aria-pressed="{{ o.on }}" style="flex:1;height:26px;border-radius:5px;border:1px solid {{ o.bd }};background:{{ o.bg }};color:{{ o.fg }};font-size:11.5px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ o.short }}</button>
+        </sc-for>
+      </div>
+      <span style="font-size:11px;line-height:1.4;color:#5F6366">Role switching here only changes which screens the prototype shows. It is not access control.</span>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;background:#FFFFFF;display:flex;flex-direction:column">
+    <header style="min-height:52px;border-bottom:1px solid #E4E4E4;display:flex;align-items:center;gap:20px;padding:8px 32px;flex-wrap:wrap;position:sticky;top:0;background:rgba(255,255,255,0.96);z-index:20">
+      <sc-if value="{{ narrow }}"><button onClick="{{ openDrawer }}" aria-label="Open navigation" style="height:32px;padding:0 10px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:13px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">☰ Menu</button></sc-if>
+      <sc-if value="{{ hasPub }}">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:#5F6366;font-variant-numeric:tabular-nums">
+          <span>Publication <span style="font-family:'Geist Mono',monospace;color:#1E1D1D;white-space:nowrap">{{ pub.id }}</span></span>
+          <span>Published <span style="color:#1E1D1D">{{ pub.published }}</span></span>
+          <span>Latest observation <span style="color:#1E1D1D">{{ latestLabel }}</span></span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;background:#E8F3EC;color:#1D6B3E">● Ready</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noPub }}">
+        <div style="display:flex;gap:16px;align-items:center;font-size:12.5px;color:#5F6366">
+          <span>No publication yet</span>
+          <span style="display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;background:#EEEEEE;color:#4A4F51">○ Unavailable</span>
+        </div>
+      </sc-if>
+      <div style="flex:1"></div>
+      <sc-if value="{{ showReviewNote }}"><button onClick="{{ goReview }}" style="min-height:26px;white-space:nowrap;padding:2px 10px;border-radius:5px;border:1px solid #EBC99D;background:#FBF0E2;color:#8A4A0B;font-size:12px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">! {{ reviewNote }}</button></sc-if>
+      <span style="font-size:12px;color:#5F6366;border:1px solid #E4E4E4;border-radius:4px;padding:2px 8px">Illustrative data</span>
+    </header>
+
+    <div ref="{{ pageRef }}" style="padding:32px;width:100%;max-width:1248px">
+
+    <sc-if value="{{ showEmpty }}">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:72px 0 40px;max-width:520px">
+        <img src="assets/mark-slate.png" alt="" style="width:32px;opacity:0.3;margin-bottom:12px">
+        <h1 style="margin:0;font-size:30px;font-weight:600;letter-spacing:-0.025em">Nothing to show yet</h1>
+        <p style="margin:0;font-size:15px;color:#5F6366">An admin still needs to publish the first set of data.</p>
+        <sc-if value="{{ emptyAdminCta }}"><button onClick="{{ goRefresh }}" style="margin-top:16px;height:36px;padding:0 14px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">Go to Refresh</button></sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.dashboard }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+        <div>
+          <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.15">U.S. nuclear fleet</h1>
+          <p style="margin:6px 0 0;font-size:15px;color:#5F6366">Latest published observation</p>
+        </div>
+        <dl style="display:grid;grid-template-columns:auto auto;gap:4px 16px;margin:0;font-size:13px;font-variant-numeric:tabular-nums">
+          <dt style="color:#5F6366">Publication</dt><dd style="margin:0;font-family:'Geist Mono',monospace;font-size:12.5px">{{ pub.id }}</dd>
+          <dt style="color:#5F6366">Published</dt><dd style="margin:0">{{ pub.published }}</dd>
+          <dt style="color:#5F6366">Observation</dt><dd style="margin:0">{{ latestLabel }}</dd>
+        </dl>
+      </div>
+
+      <section aria-label="Latest observation" style="margin-top:32px;border-top:1px solid #E4E4E4;padding-top:24px">
+        <div style="font-size:12.5px;color:#5F6366">Latest observation · {{ latestLabel }}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;margin-top:12px;font-variant-numeric:tabular-nums">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:13px;color:#5F6366">Fleet offline</span>
+            <span style="font-size:48px;font-weight:600;letter-spacing:-0.035em;line-height:1">{{ kpi.share1 }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;border-left:1px solid #EDEDED;padding-left:24px">
+            <span style="font-size:13px;color:#5F6366">Reported outage</span>
+            <span style="font-size:28px;font-weight:500;letter-spacing:-0.02em;line-height:1.2">{{ kpi.out }} <span style="font-size:15px;color:#5F6366;font-weight:400">MW</span></span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;border-left:1px solid #EDEDED;padding-left:24px">
+            <span style="font-size:13px;color:#5F6366">Reported capacity</span>
+            <span style="font-size:28px;font-weight:500;letter-spacing:-0.02em;line-height:1.2">{{ kpi.cap }} <span style="font-size:15px;color:#5F6366;font-weight:400">MW</span></span>
+          </div>
+        </div>
+        <div role="img" aria-label="{{ kpi.meterLabel }}" style="margin-top:24px;height:10px;border-radius:5px;background:#E9E9E9;overflow:hidden;display:flex">
+          <div ref="{{ meterRef }}" style="width:{{ kpi.meterW }};background:#243237;transform-origin:left center;transition:width .6s cubic-bezier(.2,.7,.2,1)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:16px;margin-top:8px;font-size:12.5px;color:#5F6366;font-variant-numeric:tabular-nums;flex-wrap:wrap">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#243237;margin-right:6px"></span>Offline {{ kpi.share2 }}</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#E9E9E9;border:1px solid #D6D6D6;margin-right:6px"></span>Remaining reported capacity {{ kpi.rest }}</span>
+        </div>
+        <p style="margin:12px 0 0;font-size:13px;color:#4A4F51">Offline share = reported outage ÷ reported capacity.</p>
+      </section>
+
+      <section aria-label="Daily offline share" style="margin-top:40px;border-top:1px solid #E4E4E4;padding-top:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+          <h2 style="margin:0;font-size:19px;font-weight:600;letter-spacing:-0.01em">Daily offline share</h2>
+          <div role="tablist" style="display:flex;gap:20px;border-bottom:1px solid #E4E4E4">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+              <button role="tab" aria-selected="{{ t.on }}" onClick="{{ t.go }}" style="height:32px;padding:0;border:0;border-bottom:2px solid {{ t.bd }};margin-bottom:-1px;background:transparent;font-size:14px;font-weight:{{ t.fw }};color:{{ t.fg }};cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ t.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap">
+          <div role="group" aria-label="Range" style="display:inline-flex;border:1px solid #D6D6D6;border-radius:6px;overflow:hidden">
+            <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.go }}" aria-pressed="{{ r.on }}" style="height:32px;padding:0 12px;border:0;border-right:1px solid #E4E4E4;background:{{ r.bg }};color:{{ r.fg }};font-size:13px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ r.label }}</button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ isCustom }}">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5F6366">
+              <label style="display:flex;align-items:center;gap:6px">From <input type="date" value="{{ cFrom }}" min="{{ minDate }}" max="{{ latestDate }}" onChange="{{ onCFrom }}" style="height:32px;border:1px solid #D6D6D6;border-radius:6px;padding:0 8px;font-size:13px"></label>
+              <label style="display:flex;align-items:center;gap:6px">To <input type="date" value="{{ cTo }}" min="{{ minDate }}" max="{{ latestDate }}" onChange="{{ onCTo }}" style="height:32px;border:1px solid #D6D6D6;border-radius:6px;padding:0 8px;font-size:13px"></label>
+            </div>
+          </sc-if>
+          <span style="font-size:13px;color:#5F6366;font-variant-numeric:tabular-nums">{{ rangeLabel }}</span>
+        </div>
+
+        <sc-if value="{{ chart.hasWarn }}">
+          <div role="note" style="display:flex;gap:8px;align-items:flex-start;margin-top:16px;background:#FBF0E2;color:#6E3B08;border-radius:6px;padding:10px 12px;font-size:13px">! {{ chart.warnText }}</div>
+        </sc-if>
+
+        <sc-if value="{{ tabChart }}">
+          <sc-if value="{{ chart.empty }}"><div style="margin-top:24px;padding:40px;border:1px dashed #D6D6D6;border-radius:8px;text-align:center;font-size:14px;color:#5F6366">No reported values in this range.</div></sc-if>
+          <sc-if value="{{ chart.ok }}">
+          <div style="display:grid;grid-template-columns:44px minmax(0,1fr);margin-top:24px">
+            <div style="position:relative;height:260px">
+              <sc-for list="{{ chart.ticks }}" as="t" hint-placeholder-count="3"><div style="position:absolute;right:10px;top:{{ t.top }};transform:translateY(-50%);font-size:11px;color:#6B7072;font-variant-numeric:tabular-nums">{{ t.label }}</div></sc-for>
+            </div>
+            <div tabIndex="0" role="application" aria-label="Daily offline share chart. Use left and right arrows to inspect, Enter to pin." onKeyDown="{{ chart.onKey }}" onMouseLeave="{{ chart.onLeave }}" style="position:relative;height:260px;border-radius:2px">
+              <sc-for list="{{ chart.ticks }}" as="t"><div style="position:absolute;left:0;right:0;top:{{ t.top }};border-top:1px solid #EDEDED"></div></sc-for>
+              <sc-for list="{{ chart.gaps }}" as="g"><div style="position:absolute;top:0;bottom:0;left:{{ g.left }};width:{{ g.width }};background:repeating-linear-gradient(135deg,rgba(36,50,55,0.08) 0 3px,transparent 3px 7px);border-left:1px dashed #C3C8CA;border-right:1px dashed #C3C8CA"></div></sc-for>
+              <div ref="{{ chartRef }}" style="position:absolute;inset:0;overflow:hidden">{{ chart.svg }}</div>
+              <sc-for list="{{ chart.dots }}" as="d"><div style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#243237"></div></sc-for>
+              <sc-for list="{{ chart.warns }}" as="d"><div title="Outside 0–100, left as-is" style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#FFFFFF;border:2px solid #C2670F"></div></sc-for>
+              <sc-if value="{{ chart.hasPin }}">
+                <div style="position:absolute;top:0;bottom:0;left:{{ chart.pin.left }};transition:left .2s ease,top .2s ease;border-left:1px solid #243237;pointer-events:none"></div>
+                <sc-if value="{{ chart.pin.hasVal }}"><div style="position:absolute;left:{{ chart.pin.left }};transition:left .2s ease,top .2s ease;top:{{ chart.pin.top }};width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#F8642B;border:2px solid #FFFFFF;box-shadow:0 0 0 1px #243237;pointer-events:none"></div></sc-if>
+              </sc-if>
+              <sc-if value="{{ chart.hasHover }}">
+                <div style="position:absolute;top:0;bottom:0;left:{{ chart.hov.left }};transition:left .09s linear,top .09s linear;border-left:1px dashed #8A9194;pointer-events:none"></div>
+                <sc-if value="{{ chart.hov.hasVal }}"><div style="position:absolute;left:{{ chart.hov.left }};transition:left .09s linear,top .09s linear;top:{{ chart.hov.top }};width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#FFFFFF;border:2px solid #243237;pointer-events:none"></div></sc-if>
+              </sc-if>
+              <sc-for list="{{ chart.cols }}" as="c"><div onMouseEnter="{{ c.enter }}" onClick="{{ c.pin }}" style="position:absolute;top:0;bottom:0;left:{{ c.left }};width:{{ c.width }};cursor:crosshair"></div></sc-for>
+              <sc-if value="{{ chart.hasHover }}">
+                <div role="status" style="position:absolute;top:8px;left:{{ chart.hov.left }};transition:left .09s linear,top .09s linear;transform:{{ chart.hov.tx }};background:#FFFFFF;border:1px solid #DADADA;border-radius:8px;box-shadow:0 4px 16px rgba(30,29,29,0.08);padding:10px 12px;font-size:12.5px;pointer-events:none;min-width:180px;font-variant-numeric:tabular-nums;z-index:2">
+                  <div style="font-weight:600;margin-bottom:6px">{{ chart.hov.date }}</div>
+                  <sc-if value="{{ chart.hov.hasVal }}">
+                    <div style="display:grid;grid-template-columns:auto auto;gap:3px 16px;color:#4A4F51"><span>Offline share</span><span style="text-align:right;color:#1E1D1D;font-weight:500">{{ chart.hov.share }}</span><span>Outage</span><span style="text-align:right;color:#1E1D1D">{{ chart.hov.out }} MW</span><span>Capacity</span><span style="text-align:right;color:#1E1D1D">{{ chart.hov.cap }} MW</span></div>
+                    <sc-if value="{{ chart.hov.warn }}"><div style="margin-top:6px;color:#8A4A0B">! Outside 0–100, left as-is</div></sc-if>
+                  </sc-if>
+                  <sc-if value="{{ chart.hov.noVal }}"><div style="color:#4A4F51">○ Not reported</div></sc-if>
+                </div>
+              </sc-if>
+            </div>
+            <div></div>
+            <div style="position:relative;height:24px;margin-top:6px;overflow:hidden">
+              <sc-for list="{{ chart.xl }}" as="x"><span style="position:absolute;left:{{ x.left }};transform:{{ x.tx }};font-size:11px;color:#6B7072;white-space:nowrap">{{ x.label }}</span></sc-for>
+            </div>
+          </div>
+          </sc-if>
+          <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:12.5px;color:#5F6366">
+            <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:#243237"></span>Reported offline share</span>
+              <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:12px;background:repeating-linear-gradient(135deg,rgba(36,50,55,0.14) 0 3px,transparent 3px 7px);border-left:1px dashed #C3C8CA;border-right:1px dashed #C3C8CA"></span>Gap = not reported</span>
+            </div>
+            <span>Hover to inspect · Click to pin · Arrow keys when focused</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ tabDaily }}">
+          <div style="margin-top:20px;max-height:420px;overflow:auto;border:1px solid #E4E4E4;border-radius:8px">
+            <table style="width:100%;min-width:640px;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+              <thead><tr>
+                <th style="position:sticky;top:0;background:#FAFAFA;text-align:left;font-size:12px;font-weight:500;color:#5F6366;padding:10px 16px;border-bottom:1px solid #E4E4E4">Day</th>
+                <th style="position:sticky;top:0;background:#FAFAFA;text-align:right;font-size:12px;font-weight:500;color:#5F6366;padding:10px 16px;border-bottom:1px solid #E4E4E4">Outage MW</th>
+                <th style="position:sticky;top:0;background:#FAFAFA;text-align:right;font-size:12px;font-weight:500;color:#5F6366;padding:10px 16px;border-bottom:1px solid #E4E4E4">Capacity MW</th>
+                <th style="position:sticky;top:0;background:#FAFAFA;text-align:right;font-size:12px;font-weight:500;color:#5F6366;padding:10px 16px;border-bottom:1px solid #E4E4E4">Offline share</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ dailyRows }}" as="r" hint-placeholder-count="6">
+                  <tr onClick="{{ r.pin }}" style="background:{{ r.bg }};cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="background:#F7F7F7">
+                    <td style="padding:10px 16px;border-bottom:1px solid #EFEFEF">{{ r.date }}<sc-if value="{{ r.isLatest }}"><span style="margin-left:8px;font-size:11px;color:#5F6366;border:1px solid #E4E4E4;border-radius:4px;padding:1px 6px">Latest</span></sc-if><sc-if value="{{ r.isPinned }}"><span style="margin-left:8px;font-size:11px;color:#1E1D1D;background:#FDE3D7;border-radius:4px;padding:1px 6px">Pinned</span></sc-if></td>
+                    <sc-for list="{{ r.cells }}" as="c">
+                      <td style="padding:10px 16px;border-bottom:1px solid #EFEFEF;text-align:right">
+                        <sc-if value="{{ c.isMissing }}"><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border:1px dashed #A9AEB0;border-radius:4px;font-size:12px;color:#4A4F51">○ Not reported</span></sc-if>
+                        <sc-if value="{{ c.isNA }}"><span style="font-size:13px;color:#5F6366">Unavailable</span></sc-if>
+                        <sc-if value="{{ c.isVal }}">{{ c.t }}</sc-if>
+                        <sc-if value="{{ c.warn }}"><span style="margin-left:6px;display:inline-flex;height:20px;align-items:center;padding:0 7px;border-radius:4px;font-size:12px;background:#FBF0E2;color:#8A4A0B">! Outside 0–100</span></sc-if>
+                      </td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </sc-if>
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;margin-top:24px;padding:20px;background:#FAFAFA;border:1px solid #EDEDED;border-radius:8px;font-variant-numeric:tabular-nums">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:15px;font-weight:600">Selected observation · {{ sel.date }}</span>
+              <span style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ sel.badgeBg }};color:#1E1D1D">{{ sel.badge }}</span>
+            </div>
+            <sc-if value="{{ sel.hasVal }}">
+              <div style="display:flex;gap:28px;flex-wrap:wrap;font-size:14px">
+                <span><span style="color:#5F6366">Offline </span><strong style="font-weight:600">{{ sel.share }}</strong></span>
+                <span><span style="color:#5F6366">Outage </span>{{ sel.out }} MW</span>
+                <span><span style="color:#5F6366">Capacity </span>{{ sel.cap }} MW</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sel.noVal }}"><div style="font-size:14px;color:#4A4F51">○ Not reported. No outage or capacity was published for this day.</div></sc-if>
+            <sc-if value="{{ sel.warn }}"><div style="font-size:13px;color:#8A4A0B">! This value is outside 0–100. It was retained as published.</div></sc-if>
+            <div style="font-size:13px;color:#5F6366">{{ sel.prev }}</div>
+          </div>
+          <button onClick="{{ resetPin }}" disabled="{{ sel.isLatest }}" style="height:34px;padding:0 14px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:13px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease;opacity:{{ sel.btnOp }}" style-hover="border-color:#243237">Latest observation</button>
+        </div>
+      </section>
+
+      <section aria-label="Facility contributions" style="margin-top:40px;border-top:1px solid #E4E4E4;padding-top:24px">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <h2 style="margin:0;font-size:19px;font-weight:600;letter-spacing:-0.01em">Facility outage contributions</h2>
+          <span style="font-size:13px;color:#5F6366">{{ sel.date }}</span>
+        </div>
+        <sc-if value="{{ contrib.none }}">
+          <div style="margin-top:16px;padding:28px;border:1px dashed #D6D6D6;border-radius:8px;font-size:14px;color:#4A4F51;max-width:640px">No facility rows for {{ sel.date }}. The illustrative facility fixture covers 20, 21, 26 and 27 Sep 2026 only.</div>
+        </sc-if>
+        <sc-if value="{{ contrib.some }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px;margin-top:16px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:#5F6366;padding:0 10px 8px;border-bottom:1px solid #EDEDED"><span>Facility, ranked by reported outage</span><span>MW</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px;margin-top:6px">
+                <sc-for list="{{ contrib.items }}" as="f" hint-placeholder-count="4">
+                  <button onClick="{{ f.go }}" aria-pressed="{{ f.on }}" style="display:grid;grid-template-columns:120px minmax(0,1fr) 96px;gap:12px;align-items:center;height:40px;padding:0 10px;border-radius:6px;border:1px solid {{ f.bd }};background:{{ f.bg }};font-size:14px;color:#1E1D1D;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums" style-hover="background:#F5F5F5">
+                    <span style="font-weight:{{ f.fw }}">{{ f.name }}</span>
+                    <span style="height:8px;border-radius:4px;background:#EDEDED;overflow:hidden;display:flex"><span style="width:{{ f.w }};background:#243237;border-radius:4px;transition:width .45s cubic-bezier(.2,.7,.2,1)"></span></span>
+                    <span style="text-align:right">
+                      <sc-if value="{{ f.missing }}"><span style="display:inline-flex;align-items:center;height:20px;padding:0 6px;border:1px dashed #A9AEB0;border-radius:4px;font-size:11.5px;color:#4A4F51">○ Not reported</span></sc-if>
+                      <sc-if value="{{ f.has }}">{{ f.val }}</sc-if>
+                    </span>
+                  </button>
+                </sc-for>
+              </div>
+              <p style="margin:14px 10px 0;font-size:12.5px;line-height:1.5;color:#5F6366">{{ contrib.note }}</p>
+            </div>
+            <div style="border-left:1px solid #EDEDED;padding-left:32px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums">
+              <span style="font-size:12px;color:#5F6366">Facility detail · {{ sel.date }}</span>
+              <span style="font-size:20px;font-weight:600;letter-spacing:-0.015em">{{ fd.name }}</span>
+              <sc-if value="{{ fd.has }}"><span style="font-size:14px">{{ fd.out }} MW reported offline · {{ fd.share }} of {{ fd.cap }} MW</span></sc-if>
+              <sc-if value="{{ fd.missing }}"><span style="font-size:14px;color:#4A4F51">○ Outage not reported for this day · capacity {{ fd.cap }} MW · share unavailable</span></sc-if>
+              <div style="position:relative;height:64px;margin-top:16px">
+                <sc-for list="{{ spark.gaps }}" as="g"><div style="position:absolute;top:0;bottom:0;left:{{ g.left }};width:{{ g.width }};background:repeating-linear-gradient(135deg,rgba(36,50,55,0.08) 0 3px,transparent 3px 7px)"></div></sc-for>
+                <div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid #EDEDED"></div>
+                <div ref="{{ sparkRef }}" style="position:absolute;inset:0">{{ spark.svg }}</div>
+                <sc-for list="{{ spark.pts }}" as="d"><div style="position:absolute;left:{{ d.left }};top:{{ d.top }};width:{{ d.size }};height:{{ d.size }};transform:translate(-50%,-50%);border-radius:50%;background:{{ d.bg }};border:1.5px solid #243237"></div></sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#6B7072"><span>{{ spark.from }}</span><span>{{ spark.to }}</span></div>
+              <span style="font-size:12.5px;color:#5F6366;margin-top:4px">Offline share, {{ spark.range }}. Gaps stay empty.</span>
+              <sc-if value="{{ canBrowse }}">
+                <div style="display:flex;gap:20px;margin-top:12px;flex-wrap:wrap">
+                  <button onClick="{{ fd.openFac }}" style="padding:0;border:0;background:transparent;font-size:13.5px;font-weight:500;color:#243237;text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="color:#1E1D1D">Open in facility_outages →</button>
+                  <button onClick="{{ fd.openGen }}" style="padding:0;border:0;background:transparent;font-size:13.5px;font-weight:500;color:#243237;text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="color:#1E1D1D">View generators →</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ pg.catalog }}">
+      <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.025em">Catalog</h1>
+      <p style="margin:6px 0 0;font-size:15px;color:#5F6366">Three tables in {{ pub.id }}. Row counts are illustrative.</p>
+      <div style="margin-top:28px;overflow-x:auto">
+        <div style="min-width:640px">
+          <div style="display:grid;grid-template-columns:1.3fr 1.3fr 0.8fr 1fr 24px;gap:16px;padding:10px 12px;font-size:12px;font-weight:500;color:#5F6366;border-bottom:1px solid #E4E4E4"><span>Table</span><span>Level</span><span style="text-align:right">Rows</span><span>Latest observation</span><span></span></div>
+          <sc-for list="{{ catalog }}" as="t" hint-placeholder-count="3">
+            <button onClick="{{ t.go }}" style="display:grid;grid-template-columns:1.3fr 1.3fr 0.8fr 1fr 24px;gap:16px;align-items:center;width:100%;height:52px;padding:0 12px;border:0;border-bottom:1px solid #EDEDED;background:#FFFFFF;font-size:14px;color:#1E1D1D;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums" style-hover="background:#F7F7F7">
+              <span style="font-family:'Geist Mono',monospace;font-size:13.5px">{{ t.name }}</span><span style="color:#4A4F51">{{ t.level }}</span><span style="text-align:right">{{ t.rows }}</span><span>{{ t.latest }}</span><span style="color:#6B7072">→</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.table }}">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#5F6366">
+        <button onClick="{{ goCatalog }}" style="padding:0;border:0;background:transparent;font-size:13px;color:#243237;text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">Catalog</button><span>/</span><span style="font-family:'Geist Mono',monospace;color:#1E1D1D">{{ tv.name }}</span>
+      </div>
+      <h1 style="margin:12px 0 0;font-size:32px;font-weight:600;letter-spacing:-0.025em">{{ tv.title }}</h1>
+      <p style="margin:6px 0 0;font-size:15px;color:#5F6366">{{ tv.level }}. Rows from {{ pub.id }}. Filters stay on this page.</p>
+      <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:24px">
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#5F6366">From<input type="date" value="{{ tv.from }}" min="{{ tv.min }}" max="{{ tv.max }}" onChange="{{ tv.onFrom }}" style="height:34px;border:1px solid #D6D6D6;border-radius:6px;padding:0 8px;font-size:13px;color:#1E1D1D"></label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#5F6366">To<input type="date" value="{{ tv.to }}" min="{{ tv.min }}" max="{{ tv.max }}" onChange="{{ tv.onTo }}" style="height:34px;border:1px solid #D6D6D6;border-radius:6px;padding:0 8px;font-size:13px;color:#1E1D1D"></label>
+        <sc-if value="{{ tv.hasPlant }}">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:#5F6366">Plant
+            <select value="{{ tv.plant }}" onChange="{{ tv.onPlant }}" style="height:34px;min-width:160px;border:1px solid #D6D6D6;border-radius:6px;padding:0 8px;font-size:13px;color:#1E1D1D;background:#FFFFFF">
+              <sc-for list="{{ plantOpts }}" as="p"><option value="{{ p }}">{{ p }}</option></sc-for>
+            </select>
+          </label>
+        </sc-if>
+        <button onClick="{{ tv.reset }}" style="height:34px;padding:0 12px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:13px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">Reset filters</button>
+        <div style="flex:1"></div>
+        <span style="font-size:13px;color:#5F6366;font-variant-numeric:tabular-nums">{{ tv.count }}</span>
+      </div>
+      <div style="margin-top:20px;overflow-x:auto;border-top:1px solid #E4E4E4">
+        <table style="width:100%;min-width:720px;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums">
+          <thead><tr>
+            <sc-for list="{{ tv.heads }}" as="h"><th style="text-align:{{ h.align }};font-size:12px;font-weight:500;color:#5F6366;padding:10px 12px;border-bottom:1px solid #E4E4E4">{{ h.l }}</th></sc-for>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ tv.rows }}" as="r" hint-placeholder-count="8">
+              <tr style-hover="background:#FAFAFA">
+                <sc-for list="{{ r }}" as="c">
+                  <td style="padding:11px 12px;border-bottom:1px solid #EFEFEF;text-align:{{ c.align }}">
+                    <sc-if value="{{ c.isMissing }}"><span style="display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border:1px dashed #A9AEB0;border-radius:4px;font-size:12px;color:#4A4F51">○ Not reported</span></sc-if>
+                    <sc-if value="{{ c.isNA }}"><span style="font-size:13px;color:#5F6366">Unavailable</span></sc-if>
+                    <sc-if value="{{ c.isVal }}">{{ c.t }}</sc-if>
+                  </td>
+                </sc-for>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <sc-if value="{{ tv.empty }}"><div style="padding:32px 12px;font-size:14px;color:#5F6366">No rows match these filters.</div></sc-if>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:16px;font-size:13px;color:#4A4F51;font-variant-numeric:tabular-nums">
+        <span>{{ tv.total }}</span>
+        <span style="color:#5F6366">○ Not reported means no value was published for that day. 0 means the day was reported as zero.</span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.sql }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.025em">SQL Explorer</h1>
+          <p style="margin:6px 0 0;font-size:15px;color:#5F6366">Read-only queries against {{ pub.id }}. In this prototype, queries run against local illustrative fixtures.</p>
+        </div>
+        <button onClick="{{ toggleSchema }}" aria-expanded="{{ schemaOpen }}" style="height:34px;padding:0 12px;border-radius:6px;border:1px solid #D6D6D6;background:{{ schemaBtnBg }};font-size:13px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">Tables {{ schemaArrow }}</button>
+      </div>
+      <div style="display:flex;gap:24px;margin-top:24px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1 1 560px;min-width:0">
+          <div style="border:1px solid #D6D6D6;border-radius:8px;overflow:hidden;background:#FBFBFB" style-focus-within="border-color:#243237">
+            <div style="display:flex">
+              <div aria-hidden="true" style="flex:none;width:40px;padding:14px 0;background:#F3F3F3;border-right:1px solid #E4E4E4;text-align:right;font-family:'Geist Mono',monospace;font-size:13px;line-height:22px;color:#8A9194">
+                <sc-for list="{{ sqlLines }}" as="l"><div style="padding-right:10px">{{ l }}</div></sc-for>
+              </div>
+              <textarea aria-label="SQL query" value="{{ sql }}" onChange="{{ onSql }}" onKeyDown="{{ onSqlKey }}" spellCheck="false" style="flex:1;min-width:0;height:{{ sqlH }};border:0;outline:none;resize:none;padding:14px 16px;background:transparent;font-family:'Geist Mono',monospace;font-size:13.5px;line-height:22px;color:#1E1D1D;white-space:pre;overflow:auto"></textarea>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-top:1px solid #E4E4E4;background:#FFFFFF;flex-wrap:wrap">
+              <span style="font-size:12px;color:#5F6366">Examples</span>
+              <sc-for list="{{ examples }}" as="e" hint-placeholder-count="3">
+                <button onClick="{{ e.go }}" style="height:26px;padding:0 8px;border-radius:5px;border:1px solid #E4E4E4;background:#FFFFFF;font-size:12px;color:#4A4F51;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">{{ e.label }}</button>
+              </sc-for>
+              <div style="flex:1"></div>
+              <span style="font-size:12px;color:#6B7072">⌘/Ctrl + Enter</span>
+              <button onClick="{{ runQuery }}" disabled="{{ sqlBusy }}" style="height:34px;padding:0 14px;border-radius:6px;border:1px solid #E5571F;background:#F8642B;color:#1E1D1D;font-size:13.5px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease;opacity:{{ runOp }}" style-hover="background:#F2581D">Run query</button>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;gap:12px">
+            <h2 style="margin:0;font-size:17px;font-weight:600">Results</h2>
+            <span role="status" style="font-size:13px;color:#5F6366;font-variant-numeric:tabular-nums">{{ sqlMeta }}</span>
+          </div>
+          <sc-if value="{{ sq.loading }}">
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+              <div style="height:36px;border-radius:6px;background:#F3F3F3"></div><div style="height:36px;border-radius:6px;background:#F6F6F6"></div><div style="height:36px;border-radius:6px;background:#F8F8F8"></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ sq.error }}">
+            <div role="alert" style="margin-top:12px;display:flex;gap:10px;background:#FBEAE8;color:#7E2B20;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.45"><strong style="font-weight:600">✕ Query error</strong><span>{{ sqlErr }}</span></div>
+          </sc-if>
+          <sc-if value="{{ sq.empty }}">
+            <div style="margin-top:12px;padding:28px;border:1px dashed #D6D6D6;border-radius:8px;font-size:14px;color:#4A4F51">The query ran and returned 0 rows.</div>
+          </sc-if>
+          <sc-if value="{{ sq.idle }}">
+            <div style="margin-top:12px;padding:28px;border:1px dashed #D6D6D6;border-radius:8px;font-size:14px;color:#5F6366">Run a query to see results.</div>
+          </sc-if>
+          <sc-if value="{{ sq.rows }}">
+            <div style="margin-top:12px;overflow:auto;max-height:440px;border:1px solid #E4E4E4;border-radius:8px">
+              <table style="width:100%;min-width:560px;border-collapse:collapse;font-family:'Geist Mono',monospace;font-size:13px;font-variant-numeric:tabular-nums">
+                <thead><tr><sc-for list="{{ sqlCols }}" as="c"><th style="position:sticky;top:0;background:#FAFAFA;text-align:left;font-weight:500;color:#5F6366;padding:10px 14px;border-bottom:1px solid #E4E4E4">{{ c }}</th></sc-for></tr></thead>
+                <tbody>
+                  <sc-for list="{{ sqlRows }}" as="r">
+                    <tr><sc-for list="{{ r }}" as="c"><td style="padding:10px 14px;border-bottom:1px solid #EFEFEF">
+                      <sc-if value="{{ c.isNull }}"><span style="display:inline-flex;height:20px;align-items:center;padding:0 6px;border:1px dashed #A9AEB0;border-radius:4px;font-size:12px;color:#4A4F51">NULL · not reported</span></sc-if>
+                      <sc-if value="{{ c.isVal }}">{{ c.t }}</sc-if>
+                    </td></sc-for></tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <sc-if value="{{ sqlTrunc }}"><p style="margin:8px 0 0;font-size:12.5px;color:#5F6366">Showing the first 200 rows.</p></sc-if>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ schemaOpen }}">
+          <aside aria-label="Tables" style="flex:0 0 272px;max-width:100%;border:1px solid #E4E4E4;border-radius:8px;padding:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 6px 10px"><span style="font-size:14px;font-weight:600">Tables</span><span style="font-size:11.5px;color:#6B7072">Fixture fields</span></div>
+            <sc-for list="{{ schema }}" as="t" hint-placeholder-count="3">
+              <div>
+                <button onClick="{{ t.toggle }}" aria-expanded="{{ t.open }}" style="display:flex;justify-content:space-between;align-items:center;width:100%;height:34px;padding:0 8px;border:0;border-radius:5px;background:{{ t.bg }};font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;color:#1E1D1D;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="background:#F5F5F5">{{ t.name }}<span style="font-family:Geist,sans-serif;color:#6B7072">{{ t.arrow }}</span></button>
+                <sc-if value="{{ t.open }}">
+                  <div style="padding:4px 8px 8px 16px;display:flex;flex-direction:column">
+                    <sc-for list="{{ t.fields }}" as="f"><div style="display:flex;justify-content:space-between;height:24px;align-items:center;font-family:'Geist Mono',monospace;font-size:12.5px"><span>{{ f.n }}</span><span style="color:#6B7072">{{ f.t }}</span></div></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <p style="margin:10px 6px 2px;font-size:11.5px;line-height:1.45;color:#5F6366">Fields shown are the ones used by this prototype's fixtures, not a confirmed production schema.</p>
+          </aside>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.refresh }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.025em">Refresh</h1>
+          <p style="margin:6px 0 0;font-size:15px;color:#5F6366">Past runs. The current publication stays up until a new candidate is approved.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:8px;height:34px;padding:0 4px 0 10px;border:1px dashed #B9BDBF;border-radius:6px;font-size:12px;color:#4A4F51"><span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.06em">PROTOTYPE</span> Next run
+            <select value="{{ outcome }}" onChange="{{ onOutcome }}" style="height:26px;border:0;background:transparent;font-size:12px;color:#1E1D1D">
+              <option value="fail">fails at Retrieve</option>
+              <option value="review">reaches Review</option>
+            </select>
+          </label>
+          <button onClick="{{ startRefresh }}" disabled="{{ startDisabled }}" style="height:36px;padding:0 14px;border-radius:6px;border:1px solid #E5571F;background:#F8642B;color:#1E1D1D;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease;opacity:{{ startOp }}" style-hover="background:#F2581D">Start refresh</button>
+        </div>
+      </div>
+      <sc-if value="{{ hasStartNote }}"><p style="margin:12px 0 0;font-size:13px;color:#5F6366;text-align:right">{{ startNote }}</p></sc-if>
+      <div style="display:flex;gap:28px;flex-wrap:wrap;margin-top:24px;padding:14px 16px;background:#FAFAFA;border:1px solid #EDEDED;border-radius:8px;font-size:13.5px">
+        <span><span style="color:#5F6366">Current publication </span><span style="font-family:'Geist Mono',monospace;font-size:13px;white-space:nowrap">{{ curPubId }}</span></span>
+        <sc-if value="{{ hasCand }}"><span><span style="color:#5F6366">Awaiting review </span><span style="font-family:'Geist Mono',monospace;font-size:13px;white-space:nowrap">{{ candId }}</span></span></sc-if>
+        <span style="color:#5F6366">Failed or unfinished runs never replace the current publication.</span>
+      </div>
+      <div style="margin-top:20px;overflow-x:auto">
+        <div style="min-width:640px">
+          <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr 1fr 24px;gap:16px;padding:10px 12px;font-size:12px;font-weight:500;color:#5F6366;border-bottom:1px solid #E4E4E4"><span>Run</span><span>Started</span><span>Status</span><span>Latest day</span><span></span></div>
+          <sc-for list="{{ runRows }}" as="r" hint-placeholder-count="4">
+            <button onClick="{{ r.go }}" style="display:grid;grid-template-columns:1fr 1.4fr 1fr 1fr 24px;gap:16px;align-items:center;width:100%;height:50px;padding:0 12px;border:0;border-bottom:1px solid #EDEDED;background:#FFFFFF;font-size:14px;color:#1E1D1D;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums" style-hover="background:#F7F7F7">
+              <span style="font-family:'Geist Mono',monospace;font-size:13.5px">{{ r.id }}</span><span>{{ r.started }}</span>
+              <span><span style="display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:4px;font-size:12px;font-weight:500;background:{{ r.b.bg }};color:{{ r.b.fg }}">{{ r.b.icon }} {{ r.b.label }}</span></span>
+              <span>{{ r.latest }}</span><span style="color:#6B7072">→</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{ noRuns }}"><div style="padding:32px 12px;font-size:14px;color:#5F6366">No runs yet. Start a refresh to retrieve the first set of data.</div></sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.run }}">
+      <button onClick="{{ goRefresh }}" style="padding:0;border:0;background:transparent;font-size:13px;color:#243237;text-decoration:underline;text-underline-offset:3px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">← Refresh</button>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
+        <h1 style="margin:0;font-family:'Geist Mono',monospace;font-size:28px;font-weight:500;letter-spacing:-0.02em">{{ run.id }}</h1>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px;border-radius:4px;font-size:12.5px;font-weight:500;background:{{ run.b.bg }};color:{{ run.b.fg }}">{{ run.b.icon }} {{ run.b.label }}</span>
+      </div>
+      <p style="margin:8px 0 0;font-size:15px;color:#5F6366">{{ run.summary }} Started {{ run.started }}.</p>
+      <ol style="list-style:none;margin:28px 0 0;padding:0;max-width:760px">
+        <sc-for list="{{ run.steps }}" as="s" hint-placeholder-count="5">
+          <li style="display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:14px;padding:14px 0;border-bottom:1px solid #EFEFEF;align-items:start">
+            <span aria-label="{{ s.label }}" style="width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:{{ s.bg }};color:{{ s.fg }};border:1px solid {{ s.bd }}">{{ s.icon }}</span>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:14.5px;font-weight:600;color:{{ s.tc }}">{{ s.n }}</span><span style="font-size:13.5px;color:#4A4F51">{{ s.d }}</span></div>
+            <span style="font-size:13px;color:#5F6366;font-variant-numeric:tabular-nums">{{ s.t }}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <sc-if value="{{ run.isReview }}">
+        <div style="margin-top:28px;max-width:760px;border:1px solid #E4E4E4;border-radius:10px;padding:24px">
+          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span style="font-size:12px;color:#5F6366">Candidate</span><span style="font-family:'Geist Mono',monospace;font-size:16px;font-weight:500">{{ run.cand }}</span></div>
+          <sc-if value="{{ run.hasWarn }}">
+            <div role="note" style="margin-top:14px;display:flex;gap:10px;background:#FBF0E2;color:#6E3B08;border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.5"><strong style="font-weight:600">! Warning</strong><span>{{ run.warn }}</span></div>
+          </sc-if>
+          <sc-if value="{{ run.noWarn }}"><p style="margin:14px 0 0;font-size:14px;color:#1D6B3E">✓ All checks passed with no warnings.</p></sc-if>
+          <p style="margin:14px 0 0;font-size:14px;color:#4A4F51">The current publication is still <span style="font-family:'Geist Mono',monospace;font-size:13px;color:#1E1D1D">{{ curPubId }}</span>. Approving publishes {{ run.cand }} in its place.</p>
+          <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap">
+            <button onClick="{{ askApprove }}" style="height:36px;padding:0 16px;border-radius:6px;border:1px solid #E5571F;background:#F8642B;color:#1E1D1D;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="background:#F2581D">Approve</button>
+            <button onClick="{{ askDiscard }}" style="height:36px;padding:0 16px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;color:#A13A2C;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#A13A2C">Discard</button>
+          </div>
+          <p style="margin:10px 0 0;font-size:12.5px;color:#5F6366">Discard drops this candidate. It can't be brought back.</p>
+        </div>
+      </sc-if>
+      <sc-if value="{{ run.isFailed }}">
+        <div style="margin-top:28px;max-width:760px;display:flex;gap:10px;background:#FBEAE8;color:#7E2B20;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.5"><strong style="font-weight:600">✕ Run failed</strong><span>Nothing was published. <span style="font-family:'Geist Mono',monospace;font-size:13px;white-space:nowrap">{{ curPubId }}</span> remains the current publication.</span></div>
+      </sc-if>
+      <sc-if value="{{ run.isRunning }}">
+        <p style="margin:24px 0 0;font-size:13.5px;color:#5F6366">Simulated progress. <span style="font-family:'Geist Mono',monospace;font-size:13px;color:#1E1D1D">{{ curPubId }}</span> stays current while this runs.</p>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ pg.settings }}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;max-width:720px">
+        <div>
+          <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-0.025em">Schedule</h1>
+          <p style="margin:6px 0 0;font-size:15px;color:#5F6366">When the daily refresh runs.</p>
+        </div>
+      </div>
+      <div style="max-width:420px;display:flex;flex-direction:column;gap:20px;margin-top:28px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid #EDEDED">
+          <div style="display:flex;flex-direction:column;gap:2px"><span id="sched-label" style="font-size:14px;font-weight:500">Schedule enabled</span><span style="font-size:13px;color:#5F6366">{{ schedState }}</span></div>
+          <button role="switch" aria-checked="{{ sched.on }}" aria-labelledby="sched-label" onClick="{{ toggleSched }}" style="width:40px;height:24px;border-radius:12px;border:0;background:{{ sw.bg }};padding:2px;cursor:pointer;display:flex"><span style="width:20px;height:20px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.2);transform:translateX({{ sw.tx }});transition:transform .2s cubic-bezier(.2,.7,.2,1)"></span></button>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Time
+          <input type="time" value="{{ sched.time }}" onChange="{{ onTime }}" style="height:40px;border:1px solid #D6D6D6;border-radius:6px;padding:0 12px;font-size:14px;color:#1E1D1D;font-variant-numeric:tabular-nums">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Timezone
+          <select value="{{ sched.tz }}" onChange="{{ onTz }}" style="height:40px;border:1px solid #D6D6D6;border-radius:6px;padding:0 10px;font-size:14px;color:#1E1D1D;background:#FFFFFF">
+            <sc-for list="{{ tzs }}" as="z"><option value="{{ z }}">{{ z }}</option></sc-for>
+          </select>
+        </label>
+        <p style="margin:0;font-size:13.5px;color:#4A4F51">This only sets the clock. It does not start a refresh.</p>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onClick="{{ saveSched }}" disabled="{{ schedClean }}" style="height:36px;padding:0 16px;border-radius:6px;border:1px solid #E5571F;background:#F8642B;color:#1E1D1D;font-size:14px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease;opacity:{{ saveOp }}" style-hover="background:#F2581D">Save</button>
+          <span role="status" style="font-size:13px;color:#5F6366">{{ saveNote }}</span>
+        </div>
+      </div>
+    </sc-if>
+
+    </div>
+  </main>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasModal }}">
+  <div style="position:fixed;inset:0;background:rgba(30,29,29,0.36);display:flex;align-items:center;justify-content:center;padding:24px;z-index:100">
+    <div ref="{{ dialogRef }}" role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="width:100%;max-width:460px;background:#FFFFFF;border-radius:10px;border:1px solid #E4E4E4;box-shadow:0 16px 48px rgba(30,29,29,0.18);padding:24px">
+      <h2 id="dlg-title" style="margin:0;font-size:18px;font-weight:600">{{ modal.title }}</h2>
+      <p style="margin:10px 0 0;font-size:14px;line-height:1.55;color:#4A4F51">{{ modal.body }}</p>
+      <p style="margin:12px 0 0;font-size:12.5px;color:#5F6366">Prototype: this only changes local state in this page.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px">
+        <button onClick="{{ closeModal }}" style="height:36px;padding:0 14px;border-radius:6px;border:1px solid #D6D6D6;background:#FFFFFF;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease" style-hover="border-color:#243237">Cancel</button>
+        <button onClick="{{ modal.confirm }}" style="height:36px;padding:0 14px;border-radius:6px;border:1px solid {{ modal.bd }};background:{{ modal.bg }};color:{{ modal.fg }};font-size:14px;font-weight:600;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,opacity .16s ease,box-shadow .16s ease">{{ modal.cta }}</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}">
+  <div ref="{{ toastRef }}" role="status" style="position:fixed;right:24px;bottom:24px;max-width:380px;background:#243237;color:#FFFFFF;border-radius:8px;padding:12px 16px;font-size:13.5px;line-height:1.45;box-shadow:0 8px 24px rgba(30,29,29,0.2);z-index:110">{{ toast }}</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const DAY = 864e5, MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const P = s => Date.parse(s + 'T00:00:00Z'), ISO = t => new Date(t).toISOString().slice(0, 10);
+const fD = s => { if (!s) return '—'; const d = new Date(P(s)); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear(); };
+const fS = s => { const d = new Date(P(s)); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()]; };
+const fI = n => Math.round(n).toLocaleString('en-US');
+const sh = (o, c) => (o == null || c == null || !c) ? null : o / c * 100;
+const fP = (v, dp) => v == null ? null : v.toFixed(dp == null ? 2 : dp) + '%';
+const nowStr = () => { const d = new Date(); const p = n => String(n).padStart(2, '0'); return d.getUTCDate() + ' ' + MON[d.getUTCMonth()] + ' ' + d.getUTCFullYear() + ', ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ' UTC'; };
+
+function buildBase() {
+  const end = P('2026-09-27'), a = [];
+  const gaps = new Set(['2025-11-27','2026-01-01','2026-03-15','2026-05-17','2026-05-18','2026-07-04','2026-09-11','2026-09-12','2026-09-13']);
+  for (let i = 364; i >= 0; i--) {
+    const t = end - i * DAY, p = ISO(t);
+    if (gaps.has(p)) { a.push({ p, cap: null, out: null }); continue; }
+    const doy = (t - Date.UTC(new Date(t).getUTCFullYear(), 0, 1)) / DAY / 365;
+    const g = (c, w) => Math.exp(-Math.pow((doy - c) / w, 2) / 2);
+    const s = 7.5 + 9 * g(0.29, 0.055) + 10 * g(0.79, 0.05) + 1.1 * Math.sin(i / 4.3) + 0.6 * Math.sin(i / 1.9);
+    a.push({ p, cap: 100056, out: Math.round(100056 * s / 100) });
+  }
+  a[a.length - 1].out = 14420;
+  return a;
+}
+const BASE = buildBase();
+function candOf(base) {
+  const a = base.map(x => x.p === '2026-09-12' ? { p: x.p, cap: 100056, out: 102457 } : x);
+  a.push({ p: '2026-09-28', cap: 100056, out: 14010 });
+  return a;
+}
+const FDAYS = ['2026-09-20','2026-09-21','2026-09-26','2026-09-27'];
+const FAC = [
+  { name: 'Browns Ferry', cap: 3480, units: [['Unit 1',1160],['Unit 2',1160],['Unit 3',1160]], off: 1, out: [0, null, 1160, 1160] },
+  { name: 'Millstone', cap: 2108, units: [['Unit 2',869],['Unit 3',1239]], off: 0, out: [0, 0, 863, 0] },
+  { name: 'Palo Verde', cap: 3937, units: [['Unit 1',1311],['Unit 2',1314],['Unit 3',1312]], off: 1, out: [1314, 1314, 0, 1314] },
+  { name: 'Vogtle', cap: 4536, units: [['Unit 1',1150],['Unit 2',1150],['Unit 3',1120],['Unit 4',1116]], off: 2, out: [0, 0, 1120, 1120] }
+];
+const FROWS = [], GROWS = [];
+FDAYS.forEach((p, di) => FAC.forEach(f => {
+  const out = f.out[di];
+  FROWS.push({ period: p, facility_name: f.name, capacity: f.cap, outage: out });
+  f.units.forEach((u, ui) => GROWS.push({ period: p, facility_name: f.name, generator: u[0], capacity: u[1], outage: out == null ? null : (ui === f.off ? out : 0) }));
+}));
+const SAMPLE = "SELECT period, facility_name, capacity, outage\nFROM facility_outages\nWHERE facility_name = 'Browns Ferry'\nORDER BY period";
+const SCHEMA = {
+  national_outages: [['period','date'],['capacity','decimal'],['outage','decimal']],
+  facility_outages: [['period','date'],['facility_name','string'],['capacity','decimal'],['outage','decimal']],
+  generator_outages: [['period','date'],['facility_name','string'],['generator','string'],['capacity','decimal'],['outage','decimal']]
+};
+const TABLES = {
+  national: { name: 'national_outages', title: 'National outages', level: 'Whole country, by day', rows: '726' },
+  facility: { name: 'facility_outages', title: 'Facility outages', level: 'Plant, by day', rows: '48,210' },
+  generator: { name: 'generator_outages', title: 'Generator outages', level: 'Unit, by day', rows: '91,440' }
+};
+const B = {
+  published: { label: 'Published', icon: '✓', bg: '#E8F3EC', fg: '#1D6B3E' },
+  failed: { label: 'Failed', icon: '✕', bg: '#FBEAE8', fg: '#A13A2C' },
+  review: { label: 'Awaiting review', icon: '!', bg: '#FBF0E2', fg: '#8A4A0B' },
+  running: { label: 'Running', icon: '◐', bg: '#E6ECEE', fg: '#243237' },
+  discarded: { label: 'Discarded', icon: '–', bg: '#EEEEEE', fg: '#4A4F51' }
+};
+const done = (n, d, t) => ({ n, d, t, s: 'done' });
+function initRuns() {
+  const std = (cand, last) => [done('Accepted','The request was taken. Nothing was published yet.','2s'), done('Retrieve','Country, plant, and unit data came in.','4m 12s'), done('Prepare','Files for ' + cand + ' are set aside.','1m 05s'), done('Validate','Checks finished.','38s'), last];
+  return [
+    { id: 'run-1044', started: '29 Sep 2026, 06:15 UTC', status: 'review', latest: '2026-09-28', cand: 'ver-19c', warn: 'On 12 Sep the offline share is 102.40. That is outside 0–100, and it was left as-is.',
+      steps: std('ver-19c', { n: 'Review', d: 'Waiting on you.', t: 'now', s: 'current' }).map((x, i) => i === 3 ? { ...x, d: 'Checks finished. One warning.' } : x) },
+    { id: 'run-1042', started: '28 Sep 2026, 14:02 UTC', status: 'published', latest: '2026-09-27', steps: std('ver-19b', done('Review','Approved. Published as pub-2026-09-28-a.','6m')) },
+    { id: 'run-1041', started: '27 Sep 2026, 06:15 UTC', status: 'published', latest: '2026-09-26', steps: std('ver-19a', done('Review','Approved. Published as pub-2026-09-27-a.','41m')) },
+    { id: 'run-1038', started: '22 Sep 2026, 06:15 UTC', status: 'failed', latest: null, steps: [done('Accepted','The request was taken. Nothing was published yet.','2s'), { n: 'Retrieve', d: 'The source did not respond. Nothing was published.', t: '5m 00s', s: 'failed' }, { n: 'Prepare', d: 'Not reached.', t: '—', s: 'pending' }, { n: 'Validate', d: 'Not reached.', t: '—', s: 'pending' }, { n: 'Review', d: 'Not reached.', t: '—', s: 'pending' }] },
+    { id: 'run-1036', started: '20 Sep 2026, 06:15 UTC', status: 'published', latest: '2026-09-19', steps: std('ver-18f', done('Review','Approved. Published as pub-2026-09-20-a.','1h 12m')) }
+  ];
+}
+function geom(vals, yMin, yMax) {
+  const n = vals.length, X = i => n === 1 ? 50 : i / (n - 1) * 100, Y = v => 100 - (v - yMin) / (yMax - yMin) * 100;
+  const half = n === 1 ? 50 : 50 / (n - 1);
+  let d = '', segs = [], cur = [], gaps = [], gs = null;
+  vals.forEach((v, i) => {
+    if (v == null) { if (cur.length) segs.push(cur); cur = []; if (gs == null) gs = i; }
+    else { cur.push(i); if (gs != null) { gaps.push([gs, i - 1]); gs = null; } }
+  });
+  if (cur.length) segs.push(cur); if (gs != null) gaps.push([gs, n - 1]);
+  segs.forEach(s => s.forEach((i, k) => { d += (k ? 'L' : 'M') + X(i).toFixed(3) + ' ' + Y(vals[i]).toFixed(3) + ' '; }));
+  return {
+    X, Y, half, d,
+    singles: segs.filter(s => s.length === 1).map(s => ({ left: X(s[0]) + '%', top: Y(vals[s[0]]) + '%' })),
+    gaps: gaps.map(([a, b]) => { const l = Math.max(0, X(a) - half), r = Math.min(100, X(b) + half); return { left: l + '%', width: (r - l) + '%' }; })
+  };
+}
+function geomD(items, X, Y, half) {
+  let d = '', segs = [], cur = [], gaps = [], gs = null;
+  items.forEach((it, i) => { if (it.v == null) { if (cur.length) segs.push(cur); cur = []; if (gs == null) gs = i; } else { cur.push(i); if (gs != null) { gaps.push([gs, i - 1]); gs = null; } } });
+  if (cur.length) segs.push(cur); if (gs != null) gaps.push([gs, items.length - 1]);
+  segs.forEach(sg => sg.forEach((i, k) => { d += (k ? 'L' : 'M') + X(items[i].t).toFixed(3) + ' ' + Y(items[i].v).toFixed(3) + ' '; }));
+  return { d,
+    singles: segs.filter(sg => sg.length === 1).map(sg => items[sg[0]]).filter(o => { const x = X(o.t); return x >= -0.5 && x <= 100.5; }).map(o => ({ left: X(o.t) + '%', top: Y(o.v) + '%' })),
+    gaps: gaps.map(([a, b]) => { const l = Math.max(0, X(items[a].t) - half), r = Math.min(100, X(items[b].t) + half); return { left: l + '%', width: (r - l) + '%', w: r - l }; }).filter(g => g.w > 0) };
+}
+const svgPath = (d, w) => React.createElement('svg', { viewBox: '0 0 100 100', preserveAspectRatio: 'none', style: { width: '100%', height: '100%', overflow: 'visible', display: 'block' } },
+  React.createElement('path', { d, fill: 'none', stroke: '#243237', strokeWidth: w, vectorEffect: 'non-scaling-stroke', strokeLinejoin: 'round', strokeLinecap: 'round' }));
+
+class Component extends DCLogic {
+  state = Object.assign(this.dataState(true), {
+    screen: 'signin', role: 'viewer', page: 'dashboard', acct: '', pw: '', signErr: '',
+    sql: SAMPLE, sqlStatus: 'idle', sqlRes: null, sqlErr: '', sqlMs: 0, schemaOpen: true, schemaExp: { facility_outages: true },
+    sched: { on: true, time: '06:15', tz: 'America/New_York' }, schedSaved: { on: true, time: '06:15', tz: 'America/New_York' }, saveNote: '',
+    modal: null, toast: null, drawer: false, w: typeof window !== 'undefined' ? window.innerWidth : 1440, outcome: 'fail', runId: null
+  });
+
+  pageRef = React.createRef(); chartRef = React.createRef(); sparkRef = React.createRef(); dialogRef = React.createRef(); toastRef = React.createRef(); signRef = React.createRef(); meterRef = React.createRef(); backdropRef = React.createRef();
+  reduced() { return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  loop(key, dur) {
+    if (this.reduced()) return;
+    const m = this[key] = { start: performance.now(), dur, from: this._lastView };
+    const step = () => { if (this[key] !== m) return; if (performance.now() - m.start >= m.dur) { this[key] = null; this.forceUpdate(); return; } this.forceUpdate(); requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  anim(ref, kf, o) {
+    const el = ref && ref.current; if (!el || !el.animate) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    el.animate(kf, Object.assign({ duration: 260, easing: 'cubic-bezier(.2,.7,.2,1)', fill: 'backwards' }, o || {}));
+  }
+  snap() { const s = this.state; return { screen: s.screen, page: s.page, tableId: s.tableId, runId: s.runId, role: s.role, pubOn: s.pubOn, range: s.range, cFrom: s.cFrom, cTo: s.cTo, tab: s.tab, series: s.series, fac: s.fac, pinned: s.pinned, modal: s.modal, toast: s.toast, drawer: s.drawer }; }
+  componentDidUpdate() {
+    const p = this._prev || this.snap(); this._prev = this.snap();
+    const s = this.state, rise = [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }];
+    const pageChanged = s.screen !== p.screen || s.page !== p.page || s.tableId !== p.tableId || s.runId !== p.runId || s.role !== p.role || s.pubOn !== p.pubOn;
+    if (pageChanged) this.anim(this.pageRef, rise);
+    if (s.screen === 'signin' && p.screen !== 'signin') this.anim(this.signRef, rise, { duration: 360 });
+    if (s.page === 'dashboard' && (pageChanged || s.tab !== p.tab || s.series !== p.series)) {
+      this.anim(this.chartRef, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 750, easing: 'cubic-bezier(.4,0,.2,1)' });
+    }
+    if (s.page === 'dashboard' && s.screen === 'app' && (pageChanged || s.series !== p.series)) { this.anim(this.meterRef, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { duration: 700, delay: 120 }); this.loop('_count', 900); }
+    if (s.drawer && !p.drawer) this.anim(this.backdropRef, [{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
+    if (s.page === 'dashboard' && (pageChanged || s.fac !== p.fac || s.pinned !== p.pinned)) this.anim(this.sparkRef, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 480, easing: 'cubic-bezier(.4,0,.2,1)' });
+    if (s.modal && !p.modal) {
+      this.anim(this.dialogRef, [{ opacity: 0, transform: 'translateY(8px) scale(.98)' }, { opacity: 1, transform: 'none' }], { duration: 200 });
+      if (this.dialogRef.current) this.anim({ current: this.dialogRef.current.parentElement }, [{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
+    }
+    if (s.toast && s.toast !== p.toast) this.anim(this.toastRef, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240 });
+  }
+
+  dataState(on) {
+    return {
+      pubOn: on, pub: on ? { id: 'pub-2026-09-28-a', published: '28 Sep 2026, 14:10 UTC' } : null,
+      series: on ? BASE : [], facOn: on, runs: on ? initRuns() : [], pubSeq: 0,
+      range: '30', cFrom: null, cTo: null, tab: 'chart', hover: null, pinned: null, fac: null,
+      filt: { national: {}, facility: { from: '2026-09-20', to: '2026-09-27', plant: 'All' }, generator: { from: '2026-09-20', to: '2026-09-27', plant: 'All' } },
+      tableId: 'facility'
+    };
+  }
+
+  componentDidMount() {
+    this._rs = () => this.setState({ w: window.innerWidth });
+    this._kd = e => { if (e.key === 'Escape') { if (this.state.modal) this.setState({ modal: null }); else if (this.state.drawer) this.setState({ drawer: false }); } };
+    window.addEventListener('resize', this._rs); document.addEventListener('keydown', this._kd);
+    this._prev = this.snap();
+    this.setState(this.execSQL(SAMPLE, BASE, true));
+    this.anim(this.signRef, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 420 });
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._rs); document.removeEventListener('keydown', this._kd); clearInterval(this._iv); clearTimeout(this._tt); }
+
+  toastMsg(t) { clearTimeout(this._tt); this.setState({ toast: t }); this._tt = setTimeout(() => this.setState({ toast: null }), 4200); }
+  allowed(role, page) {
+    const m = { dashboard: ['viewer','analyst','admin'], catalog: ['analyst','admin'], table: ['analyst','admin'], sql: ['analyst','admin'], refresh: ['admin'], run: ['admin'], settings: ['admin'] };
+    return m[page].includes(role);
+  }
+  go(page, extra) { this.setState(Object.assign({ page, drawer: false }, extra || {})); if (typeof window !== 'undefined') window.scrollTo(0, 0); }
+  enter(role) { this.setState(s => ({ screen: 'app', role, page: this.allowed(role, s.page) ? s.page : 'dashboard', signErr: '', pw: '' })); }
+
+  rows(tbl, series, facOn) {
+    if (tbl === 'national_outages') return series.map(x => ({ period: x.p, capacity: x.cap, outage: x.out }));
+    if (tbl === 'facility_outages') return facOn ? FROWS : [];
+    if (tbl === 'generator_outages') return facOn ? GROWS : [];
+  }
+  execSQL(q, series, facOn) {
+    const s = q.trim().replace(/;\s*$/, '').replace(/\s+/g, ' ');
+    const err = m => ({ sqlStatus: 'error', sqlErr: m, sqlRes: null });
+    if (!/^select\b/i.test(s)) return err('Only SELECT statements are allowed. This explorer is read-only.');
+    const m = s.match(/^select (.+?) from (\w+)(?: where (\w+) ?= ?('[^']*'|[\d.]+))?(?: order by (\w+)(?: (asc|desc))?)?(?: limit (\d+))?$/i);
+    if (!m) return err('This prototype understands SELECT … FROM … [WHERE column = value] [ORDER BY column] [LIMIT n].');
+    const [, cols, tblRaw, wc, wv, oc, od, lim] = m; const tbl = tblRaw.toLowerCase();
+    const T = SCHEMA[tbl]; if (!T) return err('Table "' + tblRaw + '" does not exist. Available: national_outages, facility_outages, generator_outages.');
+    const fields = T.map(f => f[0]);
+    const sel = cols.trim() === '*' ? fields : cols.split(',').map(c => c.trim().toLowerCase());
+    const bad = [...sel, wc, oc].filter(c => c && !fields.includes(c.toLowerCase()));
+    if (bad.length) return err('Column "' + bad[0] + '" does not exist in ' + tbl + '.');
+    let r = this.rows(tbl, series, facOn).slice();
+    if (wc) { const k = wc.toLowerCase(); const v = wv.startsWith("'") ? wv.slice(1, -1) : Number(wv); r = r.filter(x => x[k] === v); }
+    if (oc) { const k = oc.toLowerCase(), dir = (od || '').toLowerCase() === 'desc' ? -1 : 1; r.sort((a, b) => a[k] == null ? 1 : b[k] == null ? -1 : (a[k] < b[k] ? -dir : a[k] > b[k] ? dir : 0)); }
+    if (lim) r = r.slice(0, Number(lim));
+    const types = Object.fromEntries(T);
+    const out = r.map(x => sel.map(c => { const v = x[c]; if (v == null) return { isNull: true }; return { isVal: true, t: types[c] === 'decimal' ? Number(v).toFixed(1) : String(v) }; }));
+    const sample = s.toLowerCase() === SAMPLE.replace(/\s+/g, ' ').toLowerCase();
+    return { sqlStatus: out.length ? 'done' : 'empty', sqlRes: { cols: sel, rows: out }, sqlErr: '', sqlMs: sample ? 143 : Math.min(420, 48 + out.length * 3 + sel.length * 9) };
+  }
+  runQuery() {
+    if (this.state.sqlStatus === 'loading') return;
+    this.setState({ sqlStatus: 'loading' });
+    setTimeout(() => this.setState(s => this.execSQL(s.sql, s.series, s.facOn)), 650);
+  }
+
+  startRefresh() {
+    const s = this.state;
+    const n = Math.max(1043, ...s.runs.map(r => Number(r.id.slice(4)))) + 1, id = 'run-' + n;
+    const names = ['Accepted','Retrieve','Prepare','Validate','Review'];
+    const run = { id, started: nowStr(), status: 'running', latest: null, outcome: s.outcome, cand: 'ver-' + (20 + s.runs.filter(r => r.sim).length) + 'a', sim: true,
+      steps: names.map((nm, i) => ({ n: nm, d: i ? 'Waiting.' : 'Working…', t: '—', s: i ? 'pending' : 'running' })) };
+    this.setState({ runs: [run, ...s.runs], page: 'run', runId: id });
+    clearInterval(this._iv); this._iv = setInterval(() => this.tick(), 1200);
+  }
+  tick() {
+    const DD = { Accepted: 'The request was taken. Nothing was published yet.', Retrieve: 'Country, plant, and unit data came in.', Prepare: 'Files are set aside.', Validate: 'Checks finished.' };
+    let any = false;
+    const runs = this.state.runs.map(r => {
+      if (r.status !== 'running') return r;
+      const st = r.steps.map(x => ({ ...x })), i = st.findIndex(x => x.s === 'running');
+      if (r.outcome === 'fail' && st[i].n === 'Retrieve') {
+        st[i] = { ...st[i], s: 'failed', d: 'The source did not respond (simulated). Nothing was published.', t: '1s' };
+        st.slice(i + 1).forEach(x => { x.d = 'Not reached.'; });
+        return { ...r, steps: st, status: 'failed' };
+      }
+      st[i] = { ...st[i], s: 'done', t: '1s', d: st[i].n === 'Prepare' ? 'Files for ' + r.cand + ' are set aside.' : DD[st[i].n] };
+      const nx = st[i + 1];
+      if (nx.n === 'Review') { nx.s = 'current'; nx.d = 'Waiting on you.'; nx.t = 'now'; const sr = this.state.series; return { ...r, steps: st, status: 'review', latest: sr.length ? sr[sr.length - 1].p : '2026-09-27' }; }
+      nx.s = 'running'; nx.d = 'Working…'; any = true;
+      return { ...r, steps: st };
+    });
+    this.setState({ runs }); if (!any) clearInterval(this._iv);
+  }
+  approve(runId) {
+    this.setState(s => {
+      const r = s.runs.find(x => x.id === runId);
+      const series = r.cand === 'ver-19c' ? candOf(s.series.length ? s.series : BASE) : (s.series.length ? s.series : BASE);
+      const id = 'pub-' + ISO(Date.now()) + '-' + 'abcdefgh'[s.pubSeq % 8];
+      const runs = s.runs.map(x => x.id !== runId ? x : { ...x, status: 'published', steps: x.steps.map(st => st.n === 'Review' ? { ...st, s: 'done', d: 'Approved. Published as ' + id + '.', t: 'now' } : st) });
+      this.toastMsg(r.cand + ' approved and shown as ' + id + '. Prototype state only.');
+      return { modal: null, runs, series, facOn: true, pubOn: true, pub: { id, published: nowStr() }, pubSeq: s.pubSeq + 1, pinned: null, hover: null };
+    });
+  }
+  discard(runId) {
+    this.setState(s => {
+      const r = s.runs.find(x => x.id === runId);
+      this.toastMsg(r.cand + ' discarded. ' + (s.pub ? s.pub.id + ' is still current.' : 'Nothing was published.'));
+      return { modal: null, runs: s.runs.map(x => x.id !== runId ? x : { ...x, status: 'discarded', steps: x.steps.map(st => st.n === 'Review' ? { ...st, s: 'discarded', d: 'Discarded by admin. ' + x.cand + " can't be brought back.", t: 'now' } : st) }) };
+    });
+  }
+
+  renderVals() {
+    const s = this.state, role = s.role, isAdmin = role === 'admin', canBrowse = role !== 'viewer';
+    const narrow = s.w < 960, hasPub = !!s.pub, series = s.series;
+    const seg = (on) => ({ bg: on ? '#243237' : '#FFFFFF', fg: on ? '#FFFFFF' : '#1E1D1D', bd: on ? '#243237' : '#D6D6D6' });
+    const setData = on => { clearInterval(this._iv); this.setState(Object.assign(this.dataState(on), { page: 'dashboard', modal: null }, this.execSQL(SAMPLE, on ? BASE : [], on))); };
+    const v = {
+      isSignin: s.screen === 'signin', isApp: s.screen === 'app', narrow, isAdmin, canBrowse, role, hasPub, noPub: !hasPub,
+      acct: s.acct, pw: s.pw, signErr: s.signErr, hasSignErr: !!s.signErr,
+      onAcct: e => this.setState({ acct: e.target.value, signErr: '' }), onPw: e => this.setState({ pw: e.target.value }),
+      signIn: e => { e.preventDefault(); const a = s.acct.trim().toLowerCase(); if (['viewer','analyst','admin'].includes(a)) this.enter(a); else this.setState({ signErr: a ? 'Unknown account. Use viewer, analyst, or admin.' : 'Enter an account name.' }); },
+      rolePreview: ['viewer','analyst','admin'].map(r => ({ label: 'Continue as ' + r, go: () => this.enter(r) })),
+      roleSwitch: ['viewer','analyst','admin'].map(r => Object.assign({ label: r[0].toUpperCase() + r.slice(1), on: role === r, go: () => this.enter(r) }, seg(role === r))),
+      dataOpts: [[true, 'Published', 'Published'], [false, 'No publication yet', 'Unpublished']].map(([on, label, short]) => Object.assign({ label, short, on: s.pubOn === on, go: () => setData(on) }, seg(s.pubOn === on))),
+      signOut: () => this.setState({ screen: 'signin', acct: '', pw: '', drawer: false }),
+      initial: role[0].toUpperCase(), roleLabel: { viewer: 'Viewer', analyst: 'Analyst', admin: 'Admin' }[role],
+      sb: { pos: narrow ? 'fixed' : 'sticky', tx: narrow && !s.drawer ? '-100%' : '0px', vis: narrow && !s.drawer ? 'hidden' : 'visible', shadow: narrow && s.drawer ? '0 12px 40px rgba(30,29,29,0.18)' : 'none' },
+      showBackdrop: narrow && s.drawer, openDrawer: () => this.setState({ drawer: true }), closeDrawer: () => this.setState({ drawer: false }),
+      pub: s.pub || { id: '—', published: '—' }, curPubId: s.pub ? s.pub.id : 'none yet',
+      goCatalog: () => this.go('catalog'), goRefresh: () => this.go('refresh'),
+      pageRef: this.pageRef, chartRef: this.chartRef, sparkRef: this.sparkRef, dialogRef: this.dialogRef, toastRef: this.toastRef, signRef: this.signRef, meterRef: this.meterRef, backdropRef: this.backdropRef,
+      hasModal: !!s.modal, closeModal: () => this.setState({ modal: null }), hasToast: !!s.toast, toast: s.toast
+    };
+    const act = { table: 'catalog', run: 'refresh' }[s.page] || s.page;
+    const navItem = (k, label, extra) => Object.assign({ label, current: act === k ? 'page' : undefined, bg: act === k ? '#FFFFFF' : 'transparent', bd: act === k ? '#E0E0E0' : 'transparent', fw: act === k ? 600 : 500, go: () => this.go(k) }, extra || {});
+    const reviewRuns = s.runs.filter(r => r.status === 'review');
+    v.navMain = [navItem('dashboard', 'Dashboard')].concat(canBrowse ? [navItem('catalog', 'Catalog'), navItem('sql', 'SQL Explorer')] : []);
+    v.navAdmin = [navItem('refresh', 'Refresh', { hasCount: reviewRuns.length > 0, count: reviewRuns.length }), navItem('settings', 'Settings', { hasCount: false })];
+    v.showReviewNote = isAdmin && reviewRuns.length > 0 && s.page !== 'run';
+    v.reviewNote = reviewRuns.length ? reviewRuns[0].cand + ' awaits review' : '';
+    v.goReview = () => reviewRuns.length && this.go('run', { runId: reviewRuns[0].id });
+
+    const page = this.allowed(role, s.page) ? s.page : 'dashboard';
+    const dataPage = ['dashboard','catalog','table','sql'].includes(page);
+    v.showEmpty = v.isApp && dataPage && !hasPub;
+    v.emptyAdminCta = isAdmin;
+    v.pg = {}; ['dashboard','catalog','table','sql','refresh','run','settings'].forEach(k => v.pg[k] = page === k && (!dataPage || hasPub));
+
+    const reported = series.filter(x => x.out != null);
+    const latest = reported[reported.length - 1];
+    v.latestDate = latest ? latest.p : ''; v.latestLabel = latest ? fD(latest.p) : '—'; v.minDate = series.length ? series[0].p : '';
+
+    if (v.pg.dashboard && latest) {
+      const ls = sh(latest.out, latest.cap);
+      const ck = this._count ? 1 - Math.pow(1 - Math.min(1, (performance.now() - this._count.start) / this._count.dur), 3) : 1;
+      v.kpi = { share1: fP(ls * ck, 1), share2: fP(ls, 2), out: fI(latest.out * ck), cap: fI(latest.cap * ck), rest: fP(100 - ls, 2) + ' · ' + fI(latest.cap - latest.out) + ' MW', meterW: Math.min(100, ls) + '%', meterLabel: 'Offline ' + fP(ls, 2) + ' of reported capacity' };
+      const lastP = series[series.length - 1].p;
+      v.ranges = [['30','30 days'],['90','90 days'],['365','365 days'],['custom','Custom range']].map(([k, l]) => Object.assign({ label: l, on: s.range === k, go: () => { if (s.range !== k) this.loop('_morph', 650); this.setState({ range: k, hover: null }); } }, seg(s.range === k)));
+      v.isCustom = s.range === 'custom';
+      const cFrom = s.cFrom || ISO(P(lastP) - 29 * DAY), cTo = s.cTo || lastP;
+      v.cFrom = cFrom; v.cTo = cTo;
+      v.onCFrom = e => { if (!e.target.value) return; this.loop('_morph', 650); this.setState({ cFrom: e.target.value, hover: null }); };
+      v.onCTo = e => { if (!e.target.value) return; this.loop('_morph', 650); this.setState({ cTo: e.target.value, hover: null }); };
+      const pts = s.range === 'custom' ? series.filter(x => x.p >= cFrom && x.p <= cTo) : series.slice(-Number(s.range));
+      v.rangeLabel = pts.length ? fS(pts[0].p) + ' – ' + fD(pts[pts.length - 1].p) + ' · ' + pts.length + ' days' : 'No days in range';
+      v.tabs = [['chart','Chart'],['daily','Daily values']].map(([k, l]) => ({ label: l, on: s.tab === k, bd: s.tab === k ? '#243237' : 'transparent', fw: s.tab === k ? 600 : 500, fg: s.tab === k ? '#1E1D1D' : '#5F6366', go: () => this.setState({ tab: k }) }));
+      v.tabChart = s.tab === 'chart'; v.tabDaily = s.tab === 'daily';
+      const vals = pts.map(x => sh(x.out, x.cap)), nn = vals.filter(x => x != null);
+      const warnPts = pts.filter((x, i) => vals[i] != null && (vals[i] > 100 || vals[i] < 0));
+      const selDate = s.pinned || latest.p;
+      const chart = { empty: !nn.length, ok: nn.length > 0, hasWarn: warnPts.length > 0, warnText: warnPts.map(x => 'On ' + fS(x.p) + ' the offline share is ' + sh(x.out, x.cap).toFixed(2) + '.').join(' ') + ' That is outside 0–100, and it was left as-is.' };
+      if (nn.length) {
+        const lo = Math.min(...nn), hi = Math.max(...nn);
+        const yMin = Math.max(0, Math.floor((lo - 1) / 5) * 5); let yMax = Math.ceil((hi + 1) / 5) * 5; if (yMax - yMin < 10) yMax = yMin + 10;
+        const step = (yMax - yMin) <= 25 ? 5 : (yMax - yMin) <= 60 ? 10 : 25;
+        const yMin2 = Math.floor(yMin / step) * step; yMax = Math.ceil(yMax / step) * step;
+        const n = pts.length, target = { x0: P(pts[0].p), x1: P(pts[n - 1].p), y0: yMin2, y1: yMax };
+        let view = target, morphing = false;
+        if (this._morph && this._morph.from) {
+          const k = Math.min(1, (performance.now() - this._morph.start) / this._morph.dur), e = 1 - Math.pow(1 - k, 3), f = this._morph.from;
+          view = { x0: f.x0 + (target.x0 - f.x0) * e, x1: f.x1 + (target.x1 - f.x1) * e, y0: f.y0 + (target.y0 - f.y0) * e, y1: f.y1 + (target.y1 - f.y1) * e };
+          morphing = k < 1;
+        }
+        this._lastView = view;
+        const span = view.x1 - view.x0;
+        const X = t => span <= 0 ? 50 : (t - view.x0) / span * 100, Y = v => 100 - (v - view.y0) / (view.y1 - view.y0) * 100;
+        const halfPct = span <= 0 ? 50 : DAY / span * 50;
+        const items = (morphing ? series.filter(x => { const t = P(x.p); return t >= view.x0 - DAY * 1.5 && t <= view.x1 + DAY * 1.5; }) : pts).map(x => ({ t: P(x.p), v: sh(x.out, x.cap) }));
+        const G = geomD(items, X, Y, halfPct);
+        chart.ticks = []; for (let t = yMin2; t <= yMax + 0.01; t += step) { const y = Y(t); if (y >= -0.5 && y <= 100.5) chart.ticks.push({ top: y + '%', label: t + '%' }); }
+        chart.svg = svgPath(G.d, 2); chart.gaps = G.gaps; chart.dots = G.singles;
+        chart.warns = items.filter(o => o.v != null && (o.v > 100 || o.v < 0) && X(o.t) >= 0 && X(o.t) <= 100).map(o => ({ left: X(o.t) + '%', top: Y(o.v) + '%' }));
+        const cx = i => X(P(pts[i].p));
+        chart.cols = morphing ? [] : pts.map((x, i) => ({ left: Math.max(0, cx(i) - halfPct) + '%', width: (2 * halfPct) + '%', enter: () => this.state.hover !== i && this.setState({ hover: i }), pin: () => this.setState({ pinned: x.p }) }));
+        const mk = i => { const x = pts[i], val = vals[i], Xp = cx(i); return { left: Xp + '%', top: val == null ? '0%' : Y(val) + '%', hasVal: val != null, noVal: val == null, date: fD(x.p), share: fP(val), out: x.out == null ? '' : fI(x.out), cap: x.cap == null ? '' : fI(x.cap), warn: val != null && (val > 100 || val < 0), tx: Xp < 14 ? 'translateX(8px)' : Xp > 86 ? 'translateX(calc(-100% - 8px))' : 'translateX(-50%)' }; };
+        const hi2 = !morphing && s.hover != null && s.hover < n ? s.hover : null;
+        chart.hasHover = hi2 != null; chart.hov = hi2 != null ? mk(hi2) : {};
+        const pi = pts.findIndex(x => x.p === selDate); chart.hasPin = !morphing && !!s.pinned && pi >= 0; chart.pin = pi >= 0 ? mk(pi) : {};
+        const xi = n > 1 ? [0, Math.round((n - 1) / 3), Math.round(2 * (n - 1) / 3), n - 1] : [0];
+        chart.xl = xi.map((i, k) => ({ left: cx(i) + '%', label: n > 120 ? fS(pts[i].p) + ' ' + pts[i].p.slice(2, 4) : fS(pts[i].p), tx: k === 0 ? 'none' : k === xi.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)' }));
+        chart.onLeave = () => this.setState({ hover: null });
+        chart.onKey = e => {
+          const h = this.state.hover;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); const base = h == null ? (pi >= 0 ? pi : n - 1) : h; this.setState({ hover: Math.max(0, Math.min(n - 1, base + (e.key === 'ArrowRight' ? 1 : -1))) }); }
+          else if ((e.key === 'Enter' || e.key === ' ') && h != null) { e.preventDefault(); this.setState({ pinned: pts[h].p }); }
+          else if (e.key === 'Escape') this.setState({ hover: null });
+        };
+      }
+      v.chart = chart;
+      const cell = (val, fmt) => val == null ? { isMissing: true } : { isVal: true, t: fmt(val) };
+      v.dailyRows = pts.slice().reverse().map(x => { const sv = sh(x.out, x.cap); return {
+        date: fD(x.p), isLatest: x.p === latest.p, isPinned: x.p === s.pinned, bg: x.p === s.pinned ? '#FEF3EE' : 'transparent', pin: () => this.setState({ pinned: x.p }),
+        cells: [cell(x.out, fI), cell(x.cap, fI), sv == null ? { isNA: x.out != null || x.cap != null, isMissing: x.out == null && x.cap == null } : { isVal: true, t: fP(sv), warn: sv > 100 || sv < 0 }] }; });
+      const si = series.findIndex(x => x.p === selDate), sp = series[si], ssv = sp ? sh(sp.out, sp.cap) : null, prev = si > 0 ? series[si - 1] : null;
+      const psv = prev ? sh(prev.out, prev.cap) : null;
+      v.sel = { date: fD(selDate), isLatest: !s.pinned || s.pinned === latest.p, badge: (!s.pinned || s.pinned === latest.p) ? 'Latest observation' : 'Pinned', badgeBg: (!s.pinned || s.pinned === latest.p) ? '#EDEDED' : '#FDE3D7',
+        hasVal: ssv != null, noVal: ssv == null, share: fP(ssv), out: sp && sp.out != null ? fI(sp.out) : '', cap: sp && sp.cap != null ? fI(sp.cap) : '', warn: ssv != null && (ssv > 100 || ssv < 0),
+        prev: !prev ? 'No earlier day in this publication.' : psv == null ? 'Previous day (' + fS(prev.p) + ') was not reported.' : ssv == null ? 'Previous day (' + fS(prev.p) + '): ' + fP(psv) + '.' : 'Previous day (' + fS(prev.p) + '): ' + fP(psv) + ' · change ' + ((ssv - psv) >= 0 ? '+' : '−') + Math.abs(ssv - psv).toFixed(2) + ' pts.' };
+      v.sel.btnOp = v.sel.isLatest ? 0.45 : 1;
+      v.resetPin = () => this.setState({ pinned: null, hover: null });
+      const day = s.facOn ? FROWS.filter(r => r.period === selDate) : [];
+      const ranked = day.slice().sort((a, b) => a.outage == null ? 1 : b.outage == null ? -1 : b.outage - a.outage);
+      const maxO = Math.max(1, ...ranked.map(r => r.outage || 0));
+      const facSel = ranked.find(r => r.facility_name === s.fac) || ranked[0];
+      v.contrib = { none: !ranked.length, some: ranked.length > 0, items: ranked.map(r => { const on = facSel && r.facility_name === facSel.facility_name; return {
+        name: r.facility_name, on, bg: on ? '#F3F3F3' : 'transparent', bd: on ? '#E0E0E0' : 'transparent', fw: on ? 600 : 500, w: r.outage == null ? '0%' : (r.outage / maxO * 100) + '%',
+        missing: r.outage == null, has: r.outage != null, val: r.outage == null ? '' : fI(r.outage), go: () => this.setState({ fac: r.facility_name }) }; }) };
+      if (ranked.length) {
+        const sum = ranked.reduce((a, r) => a + (r.outage || 0), 0), miss = ranked.filter(r => r.outage == null);
+        v.contrib.note = 'These ' + ranked.length + ' fixture facilities report ' + fI(sum) + ' MW of the ' + (sp && sp.out != null ? fI(sp.out) + ' MW' : 'unreported national total') + ' for this day; other facilities are not in this illustrative fixture.' + (miss.length ? ' ' + miss.map(r => r.facility_name).join(', ') + ' did not report and is left out of the sum, not counted as zero.' : '');
+        const fs = sh(facSel.outage, facSel.capacity);
+        v.fd = { name: facSel.facility_name, has: facSel.outage != null, missing: facSel.outage == null, out: facSel.outage == null ? '' : fI(facSel.outage), cap: fI(facSel.capacity), share: fP(fs),
+          openFac: () => this.go('table', { tableId: 'facility', filt: Object.assign({}, s.filt, { facility: { from: '2026-09-20', to: '2026-09-27', plant: facSel.facility_name } }) }),
+          openGen: () => this.go('table', { tableId: 'generator', filt: Object.assign({}, s.filt, { generator: { from: '2026-09-20', to: '2026-09-27', plant: facSel.facility_name } }) }) };
+        const sd = []; for (let t = P('2026-09-20'); t <= P('2026-09-27'); t += DAY) sd.push(ISO(t));
+        const svals = sd.map(d => { const r = FROWS.find(x => x.period === d && x.facility_name === facSel.facility_name); return r ? sh(r.outage, r.capacity) : null; });
+        const smax = Math.max(10, Math.ceil(Math.max(0, ...svals.filter(x => x != null)) / 10) * 10);
+        const SG = geom(svals, 0, smax);
+        v.spark = { svg: svgPath(SG.d, 1.75), gaps: SG.gaps, from: fS(sd[0]), to: fS(sd[sd.length - 1]), range: '20–27 Sep 2026',
+          pts: svals.map((x, i) => ({ x, i })).filter(o => o.x != null).map(o => { const on = sd[o.i] === selDate; return { left: SG.X(o.i) + '%', top: SG.Y(o.x) + '%', size: on ? '9px' : '6px', bg: on ? '#F8642B' : '#FFFFFF' }; }) };
+      } else { v.fd = {}; v.spark = {}; }
+    }
+
+    if (v.pg.catalog) v.catalog = Object.keys(TABLES).map(k => ({ name: TABLES[k].name, level: TABLES[k].level, rows: TABLES[k].rows, latest: k === 'national' ? v.latestLabel : '27 Sep 2026', go: () => this.go('table', { tableId: k }) }));
+
+    if (v.pg.table) {
+      const k = s.tableId, T = TABLES[k], f = s.filt[k] || {};
+      const lastP = latest ? latest.p : '2026-09-27';
+      const defs = k === 'national' ? { from: ISO(P(lastP) - 29 * DAY), to: series[series.length - 1].p } : { from: '2026-09-20', to: '2026-09-27', plant: 'All' };
+      const from = f.from || defs.from, to = f.to || defs.to, plant = f.plant || 'All';
+      const setF = patch => this.setState(st => ({ filt: Object.assign({}, st.filt, { [k]: Object.assign({}, st.filt[k], patch) }) }));
+      const num = (val, fmt) => val == null ? { isMissing: true, align: 'right' } : { isVal: true, t: fmt ? fmt(val) : fI(val), align: 'right' };
+      const shareCell = (o, c) => { const x = sh(o, c); return x == null ? { isNA: true, align: 'right' } : { isVal: true, t: fP(x), align: 'right' }; };
+      const tx = t => ({ isVal: true, t, align: 'left' });
+      let heads, rows, total;
+      if (k === 'national') {
+        const rs = series.filter(x => x.p >= from && x.p <= to).reverse();
+        heads = [['Day','left'],['Capacity MW','right'],['Outage MW','right'],['Offline share','right']];
+        rows = rs.map(x => [tx(fD(x.p)), num(x.cap), num(x.out), shareCell(x.out, x.cap)]);
+        const miss = rs.filter(x => x.out == null).length;
+        total = rs.length + ' days · ' + miss + ' not reported.';
+      } else {
+        const src = k === 'facility' ? FROWS : GROWS;
+        const rs = src.filter(r => r.period >= from && r.period <= to && (plant === 'All' || r.facility_name === plant)).slice().sort((a, b) => a.period < b.period ? 1 : a.period > b.period ? -1 : a.facility_name.localeCompare(b.facility_name));
+        heads = k === 'facility' ? [['Day','left'],['Plant','left'],['Capacity MW','right'],['Outage MW','right'],['Offline share','right']] : [['Day','left'],['Plant','left'],['Unit','left'],['Capacity MW','right'],['Outage MW','right'],['Offline share','right']];
+        rows = rs.map(r => k === 'facility' ? [tx(fS(r.period)), tx(r.facility_name), num(r.capacity), num(r.outage), shareCell(r.outage, r.capacity)] : [tx(fS(r.period)), tx(r.facility_name), tx(r.generator), num(r.capacity), num(r.outage), shareCell(r.outage, r.capacity)]);
+        const miss = rs.filter(r => r.outage == null).length;
+        const so = rs.reduce((a, r) => a + (r.outage || 0), 0), sc = rs.reduce((a, r) => a + r.capacity, 0);
+        total = !rs.length ? '' : miss ? 'Combined offline share for these rows: unavailable. ' + miss + ' row' + (miss > 1 ? 's are' : ' is') + ' not reported, so the sum is incomplete.' : 'Combined offline share for these rows: ' + fI(so) + ' MW ÷ ' + fI(sc) + ' MW = ' + fP(sh(so, sc)) + ' (summed outage ÷ summed capacity).';
+      }
+      v.tv = { name: T.name, title: T.title, level: T.level, from, to, plant, min: k === 'national' ? v.minDate : '2026-09-20', max: k === 'national' ? series[series.length - 1].p : '2026-09-27',
+        hasPlant: k !== 'national', heads: heads.map(([l, align]) => ({ l, align })), rows, empty: !rows.length, total, count: rows.length + ' rows',
+        onFrom: e => setF({ from: e.target.value }), onTo: e => setF({ to: e.target.value }), onPlant: e => setF({ plant: e.target.value }),
+        reset: () => setF({ from: null, to: null, plant: 'All' }) };
+      v.plantOpts = ['All'].concat(FAC.map(x => x.name));
+    }
+
+    if (v.pg.sql) {
+      const st = s.sqlStatus;
+      v.sql = s.sql; v.sqlLines = s.sql.split('\n').map((_, i) => i + 1); v.sqlH = (Math.max(5, v.sqlLines.length) * 22 + 28) + 'px';
+      v.onSql = e => this.setState({ sql: e.target.value });
+      v.onSqlKey = e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); this.runQuery(); } };
+      v.runQuery = () => this.runQuery(); v.sqlBusy = st === 'loading'; v.runOp = st === 'loading' ? 0.5 : 1;
+      v.sq = { loading: st === 'loading', error: st === 'error', empty: st === 'empty', idle: st === 'idle', rows: st === 'done' };
+      v.sqlErr = s.sqlErr;
+      v.sqlMeta = st === 'loading' ? 'Running…' : st === 'error' ? 'Did not run' : (st === 'done' || st === 'empty') ? s.sqlRes.rows.length + ' rows · ' + s.sqlMs + ' ms' : '';
+      v.sqlCols = s.sqlRes ? s.sqlRes.cols : []; v.sqlRows = s.sqlRes ? s.sqlRes.rows.slice(0, 200) : []; v.sqlTrunc = s.sqlRes && s.sqlRes.rows.length > 200;
+      const ex = q => () => this.setState({ sql: q });
+      v.examples = [{ label: 'Browns Ferry', go: ex(SAMPLE) }, { label: 'Empty result', go: ex("SELECT period, facility_name, outage\nFROM facility_outages\nWHERE facility_name = 'Indian Point'") }, { label: 'Error', go: ex('SELECT period, outage\nFROM plants') }, { label: 'Generators', go: ex("SELECT period, generator, capacity, outage\nFROM generator_outages\nWHERE facility_name = 'Vogtle'\nORDER BY period DESC") }];
+      v.schemaOpen = s.schemaOpen; v.schemaArrow = s.schemaOpen ? '▾' : '▸'; v.schemaBtnBg = s.schemaOpen ? '#F3F3F3' : '#FFFFFF';
+      v.toggleSchema = () => this.setState({ schemaOpen: !s.schemaOpen });
+      v.schema = Object.keys(SCHEMA).map(n => ({ name: n, open: !!s.schemaExp[n], arrow: s.schemaExp[n] ? '−' : '+', bg: s.schemaExp[n] ? '#F5F5F5' : 'transparent', fields: SCHEMA[n].map(([a, b]) => ({ n: a, t: b })), toggle: () => this.setState(x => ({ schemaExp: Object.assign({}, x.schemaExp, { [n]: !x.schemaExp[n] }) })) }));
+    }
+
+    const running = s.runs.some(r => r.status === 'running');
+    if (v.pg.refresh) {
+      v.outcome = s.outcome; v.onOutcome = e => this.setState({ outcome: e.target.value });
+      v.startDisabled = running || (s.outcome === 'review' && reviewRuns.length > 0);
+      v.startOp = v.startDisabled ? 0.45 : 1;
+      v.hasStartNote = v.startDisabled; v.startNote = running ? 'A run is already in progress.' : 'Resolve the candidate awaiting review before starting a run that reaches Review.';
+      v.startRefresh = () => !v.startDisabled && this.startRefresh();
+      v.hasCand = reviewRuns.length > 0; v.candId = reviewRuns.map(r => r.cand).join(', ');
+      v.runRows = s.runs.map(r => ({ id: r.id, started: r.started, b: B[r.status], latest: r.latest ? fD(r.latest) : '—', go: () => this.go('run', { runId: r.id }) }));
+      v.noRuns = !s.runs.length;
+    }
+    if (v.pg.run) {
+      const r = s.runs.find(x => x.id === s.runId) || s.runs[0];
+      if (r) {
+        const SS = { done: ['✓','#243237','#FFFFFF','#243237','#1E1D1D','Done'], current: ['!','#FBF0E2','#8A4A0B','#EBC99D','#1E1D1D','Needs review'], running: ['◐','#FFFFFF','#243237','#243237','#1E1D1D','In progress'], failed: ['✕','#FBEAE8','#A13A2C','#E8B4AC','#A13A2C','Failed'], pending: ['','#FFFFFF','#8A9194','#D6D6D6','#6B7072','Not reached'], discarded: ['–','#EEEEEE','#4A4F51','#D6D6D6','#4A4F51','Discarded'] };
+        const sum = { review: r.warn ? 'Checks are done. One warning still needs a look.' : 'Checks are done. Waiting for review.', published: 'Published.', failed: 'Stopped at Retrieve. The current publication was not replaced.', running: 'In progress. The current publication stays up.', discarded: 'Candidate discarded. Nothing was published.' };
+        v.run = { id: r.id, b: B[r.status], started: r.started, summary: sum[r.status], cand: r.cand, warn: r.warn, hasWarn: !!r.warn, noWarn: !r.warn,
+          isReview: r.status === 'review', isFailed: r.status === 'failed', isRunning: r.status === 'running',
+          steps: r.steps.map(x => { const m = SS[x.s]; return { n: x.n, d: x.d, t: x.t, icon: m[0], bg: m[1], fg: m[2], bd: m[3], tc: m[4], label: m[5] }; }) };
+        v.askApprove = () => this.setState({ modal: { title: 'Approve ' + r.cand + '?', body: r.cand + ' will replace ' + (s.pub ? s.pub.id : 'the empty state') + ' as the current publication.' + (r.warn ? ' The 12 Sep offline share of 102.40 will be published as-is, with its warning.' : ''), cta: 'Approve and publish', bg: '#F8642B', fg: '#1E1D1D', bd: '#E5571F', confirm: () => this.approve(r.id) } });
+        v.askDiscard = () => this.setState({ modal: { title: 'Discard ' + r.cand + '?', body: 'This drops ' + r.cand + ' permanently. It can\'t be brought back, and nothing from this run will be published. ' + (s.pub ? s.pub.id + ' stays the current publication.' : 'There is still no publication.'), cta: 'Discard candidate', bg: '#A13A2C', fg: '#FFFFFF', bd: '#A13A2C', confirm: () => this.discard(r.id) } });
+      } else v.run = { b: {}, steps: [] };
+    }
+    if (v.pg.settings) {
+      const sc = s.sched;
+      v.sched = sc; v.sw = { bg: sc.on ? '#243237' : '#C9CDCF', tx: sc.on ? '16px' : '0px' };
+      v.schedState = sc.on ? 'Runs daily at ' + sc.time + ' ' + sc.tz + '.' : 'Off. Refreshes only start by hand.';
+      v.toggleSched = () => this.setState({ sched: Object.assign({}, sc, { on: !sc.on }), saveNote: '' });
+      v.onTime = e => this.setState({ sched: Object.assign({}, sc, { time: e.target.value }), saveNote: '' });
+      v.onTz = e => this.setState({ sched: Object.assign({}, sc, { tz: e.target.value }), saveNote: '' });
+      v.tzs = ['America/New_York','America/Chicago','America/Denver','America/Phoenix','America/Los_Angeles','UTC'];
+      v.schedClean = JSON.stringify(sc) === JSON.stringify(s.schedSaved); v.saveOp = v.schedClean ? 0.45 : 1;
+      v.saveNote = s.saveNote || (v.schedClean ? 'No unsaved changes.' : 'Unsaved changes.');
+      v.saveSched = () => !v.schedClean && this.setState({ schedSaved: sc, saveNote: 'Saved in this prototype. No refresh was started.' });
+    }
+    v.modal = s.modal || {};
+    return v;
+  }
+}
+</script>
+</body>
+</html>

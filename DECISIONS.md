@@ -28,6 +28,9 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A19 | Technical / code | Security contract: trusted server-side roles (local authentication under A20), selected SQL functions, per-query containers, shared admission, bounded retries and local Docker Compose. |
 | A20 | Technical / code | Seeded local authentication for the challenge; unchanged server-side permissions; Clerk deferred to future production work. |
 | A24 | Technical / code | Publication first delivery: one worker host, executable operator reconciliation and separate Admin same-candidate retry; automatic crash recovery deferred. |
+| A25 | Product / business | Alayala's Figma mockups and the ChatGPT-created Trinity brand are the inputs for the planned Claude design handoff, with separate authorship records. |
+| A26 | Technical / code | React, TypeScript and Vite for the web frontend in `frontend/`; other packages need separate approval; exact versions under A17. |
+| A27 | Technical / code | Compress new JSON evidence with versioned storage identities; keep existing stored versions readable and retain all integrity checks. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -465,6 +468,8 @@ Source and contributions: [approved API completion session](ai/sessions/2026-10-
 
 **A20 amendment:** Remove `clerk-backend-api` from challenge dependencies. Its former 7.0.0 pin and compatibility notes below are historical only. No replacement password library/version is selected here; check existing runtime support before adding one. All other selected versions and the lockfile policy remain unchanged.
 
+**October 5, 2026 amendment:** Alayala approved changing the pin to `boto3[crt]==1.43.108`. Reason: the Compose S3 workers use the host `trinity-writer` profile, whose source profile uses `aws login`; botocore raised `MissingDependencyException` without `awscrt`. `uv lock` added only `awscrt` 0.36.0. The backend offline suite passed in the rebuilt image (790 ran, 258 opt-in skips). Advisory review of `awscrt` and credential resolution in the running workers remain unverified.
+
 Category: **Technical / code**.
 
 Status: accepted by alayala on October 3, 2026. Exact versions selected; installation, dependency resolution, advisory review, and runtime compatibility remain unverified.
@@ -479,7 +484,7 @@ Status: accepted by alayala on October 3, 2026. Exact versions selected; install
 | Analytical execution | [pyarrow 25.0.1](https://pypi.org/project/pyarrow/25.0.1/), [datafusion 54.0.0](https://pypi.org/project/datafusion/54.0.0/), [sqlglot 30.21.0](https://pypi.org/project/sqlglot/30.21.0/) | A13 stack; install name is `datafusion`, not `datafusion-python`. |
 | Queue | [bullmq 3.3.0](https://pypi.org/project/bullmq/3.3.0/) | Python package under A6; its metadata requires `redis==7.4.1`, `msgpack==1.2.3`, `semver==3.1.0`, and `croniter==2.0.7`. These are package versions, not the Redis server version. |
 | External HTTP | [httpx 0.28.1](https://pypi.org/project/httpx/0.28.1/) | Reuse HTTPX for EIA HTTP and bounded timeouts. A20 removes clerk-backend-api from the challenge dependency set. |
-| Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. |
+| Object storage | [boto3 1.43.108](https://pypi.org/project/boto3/1.43.108/) with `crt` extra | Official AWS SDK for application-owned S3 operations; privileged API/worker adapter only. The `crt` extra adds `awscrt` (locked at 0.36.0), which botocore requires to read `aws login` credentials. |
 
 Server versions: **PostgreSQL 18.6** and **Redis 8.10.2**. The Redis server version is separate from BullMQ's `redis` Python client version. Exact deployment images/digests, frontend packages, and cloud resources remain outside this selection.
 
@@ -521,6 +526,10 @@ Status: accepted by alayala on October 3, 2026. Scope selected; implementation a
 Source: alayala's supplied stage/scope table. Supporting record: [SQL scope session](ai/sessions/2026-10-03-sql-scope-by-stage.md).
 
 ### A19 — Security contract and local execution: closed
+
+**Verified evidence cache — accepted October 6, 2026:** Alayala approved a first fix for QA-03: a per-process cache of successfully verified diagnostic summaries, initially 16 entries with a fixed 60-second expiry after verification. These are starting values to revisit with measurements. He additionally requires one download/verification for concurrent requests needing the same evidence. Share verification by the complete pinned publication/evidence identity and trusted storage namespace, including across datasets; return only the caller's authorized dataset projection. Cache immutable safe summaries only, never raw evidence, query rows, authority, failures or partial verification. Every request retains fresh authorization, publication pinning, rate accounting and capacity admission. A changed identity misses immediately; expiry, eviction or process restart requires full verification, with no expired fallback on failure. Each waiter retains its own deadline/cancellation; shared work has the original fill deadline, and its execution owner keeps its slot until it stops. Preserve per-query containers and `Cache-Control: no-store`. Broader result caches remain unselected. The separately approved 64 MiB evidence-read limit is delivered as a prerequisite because the retained validation summary exceeds 4 MiB. See the [measured baseline](ai/sessions/2026-10-05-qa-03-evidence-read-profile.md) and [cache contract](docs/security-contract.md#verified-diagnostic-summary-cache).
+
+**Local read activation — October 5, 2026:** Alayala approved running the SQL runtime (`compose.sql.yaml`) and opening Preview, Dashboard and choice routes on the local retained stack. `trinity.main.app` now passes `enable_preview` from `TRINITY_PREVIEW_ENABLED`; only the exact value `true` opens the routes, and any other value keeps them at 503. Local cursor keys come from the git-ignored `.env`. Accepted local tradeoffs: the read profile is `trinity-writer` (it can also write), the API holds the Docker socket, and cursor keys are visible in `docker inspect`. A separate read-only role and secret delivery remain open for any shared deployment. Alayala also raised `MAX_EVIDENCE_BYTES` (Preview diagnostics summaries) from 4 MiB to 64 MiB: the full-window `validation.json` is 14.9 MB, so every Preview failed with `query_resource_limit`. Each Preview now downloads about 15 MB of evidence; per-version caching remains a possible later improvement.
 
 **Publication refinement — October 4, 2026:** [A24](#a24--build-publication-first-delivery) governs the approved first-delivery operating and recovery scope. Earlier conflicting recovery expectations are historical for Publication; other guarantees remain in force.
 
@@ -775,6 +784,75 @@ recovery preserves the original budget and takes a new fence. Changed/missing
 evidence or exhausted limits record failure, never publication readiness.
 Publisher, setup writes and Admin review/recovery commands remain separate.
 The [current tasks](sdd/refresh-publication/tasks.md) state the tested boundary.
+
+**October 5, 2026 amendment:** Alayala raised the registration budget from 30 to
+150 seconds (`REGISTRATION_SECONDS` in `refresh/registration.py`). Live run #7
+stored and read back 49/49 objects, then failed registration at its 30-second
+deadline. A separate read-only readback of the same objects took 14.2 seconds at
+best, with five requests over one second. The budget is still saved once per run,
+still capped by the execution deadline, and still limited to three invocations.
+Tradeoff: a stuck registration can hold the refresh slot up to 150 seconds.
+
+### A25 — Figma design and brand handoff
+
+Category: **Product / business**.
+
+Status: selected by alayala on October 4, 2026 through his supplied mockups, brand reference and request to record the workflow. This is design direction and attribution, not frontend implementation approval.
+
+**Choice:** Use alayala's self-created Figma interface mockups as the layout and flow reference. Use the earlier Trinity brand created with ChatGPT as the visual identity reference. Alayala plans to pass both to Claude to apply the brand. Credit each contribution separately in Engineering Notes, handoffs and subsequent implementation records.
+
+**Reason and alternatives:** Preserve the human interface design and make the use of AI visible to the evaluator. Do not describe the entire design as AI-generated or the brand as entirely handmade. No competing brand or frontend framework was selected in this request.
+
+**Boundary and precedence:** A9/A16/A19/A20 and the current API, data and security contracts govern behavior. The references do not change roles, field names, missing-value handling, SQL scope or publication gates. Reconcile any mismatch before implementation. Final styling and frontend technology remain open; mock values and visible states do not prove runtime behavior. Later refinement: [A26](#a26--frontend-stack) selects the frontend technology on October 4, 2026; final styling remains open.
+
+**Evidence and validation:** [Engineering Notes](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026) and the [reference inventory](ai/sessions/2026-10-04-figma-brand-handoff.md) separate alayala's authorship statement from the supplied screenshots. The native Figma file and earlier ChatGPT conversation were not inspected. Claude's adaptation, asset exports and frontend behavior remain unverified.
+
+**Explorer handoff package — authorship pending, October 5, 2026:** alayala supplied a second package, `design_handoff_trinity_explorer/` (`Trinity.dc.html`, its README, 18 screenshots and 4 logo images), now copied to [docs/design-reference/2026-10-04-explorer-handoff/](docs/design-reference/2026-10-04-explorer-handoff/PROVENANCE.md) without `support.js`. The author of `Trinity.dc.html` and its README is **pending confirmation**. Do not attribute these files to a person or tool without evidence. Alayala reported that design images and design prompts were generated in a Codex chat; that chat was not inspected.
+
+### A26 — Frontend stack
+
+Category: **Technical / code**.
+
+Status: selected by alayala on October 4, 2026, when he answered proposal Q1 ("yes, go with React + TypeScript + Vite") and requested the frontend specification. This is a technology choice, not implementation approval.
+
+**Choice:** Build the web frontend in `frontend/` with React, TypeScript and Vite. On October 5, 2026 alayala confirmed that this approval covers only those three technologies. Every other package, including those the proposal recommends (React Router, TanStack Query, test and lint tools), is listed for separate approval in the [specification](sdd/frontend/spec.md#dependencies-pending-approval). The development server proxies `/api` to the local API, so local work needs no CORS change.
+
+**Reason and alternatives:** The design handoff assumes a React (Vite) codebase, and its prototype is written as React components. No competing framework was proposed.
+
+**Boundary:** A17 governs exact versions and the lockfile. A9/A16/A19/A20 and the current contracts govern data, roles and errors (A25). Spec D01 (accepted October 5): the browser keeps the session token in `sessionStorage`, sends it only in `Authorization: Bearer`, never in a URL, and clears it on sign-out, `401` and expiry. Alayala first answered "memory only" and then corrected it to `sessionStorage`. D02–D04 are accepted in the specification.
+
+**Evidence:** [frontend proposal](sdd/frontend/proposal.md) and [session record](ai/sessions/2026-10-04-frontend-plan-and-spec.md). No frontend code exists or has been tested.
+
+### A27 - Compressed refresh evidence
+
+Category: **Technical / code**.
+
+Status: alayala requested implementation on October 6, 2026 after the measured
+compression recommendation. Exact encoding and bundle fields below are AI-selected
+implementation details, not separately observed human verification.
+
+**Choice:** compress eligible new JSON/JSONL evidence using deterministic gzip
+level 1 when it reduces bytes. New storage bundles use format 2 and bind both
+original and stored hashes/sizes. Keep format 1 readable without rewriting it.
+Parquet and bootstrap objects remain unchanged. Use the Python standard library;
+no dependency, analytical schema, HTTP contract or database migration is added.
+The exact [storage format](docs/schema.md#compressed-evidence-storage) is canonical.
+
+**Reason and tradeoff:** run #12 exceeded the 300-second storage budget. Applying
+the implemented codec to its 48 planned artifacts reduced 103,338,932 bytes to
+4,304,973 bytes (95.83%), with exact original-byte recovery. This is a local
+measurement, not an end-to-end latency guarantee or proof of the earlier network
+delay. Retain all evidence instead of deleting detail; retain readback checks
+instead of trusting upload acknowledgments. Increasing a timeout is not a speedup.
+
+**Boundary:** keep conditional writes, retries, deadlines, permissions and
+publication gates. Upgrade all readers before allowing a new writer to produce
+format 2. Old binaries cannot read the new format. Existing and failed candidates
+are not recompressed in place. Per-request timing, incremental progress and
+parallel transfers are outside this compression-only change. Live deployment and
+a new refresh are separate operator actions.
+
+**Evidence:** [implementation and verification](ai/sessions/2026-10-06-refresh-evidence-compression.md).
 
 ## Proposed decisions
 

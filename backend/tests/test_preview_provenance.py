@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import io
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 from trinity.connector.validate import (
@@ -20,7 +20,7 @@ from test_preview_unit import publication
 from test_sql_staging import Client
 
 
-def frozen_fixture():
+def frozen_fixture(padding=0):
     public = publication()
     attempt = str(uuid4())
     binding = dict(version_id=str(public.version_id), attempt_id=attempt, manifest_sha256='a'*64,
@@ -31,7 +31,8 @@ def frozen_fixture():
         checks = []
         for code, scope in pairs:
             observed = not required and (code, scope) in {('D02','national'), ('D01','facility'), ('D09','facility')}
-            details = canonical_json({'canary': 'PRIVATE_DETAIL', 'not_applicable': 0})
+            details = canonical_json({'canary': 'PRIVATE_DETAIL', 'not_applicable': 0,
+                                      **({'padding': 'x' * padding} if (code, scope) == ('V06', 'all') else {})})
             path = f'evidence/{attempt}/{code}-{scope}.json'
             objects[path] = details
             checks.append(CheckResult(binding['version_id'], attempt, binding['manifest_sha256'],
@@ -80,6 +81,21 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(len(client.calls), 3)
         self.assertFalse(any('parquet' in path for path in client.calls))
         return result
+
+    def test_large_live_sized_summary_is_read(self):
+        # A live full window produced a 14.9 MB validation.json. Use 15 MB of V06 detail.
+        pinned, objects = frozen_fixture(padding=15 * 1024 * 1024)
+        self.assertGreater(len(objects[f'evidence/{pinned.validation_attempt_id}/validation.json']), 4 * 1024 * 1024)
+        self.assertEqual([item.code for item in self.read(pinned, objects)], ['D02'])
+
+    def test_summary_above_the_limit_fails_closed(self):
+        from trinity.publication import diagnostics
+        pinned, objects = frozen_fixture(padding=2 * 1024 * 1024)
+        with patch.object(diagnostics, 'MAX_EVIDENCE_BYTES', 1024 * 1024):
+            with self.assertRaises(Problem) as raised:
+                read_preview_diagnostics(pinned, 'national', PublishedReader(Client(objects),
+                    SimpleNamespace(bucket='synthetic', prefix='versions')), QueryDeadline(30))
+        self.assertEqual(raised.exception.code, 'query_resource_limit')
 
     def test_complete_evidence_projects_only_requested_scope_and_no_details(self):
         pinned, objects = frozen_fixture()

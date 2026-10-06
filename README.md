@@ -1,10 +1,32 @@
 # Trinity — Arkham Outage Explorer
 
+**Current integration status - October 6, 2026:** the frontend, request/session
+reliability fixes, shared evidence cache and compressed refresh evidence are
+implemented. The retained Docker stack is activated. Live run #13 published
+successfully with compressed bundle format 2: storage 39.95 s, total execution
+100.67 s. Delivery checks passed: frontend typecheck/lint/build, 128 unit/component
+tests, 9 browser regressions with synthetic API responses, and 571 backend tests
+(258 opt-in skips). See [delivery evidence and remaining acceptance](ai/sessions/2026-10-06-frontend-main-delivery.md),
+[frontend setup](frontend/README.md) and [backend setup](backend/README.md).
+Full visual/accessibility acceptance and clean-checkout rehearsal remain open.
+This current status supersedes the historical implementation/readiness statements below.
+
 **Plant filter backend — October 5, 2026:** Plant and generator choice endpoints are implemented with full-range distinct results, latest-name search and publication-bound paging. See [usage and checks](backend/README.md#plant-and-generator-filter-choices) and [implementation evidence](ai/sessions/2026-10-05-plant-filter-implementation.md). They share the preview execution gate; retained activation and frontend clicks remain separate.
 
 **National dashboard handoff — October 5, 2026:** Steps 2–3 are implemented; Step 4 passed 101 combined tests with zero skips. Step 5 readiness and prerequisites are recorded in the [real acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md). National reads reuse the shared preview runtime. Retained operator readiness is **not ready**: no active publication, and the installed retained API lacks the national routes and preview switch. Execution is still disabled by default in this branch. See the handoff for final automated results and the retained prerequisites.
 
 Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
+
+**Current frontend continuation — October 5, 2026:** steps 3–9 are implemented
+locally on `frontend`, with sign-in, dashboard, Catalog/tables, SQL, Refresh and
+Settings plus their missing backend endpoints. See [run the frontend](frontend/README.md),
+[measured checks and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+and the [task checklist](sdd/frontend/tasks.md). Human visual acceptance, complete
+browser acceptance and retained-system enablement remain open. This status
+supersedes older statements below that the frontend or these endpoints do not exist;
+those paragraphs retain their historical evidence boundaries.
+
+**Design handoff — October 4, 2026:** alayala created the interface mockups himself in Figma. The earlier Trinity brand reference was created with ChatGPT. He plans to pass both to Claude to apply the brand to his interface design. See [authorship and workflow](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026), [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) and the [retained screenshots and handoff](ai/sessions/2026-10-04-figma-brand-handoff.md). This records design inputs; Claude adaptation and frontend delivery are not yet verified.
 
 **Refresh continuation:** `feat/refresh-publication` now extends merged SQL/Preview. Admin admission, durable BullMQ dispatch and fenced preparation are implemented with disposable-service checks. Linear migrations and verified candidate registration preserve Preview-compatible evidence fields. Task 5 now connects receipt routing/recovery and Admin candidate detail. [Current tasks](sdd/refresh-publication/tasks.md) track measured verification; Publication implementation and acceptance are tracked in the [implementation and acceptance](ai/sessions/2026-10-04-publication-implementation-acceptance.md) record.
 

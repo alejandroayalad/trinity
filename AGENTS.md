@@ -77,6 +77,12 @@ Do not commit, push, open a pull request, or change remote state unless requeste
 
 ## Documentation and handoff
 
+### Design authorship across documents
+
+Preserve the attribution recorded in [NOTES.md](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026) and [A25](DECISIONS.md#a25--figma-design-and-brand-handoff). Alayala created the interface mockups himself in Figma. The earlier Trinity brand reference was created with ChatGPT. Claude is the planned recipient for applying that brand to the mockups; do not record Claude work as completed until it is observed.
+
+Apply this distinction in every document, design handoff, implementation record and evaluator summary that describes this work. Record later AI changes separately from alayala's original design. Link the canonical attribution instead of copying it into unrelated documents or rewriting historical sessions. Preserve the supplied layouts and flows while applying the brand. Reconcile differences with A9/A16/A19/A20 and the current contracts before implementation; screenshots do not override data fields, permissions or publication rules. Mock values are design examples, not EIA findings or runtime evidence.
+
 `DECISIONS.md` is the single decision record. Keep unique IDs and the two agreed categories. Record changed decisions with their history. Link evidence instead of duplicating decision text across files.
 
 `FINDINGS.md` holds data evidence. `NOTES.md` summarizes AI use and verification for the evaluator. Session records hold dated supporting history. `CLAUDE.md` points here and must not duplicate these rules.

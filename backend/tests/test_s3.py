@@ -85,7 +85,8 @@ class MemoryS3:
             raise sdk_error("NoSuchKey", 404)
         body = io.BytesIO(self.objects[request["Key"]])
         self.bodies.append(body)
-        return {"Body": body, "ETag": '"deliberately-not-a-sha256"'}
+        return {"Body": body, "ContentLength": len(self.objects[request["Key"]]),
+                "ETag": '"deliberately-not-a-sha256"'}
 
 
 class StorageTests(unittest.TestCase):
@@ -123,7 +124,11 @@ class StorageTests(unittest.TestCase):
         self.assertEqual(len(self.client.objects), len(receipt.artifacts) + 1)
         for artifact in receipt.artifacts:
             data = self.client.objects[self.key(report, artifact.storage_path)]
-            self.assertEqual((len(data), sha256(data)), (artifact.byte_size, artifact.sha256))
+            expected = ((artifact.stored_byte_size, artifact.stored_sha256)
+                        if artifact.encoding == "gzip-v1" else (artifact.byte_size, artifact.sha256))
+            self.assertEqual((len(data), sha256(data)), expected)
+        self.assertEqual(receipt.bundle_format, 2)
+        self.assertTrue(any(item.encoding == "gzip-v1" for item in receipt.artifacts))
         self.assertEqual(receipt.bundle_sha256,
                          sha256(self.client.objects[self.key(report, "bundle.json")]))
         self.assertTrue(all(body.closed for body in self.client.bodies))
@@ -519,7 +524,7 @@ class StorageTests(unittest.TestCase):
         with Stubber(client) as stub:
             stub.add_response("put_object", {}, {"Bucket": self.settings.bucket, "Key": key,
                                                 "Body": b"{}", "ContentLength": 2, "IfNoneMatch": "*"})
-            stub.add_response("get_object", {"Body": StreamingBody(io.BytesIO(b"{}"), 2)},
+            stub.add_response("get_object", {"Body": StreamingBody(io.BytesIO(b"{}"), 2), "ContentLength": 2},
                               {"Bucket": self.settings.bucket, "Key": key})
             storage.operation(report.manifest.version_id).put_verified("reservation.json", b"{}", reservation=True)
             stub.assert_no_pending_responses()

@@ -1,5 +1,61 @@
 # Engineering Notes — Trinity
 
+## Frontend integration delivery checks - October 6, 2026
+
+[ME] Alayala requested committing the remaining work, creating the complete
+frontend integration PR and delivering it to `main`. [YOU] OpenCode inspected the
+30-commit branch range, reviewed its frontend/backend/deployment scope, and reran
+frontend typecheck, lint, build, 128 tests and 9 synthetic-API browser regressions.
+The backend rerun passed 571 tests with 258 opt-in skips. Compression code/tests
+were committed separately from documentation. No history rewriting is requested.
+[YOU] Read-only retained checks also found run #13 had published compressed bundle
+format 2 successfully: storage 39.95 s, total execution 100.67 s. The agent did not
+trigger that run. This is one observed result, not a controlled speedup claim.
+See [delivery checks, live evidence and remaining gates](ai/sessions/2026-10-06-frontend-main-delivery.md).
+
+## Compression Docker activation - October 6, 2026
+
+[ME] Alayala authorized stopping and restarting Docker to see the new changes in
+the frontend. [YOU] OpenCode checked for active work, built the shared image and
+recreated the complete Compose stack without deleting volumes. API and workers
+use one new image; five installed compression modules match the working tree.
+Health, frontend/proxy access and old-publication evidence reads passed. OpenCode
+opened `http://127.0.0.1:5173/` in the browser. No refresh, EIA fetch, S3 write,
+commit or push was initiated. Actual compressed-refresh duration and human UI
+acceptance remain pending. See the [activation record](ai/sessions/2026-10-06-compression-docker-activation.md).
+
+## Refresh evidence compression - October 6, 2026
+
+[ME] Alayala asked why refresh run #12 timed out, then authorized the compression
+part of the proposed optimization. [YOU] OpenCode traced the retained evidence,
+implemented versioned gzip evidence with separate original/stored identities,
+bounded decompression and old-format compatibility. The implemented codec reduced
+the retained candidate's planned files from 103.34 MB to 4.30 MB (95.83%), recovering
+every original byte without network requests or file changes in that measurement.
+Offline: 571 passed, 258 opt-in skips. Disposable refresh/publication acceptance:
+140 passed; its one container case passed separately after correcting the test
+image from a tag to its digest and selecting the actual Docker socket. [YOU] also
+verified old live-publication reads in an isolated interpreter. No retained service
+restart, EIA fetch, S3 write, new publication, commit or push was performed. See
+[A27](DECISIONS.md#a27---compressed-refresh-evidence) and the
+[implementation record](ai/sessions/2026-10-06-refresh-evidence-compression.md).
+
+## QA-03 verified evidence cache — October 6, 2026
+
+[ME] Alayala approved 60-second expiry and a 16-entry bound as initial values, and required concurrent requests to share one evidence download/verification. [YOU] OpenCode added the process-owned cache, publication-wide shared verification and fresh dataset-scoped projections. Current permissions and query capacity are checked per request; the fill owner retains its reservation until shared work stops. The backend suite ran 814 checks: 556 passed and 258 opt-in checks skipped. In an isolated interpreter using the retained evidence, warm reads took 0.10–0.11 ms with zero evidence GETs; four concurrent cold callers shared three GETs totaling 14,974,928 bytes. This measures the evidence stage, not the full HTTP request. [ME] Alayala then authorized the API rebuild and full timing check; the results follow in the next entry. See [implementation, setup correction and evidence limits](ai/sessions/2026-10-06-qa-03-cache-implementation.md) and the accepted [A19 cache rules](DECISIONS.md#a19--security-contract-and-local-execution-closed).
+
+## QA-03 API activation and complete timings — October 6, 2026
+
+[ME] Alayala requested the API rebuild and full dashboard timing check. [YOU] OpenCode captured an authenticated HTTP baseline, rebuilt only the API, then measured the same requests again. Viewer 30-day median fell from 9.40 s to 1.65 s, the Analyst facility preview from 5.01 s to about 2.08 s, with identical publication data, Viewer detail still denied and zero unreleased query reservations. Cold reads still took 5.6–7.1 s, and one non-reproduced Admin browser timeout stays open. Samples are small; no percentile claim. See the [measurements and limits](ai/sessions/2026-10-06-qa-03-api-rebuild-and-http-timing.md).
+
+## QA-03 slow-read profiling — October 5, 2026
+
+[ME] Alayala requested backend profiling and optimization for slow dashboard/preview reads. [YOU] OpenCode measured the production evidence verifier against the retained publication: four unprofiled calls took 2.52–10.39 s, downloading about 15 MB each before analytical execution. The [profile and proposed cache rules](ai/sessions/2026-10-05-qa-03-evidence-read-profile.md) separate measured evidence-read cost from unmeasured full-request/container latency. A reproducible operator probe is included and was run successfully. A bounded cache of verified diagnostic summaries is proposed under A19; no cache implementation, deployment or latency improvement is claimed yet.
+
+## QA-01 request handling — October 5, 2026
+
+[ME] Alayala requested a small SDD cycle for QA-01 and then authorized the implementation. [YOU] Claude (OpenCode) traced the request path, wrote the [slice records](sdd/qa-01-request-handling/proposal.md) and implemented the client fix. Tracing corrected the proposed server work: the backend already cancels a disconnected analytical request and releases its slot, so the defect was the missing client `AbortSignal`. React Query signals now reach `fetch`, Catalog dates need Apply, `/facilities` loads on first open, and `PageError` offers a Retry. One automatic retry handles `429 rate_limited` with `Retry-After` ≤ 5 s. Checks: typecheck, lint and 85 Vitest tests passed; the new Playwright regression passed against the retained API. The Viewer e2e still fails on its fixed date after the 2026-10-05 publication (pre-existing). See the [session](ai/sessions/2026-10-05-qa-01-request-handling.md).
+
 ## Retained persona password rotation — October 5, 2026
 
 [ME] Alayala lost the retained persona passwords and asked for the safest bounded rotation, with no change to setup or refresh state, stopping before the mutation. He approved the design. [YOU] Claude (OpenCode) added `python -m trinity.auth.rotate`, which updates only the chosen password hashes, and tests that compare every table before and after. [ME] He ran the rotation on the retained database. [YOU] Read-only snapshots before and after show only the rotated hashes plus the expected effects of his S20 check. See the [rotation session](ai/sessions/2026-10-05-retained-persona-password-rotation.md) and the A20 refinement.
@@ -48,12 +104,27 @@ Current status: Parquet preparation Steps 1–5 implemented and offline-tested; 
 
 ## Human and AI contributions
 
+Current design attribution: see [Figma mockups, brand and Claude handoff](#figma-mockups-brand-and-claude-handoff--october-4-2026). The table below retains the original planning discussion's scope.
+
 | Contributor | Observed contribution |
 |---|---|
 | Alayala | Set the product direction, challenged the DuckDB recommendation, selected A1–A4, defined shared initial setup, corrected refresh scope, and chose Obsidian for these drafts. Fetched the EIA data, analyzed it, and wrote the original findings. Reconfirmed A4 after discussing daily data. |
 | AI | Read the brief and existing notes, checked official technical documentation during the discussion, explained alternatives, and drafted decisions, session summaries, and these documents. Formatted alayala's findings, added evidence limits, ran separate read-only CSV checks, and wrote the session handoff. |
 
 No application code was written in this discussion. There is no generated-versus-handwritten code inventory yet. Update this section with concrete files or changes once code exists. AI-drafted prose is not evidence that the author wrote code or independently debugged it.
+
+## Figma mockups, brand and Claude handoff — October 4, 2026
+
+| Contributor | Contribution and status |
+|---|---|
+| [ME] Alayala | Created the interface mockups himself in Figma. Supplied eleven screenshots covering login, no-publication, role-specific dashboards, catalog, plant preview, SQL, refresh history/review and schedule settings. Selected these mockups and the earlier brand reference for the planned Claude handoff. |
+| [YOU] ChatGPT | Contributed the earlier Trinity brand reference, as stated by alayala. The supplied board contains the symbol, wordmark, palette and nuclear imagery. This contribution is separate from alayala's Figma interface design. |
+| [YOU] Claude — planned | Will receive the mockups and brand reference to apply the brand to the interface. No completed Claude adaptation or frontend implementation is claimed in this record. |
+| [YOU] Codex — this documentation task | Recorded authorship, preserved the twelve supplied images, updated relevant current documents and added shared attribution guidance for subsequent work. |
+
+The workflow is **human Figma design → ChatGPT brand reference → planned Claude adaptation → human review**. [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) records the selected direction. Preserve alayala's layouts and flows while applying the brand; identify later AI design changes and generated code separately. Use this attribution in every document that describes the work, with links here instead of duplicate histories.
+
+Evidence: alayala's explicit authorship statement and the [twelve retained references](ai/sessions/2026-10-04-figma-brand-handoff.md#supplied-references). Each image copy matched its original by SHA-256. Native Figma history and the earlier ChatGPT conversation were not inspected. Screenshots contain illustrative data, not new EIA findings or working-application proof. Claude adaptation and human review remain pending. Documentation verification is recorded in the [session](ai/sessions/2026-10-04-figma-brand-handoff.md#corrections-and-verification).
 
 ## Concrete AI mistakes and corrections
 
@@ -664,3 +735,128 @@ boundary. The pre-integration combined runtime passed 128 checks with no skips.
 After preserving the latest schedule work, 27 choice and 112 auth/catalog/settings
 checks passed without skips; the offline suite passed 532 with 258 opt-in skips. Synthetic fixtures do not create new EIA findings; maintain data
 evidence — ongoing.
+
+## Frontend steps 3–9 continuation — October 5, 2026
+
+[ME] Asked to continue and finish frontend steps 3–9. [YOU] Codex implemented
+the application pages and their missing national, settings, choices and recovery
+backend routes, plus the explicit scheduler role. The work was initially local
+and uncommitted. [ME] subsequently requested a branch push; [YOU] prepared focused
+backend, frontend and evidence commits. No EIA key or retained-data mutation was
+part of this continuation.
+
+[YOU] Ran the frontend build/checks, offline Python regression, disposable
+PostgreSQL checks, isolated Docker queries and real browser scenarios. See the
+[measured evidence and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
+and [updated tasks](sdd/frontend/tasks.md). Human visual review and the complete
+acceptance matrix remain open; synthetic data and screenshots are not EIA findings.
+Maintain data evidence — ongoing.
+
+This is Codex implementation work, separate from the earlier Claude scaffold and
+alayala's original Figma design. Preserve the
+[canonical design attribution](#figma-mockups-brand-and-claude-handoff--october-4-2026)
+and A25. No later AI contribution changes the authorship of the original mockups.
+
+
+### Recovery and schedule component coverage — October 5, 2026
+
+[ME] Prioritized positive recovery and basic schedule behavior.
+[YOU] Added eight component tests; the full frontend suite passed 77 tests.
+See [scope, corrections and evidence limits](ai/sessions/2026-10-05-recovery-schedule-component-coverage.md).
+This is synthetic API/component evidence. Real-browser recovery and extended
+schedule editing remain open; original design attribution is unchanged.
+
+### Redis and worker Compose services — October 5, 2026
+
+[ME] Asked for Redis and BullMQ services under A6/A7, reviewed the draft and
+approved `compose.yaml`. Kept Redis persistence and the PostgreSQL 17.11 vs A17
+18.6 mismatch unresolved.
+[YOU] Drafted the opt-in `workers` profile: `redis:8.10.2` (noeviction, no
+published port), `refresh_root_init`, and the six `trinity.workers` roles with
+per-role settings. `docker compose config` passed with and without the profile,
+with EIA/AWS/S3 variables unset. No container ran; no EIA or AWS access was used.
+Open: Redis persistence (A7), PostgreSQL version, Redis auth/TLS, worker restart
+policy, and the API refresh cursor keys. Runtime behavior is unverified.
+
+[ME] Ran live refreshes #1–#4 from the UI; all stopped at S3 storage with
+`storage_configuration`. Selected the fix: mount `~/.aws` writable into the S3
+workers with `AWS_PROFILE=trinity-writer`.
+[YOU] Traced the cause (an AWS config file was mounted as a credentials file) and
+changed `compose.yaml`. Fixed `Diagnostics` in `frontend/src/pages/shared.tsx`:
+it showed passed D01–D06 checks (`affected_count` 0) as review warnings. Added a
+regression test; the frontend suite (78 tests), typecheck and lint passed.
+Credential resolution in the container and a successful S3 save remain unverified.
+
+### Frontend and main integration — October 5, 2026
+
+[ME] Requested merging `frontend` into `main` and decided that main's reviewed
+backend wins every conflict. [YOU] Merged on `integrate/frontend-main` without
+squashing. The frontend branch's parallel backend for dashboard, settings, choices
+and recovery was replaced by main's versions from PR #13. Its frontend-only backend
+tests (`test_frontend_*`) and modules were removed; the browser runner hook was kept.
+Frontend code was then checked against main's API. Measured checks are in the
+merge commit; nothing was pushed.
+
+[ME] Approved adding `boto3[crt]` after workers failed with
+`MissingDependencyException` for the `aws login` provider. [YOU] Changed the pin,
+ran `uv lock` in a container (only `awscrt` 0.36.0 added) and recorded the A17
+amendment. A check image imported `awscrt` and the backend offline suite passed
+(790 ran, 258 skips). Worker credential resolution remains unverified.
+
+[ME] Watched live run #7 fail registration after a complete S3 save and selected
+a 150-second registration budget. [YOU] Measured a 14.2-second best-case readback
+(49/49 checksums match), added `REGISTRATION_SECONDS`, a regression test and the
+A23 amendment. The backend offline suite passed (793 ran, 258 skips).
+
+[ME] Found run #8 stuck in `publishing` and asked to stop it. [YOU] Traced the
+cause: `custody()` requires the refresh host, and each Compose container had its
+own hostname. Added a shared `hostname` (`TRINITY_WORKER_HOSTNAME`, default
+`trinity-worker`) to the four custody roles. Ran `publication-recover` on the
+recorded host: run #8 became `publication_failed` with one warning; nothing was
+published and the S3 candidate is retained.
+
+[ME] Approved A (SQL runtime) then B (open Preview) and confirmed SQL Explorer
+returned published facility rows. [YOU] Built the query image, added runtime
+settings to `.env`, made the `aws login` cache writable in `compose.sql.yaml`,
+added the exact-`true` `TRINITY_PREVIEW_ENABLED` switch with a test, generated
+local cursor keys and recorded the A19 note. Backend offline suite: 794 ran, OK,
+258 skips. Dashboard, Catalog tables and filters await the UI check.
+
+[ME] Saw Dashboard and Catalog tables fail with `query_resource_limit` and chose
+a 64 MiB evidence limit. [YOU] Traced it to `read_preview_diagnostics` reading a
+14.9 MB `validation.json` under a 4 MiB cap; raised `MAX_EVIDENCE_BYTES`, added two
+regression tests (fail on old limit, pass on new) and the A19 note. Offline suite:
+796 ran, OK, 258 skips.
+
+## Explorer state — October 6, 2026
+
+[ME] Alayala scoped and authorized original-report QA-02/04/05/08 and analytical
+QA-06. [YOU] Codex extended existing frontend query handling with 300 ms search
+debounce, independent pagination visits, complete Reset, accessible dashboard
+loading and guarded read recovery. No backend cache or auth work was changed.
+Typecheck/lint and 100 unit tests passed; two simulated Playwright regressions
+passed. Live browser checks covered rapid ranges, current facility search,
+2000-row pagination followed by filter/Reset, and a prefiltered generator URL.
+QA-02 remains partial pending live network and backend-capacity evidence; browser
+cancellation does not prove server stop. Build and human acceptance remain [ME].
+See [scope and evidence](ai/sessions/2026-10-06-explorer-state-implementation.md).
+
+## Presentation fixes — October 6, 2026
+
+[ME] Alayala requested original-report QA-07/10/11 after Explorer delivery.
+[YOU] Codex made chart coordinates responsive to displayed width, preserved
+ordered duplicate SQL headers with unique React keys, and replaced unconditional
+approval text with server-state candidate copy. Typecheck/lint, 113 unit tests
+and three simulated browser checks passed. Mobile/desktop screenshots were
+inspected; no retained mutation was sent. Human visual acceptance and builds
+remain [ME]. See [evidence](ai/sessions/2026-10-06-presentation-fixes.md).
+
+## Session reliability — October 6, 2026
+
+[ME] Alayala authorized original-report QA-01, QA-09 and startup QA-06 after
+requesting the presentation commits/push. [YOU] Codex separated local sign-out
+from confirmed server revocation, shared in-flight startup authority checks and
+added guarded startup Retry. Typecheck/lint, 128 unit tests and four simulated
+browser regressions passed. No retained session was logged out; backend
+revocation failure and human acceptance remain unverified. Build remains [ME].
+See [evidence](ai/sessions/2026-10-06-session-reliability.md).

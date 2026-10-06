@@ -133,6 +133,17 @@ A20 replaces the Clerk adapter with local login/logout behind `auth/service.py`.
 4. Start a separate container running `queries/runtime/main.py` for the approved query/preview/dashboard operation. Supply the approved operation, pinned IDs, local-file mapping and server limits through `contracts/queries.py`; supply no network, credentials or Docker control. `engine.py` registers only those mounted authorized files.
 5. Bound output, verify it belongs to the request/publication, confirm execution ended or stop it, remove temporary resources and release the query slot only when no execution remains. Use the same path for all analytical execution, with endpoint-specific pagination.
 
+**A19 refinement, October 6:** `publication/evidence_cache.py` shares complete
+evidence verification for concurrent dashboard/preview reads in one API process.
+`queries/config.py` owns the 16-entry/60-second cache and trusted namespace;
+`QueryExecution.execute` calls it only after service authorization, pinning and
+admission. `publication/diagnostics.py` retains the full verifier and projects
+fresh dataset-scoped note models from immutable summaries. A synchronous fill
+owner keeps its reservation until shared verification stops, even after its own
+disconnect if another caller still needs the result. See the
+[cache contract](security-contract.md#verified-diagnostic-summary-cache).
+This does not replace analytical execution, Parquet checks or container cleanup.
+
 Catalog metadata uses the same permission policy without giving Viewer detail through registry/freshness/diagnostics. Exploration makes no EIA request. User SQL cannot reach PostgreSQL state or unpublished files. Selecting single-table scope still requires SQLGlot/DataFusion compatibility tests for arithmetic, CASE and the A19 functions.
 
 **Failure example:** an Analyst submits a CTE over `job_outbox`. The single policy rejects unsupported syntax before any protected file download. A permitted national query receives only authorized publication files, never S3 or application-database access from the query container.

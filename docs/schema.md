@@ -203,6 +203,38 @@ lease is released at either handoff. Registration never changes the active point
 The broader lifecycle and remaining constraints below remain requirements, not proof
 that the full refresh/publisher path is implemented.
 
+### Compressed evidence storage
+
+[A27](../DECISIONS.md#a27---compressed-refresh-evidence) adds storage bundle format
+2; the analytical manifest and `trinity-data-v1` checks remain unchanged. Each
+member retains `storage_path`, `sha256` and `byte_size` for its original file.
+A compressed member adds exactly `encoding: "gzip-v1"`, `stored_sha256` and
+`stored_byte_size`. These extra fields identify the exact S3 bytes. The pinned
+bundle SHA-256 binds both identities. Format 1 accepts only the original three
+fields; format 2 accepts those fields or the complete gzip descriptor. Unknown
+formats, encodings, incomplete descriptors and surplus fields fail closed.
+
+Eligible members are `source-evidence.json` and JSON/JSONL under `evidence/`.
+New writers use gzip level 1 with `mtime=0`, only when smaller. Keys remain stable;
+encoding comes from the trusted descriptor, never a filename guess, S3 header or
+magic-byte detection. The local files remain original. `bundle.json`,
+`manifest.json`, `reservation.json` and Parquet remain unencoded so existing
+publication hashes and manifest reads can establish the initial trust boundary.
+
+Storage readback, registration, publication and diagnostic-summary reads verify
+the exact stored length/hash and the decoded length/hash. Both representations
+must fit the existing 64 MiB per-object limit; a reader's smaller limit also
+applies to decoded bytes. Decompression emits at most 1 MiB per chunk and checks
+deadlines/cancellation between chunks. Truncated gzip, bad checksums, trailing
+bytes, concatenated members and excess decoded output are rejected. No original
+detail is removed or replaced by its compressed representation in validation.
+
+Readers retain format 1 support for persisted publications and recoverable
+candidates. No migration or in-place recompression is required. Rollout must
+upgrade API, recovery and publication readers before a refresh/CLI writer emits
+format 2. Rolling back readers after creating format 2 is not supported; do not
+rewrite an immutable version to make an old binary accept it.
+
 ### Application relationships
 
 Split diagrams show one shared model. Repeated entities refer to the same table. Application FKs connect metadata, never outage rows. Delete cascades must not remove published evidence or actors' historical actions.

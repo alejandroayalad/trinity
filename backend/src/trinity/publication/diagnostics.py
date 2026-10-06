@@ -3,6 +3,7 @@
 import io
 import re
 
+from trinity.adapters.s3 import StoredArtifact
 from trinity.connector.validate import (
     CheckResult, DIAGNOSTIC_CHECKS, DIAGNOSTIC_REGISTRY, REQUIRED_CHECKS,
     diagnostic_identity, required_checks_pass,
@@ -12,26 +13,48 @@ from trinity.contracts.manifest import canonical_json, read_json, safe_relative_
 from trinity.errors import Problem
 from trinity.queries.preview_schemas import PreviewDiagnostic
 
-MAX_EVIDENCE_BYTES = 4 * 1024 * 1024
+# Each uncached verification reads validation.json and diagnostics.json. They embed
+# every check's detail bytes. A full live window (2024-10-02 to 2026-10-05) made
+# validation.json 14.9 MB, mostly V06 detail, so the earlier 4 MiB limit failed
+# every Preview. Alayala selected 64 MiB. A larger file still fails closed.
+MAX_EVIDENCE_BYTES = 64 * 1024 * 1024
 
 
 def read_preview_diagnostics(pinned, dataset, reader, deadline):
-    """Verify bundle/member hashes and complete evaluations before projecting notes.
+    """Verify evidence without caching, then return only the requested dataset.
+
+    Keep this uncached entry point for explicit verification and controlled
+    executions. Production can reuse the same verifier through EvidenceCache.
+    """
+    if dataset not in DATASETS:
+        raise Problem(503, 'dependency_unavailable')
+    return project_diagnostics(read_verified_diagnostics(pinned, reader, deadline), dataset)
+
+
+def project_diagnostics(summaries, dataset):
+    """Return new public models for one dataset from immutable verified summaries."""
+    if dataset not in DATASETS:
+        raise Problem(503, 'dependency_unavailable')
+    return [PreviewDiagnostic.model_validate_json(raw) for scope, raw in summaries if scope == dataset]
+
+
+def read_verified_diagnostics(pinned, reader, deadline):
+    """Verify bundle/member hashes and complete evaluations before retaining notes.
 
     Read only the bundle and two summaries from the pinned version. Required and
     diagnostic detail bytes are already embedded in these summaries. Verify their
     identities against the bundle without loading another analytical dataset.
     Missing or partial evidence fails closed, including when no warning is listed.
+    Return immutable (dataset, JSON) pairs containing safe note fields only. The
+    trusted cache can share this proof across datasets without retaining details.
     """
     try:
-        if dataset not in DATASETS:
-            raise ValueError
         version = str(pinned.publication.version_id)
 
-        def fetch(path, digest, size=None):
+        def fetch(path, digest, size=None, artifact=None):
             output = io.BytesIO()
             reader.read_into(version, path, output, deadline=deadline, max_bytes=MAX_EVIDENCE_BYTES,
-                             digest=digest, expected_size=size)
+                             digest=digest, expected_size=size, artifact=artifact)
             raw = output.getvalue()
             body = read_json(raw)
             if canonical_json(body) != raw:
@@ -46,7 +69,7 @@ def read_preview_diagnostics(pinned, dataset, reader, deadline):
         warning = dict(warning_digest=pinned.review_warning_digest, warning_count=pinned.review_warning_count,
                        approval_required=pinned.approval_required)
         if (set(bundle) != {*binding, *warning, 'bundle_format', 'published', 'artifacts'}
-                or type(bundle['bundle_format']) is not int or bundle['bundle_format'] != 1
+                or type(bundle['bundle_format']) is not int or bundle['bundle_format'] not in (1, 2)
                 or type(bundle['contract_version']) is not int
                 or bundle['published'] is not False
                 or any(bundle[key] != value for key, value in (binding | warning).items())
@@ -55,8 +78,7 @@ def read_preview_diagnostics(pinned, dataset, reader, deadline):
             raise ValueError
         artifacts = {}
         for item in bundle['artifacts']:
-            if set(item) != {'storage_path', 'byte_size', 'sha256'}:
-                raise ValueError
+            StoredArtifact.from_dict(item, bundle['bundle_format'])
             path = item['storage_path']
             safe_relative_path(path)
             if (path in artifacts or type(item['byte_size']) is not int or item['byte_size'] < 0
@@ -70,7 +92,8 @@ def read_preview_diagnostics(pinned, dataset, reader, deadline):
 
         def summary(name, fields):
             member = artifacts[f'{prefix}/{name}.json']
-            body = fetch(member['storage_path'], member['sha256'], member['byte_size'])
+            body = fetch(member['storage_path'], member['sha256'], member['byte_size'],
+                         StoredArtifact.from_dict(member, bundle['bundle_format']))
             if (set(body) != {*binding, *fields} or type(body['contract_version']) is not int
                     or any(body[key] != value for key, value in binding.items())):
                 raise ValueError
@@ -115,14 +138,17 @@ def read_preview_diagnostics(pinned, dataset, reader, deadline):
             raise ValueError
         # Counts describe the frozen dataset, not the current page. D09 is never
         # a preview note, even for Admin; raw diagnostic details stay trusted.
-        result = [PreviewDiagnostic(code=item['code'], severity=item['severity'], scope=dataset,
-                                    message=item['message'], affected_count=str(item['affected_count']))
-                  for item in summaries if item['dataset_key'] == dataset and item['code'] != 'D09'
-                  and item['affected_count'] > 0]
-        if len(result) > 32:
-            raise ValueError
+        result = []
+        for dataset in DATASETS:
+            notes = [PreviewDiagnostic(code=item['code'], severity=item['severity'], scope=dataset,
+                                       message=item['message'], affected_count=str(item['affected_count']))
+                     for item in summaries if item['dataset_key'] == dataset and item['code'] != 'D09'
+                     and item['affected_count'] > 0]
+            if len(notes) > 32:
+                raise ValueError
+            result.extend((dataset, note.model_dump_json()) for note in notes)
         deadline.remaining()
-        return result
+        return tuple(result)
     except Problem:
         raise
     except Exception:
