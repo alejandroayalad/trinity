@@ -1,5 +1,16 @@
 # Trinity — Arkham Outage Explorer
 
+**Current integration status - October 6, 2026:** the frontend, request/session
+reliability fixes, shared evidence cache and compressed refresh evidence are
+implemented. The retained Docker stack is activated. Live run #13 published
+successfully with compressed bundle format 2: storage 39.95 s, total execution
+100.67 s. Delivery checks passed: frontend typecheck/lint/build, 128 unit/component
+tests, 9 browser regressions with synthetic API responses, and 571 backend tests
+(258 opt-in skips). See [delivery evidence and remaining acceptance](ai/sessions/2026-10-06-frontend-main-delivery.md),
+[frontend setup](frontend/README.md) and [backend setup](backend/README.md).
+Full visual/accessibility acceptance and clean-checkout rehearsal remain open.
+This current status supersedes the historical implementation/readiness statements below.
+
 **Plant filter backend — October 5, 2026:** Plant and generator choice endpoints are implemented with full-range distinct results, latest-name search and publication-bound paging. See [usage and checks](backend/README.md#plant-and-generator-filter-choices) and [implementation evidence](ai/sessions/2026-10-05-plant-filter-implementation.md). They share the preview execution gate; retained activation and frontend clicks remain separate.
 
 **National dashboard handoff — October 5, 2026:** Steps 2–3 are implemented; Step 4 passed 101 combined tests with zero skips. Step 5 readiness and prerequisites are recorded in the [real acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md). National reads reuse the shared preview runtime. Retained operator readiness is **not ready**: no active publication, and the installed retained API lacks the national routes and preview switch. Execution is still disabled by default in this branch. See the handoff for final automated results and the retained prerequisites.

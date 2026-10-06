@@ -1,5 +1,45 @@
 # Engineering Notes — Trinity
 
+## Frontend integration delivery checks - October 6, 2026
+
+[ME] Alayala requested committing the remaining work, creating the complete
+frontend integration PR and delivering it to `main`. [YOU] OpenCode inspected the
+30-commit branch range, reviewed its frontend/backend/deployment scope, and reran
+frontend typecheck, lint, build, 128 tests and 9 synthetic-API browser regressions.
+The backend rerun passed 571 tests with 258 opt-in skips. Compression code/tests
+were committed separately from documentation. No history rewriting is requested.
+[YOU] Read-only retained checks also found run #13 had published compressed bundle
+format 2 successfully: storage 39.95 s, total execution 100.67 s. The agent did not
+trigger that run. This is one observed result, not a controlled speedup claim.
+See [delivery checks, live evidence and remaining gates](ai/sessions/2026-10-06-frontend-main-delivery.md).
+
+## Compression Docker activation - October 6, 2026
+
+[ME] Alayala authorized stopping and restarting Docker to see the new changes in
+the frontend. [YOU] OpenCode checked for active work, built the shared image and
+recreated the complete Compose stack without deleting volumes. API and workers
+use one new image; five installed compression modules match the working tree.
+Health, frontend/proxy access and old-publication evidence reads passed. OpenCode
+opened `http://127.0.0.1:5173/` in the browser. No refresh, EIA fetch, S3 write,
+commit or push was initiated. Actual compressed-refresh duration and human UI
+acceptance remain pending. See the [activation record](ai/sessions/2026-10-06-compression-docker-activation.md).
+
+## Refresh evidence compression - October 6, 2026
+
+[ME] Alayala asked why refresh run #12 timed out, then authorized the compression
+part of the proposed optimization. [YOU] OpenCode traced the retained evidence,
+implemented versioned gzip evidence with separate original/stored identities,
+bounded decompression and old-format compatibility. The implemented codec reduced
+the retained candidate's planned files from 103.34 MB to 4.30 MB (95.83%), recovering
+every original byte without network requests or file changes in that measurement.
+Offline: 571 passed, 258 opt-in skips. Disposable refresh/publication acceptance:
+140 passed; its one container case passed separately after correcting the test
+image from a tag to its digest and selecting the actual Docker socket. [YOU] also
+verified old live-publication reads in an isolated interpreter. No retained service
+restart, EIA fetch, S3 write, new publication, commit or push was performed. See
+[A27](DECISIONS.md#a27---compressed-refresh-evidence) and the
+[implementation record](ai/sessions/2026-10-06-refresh-evidence-compression.md).
+
 ## QA-03 verified evidence cache — October 6, 2026
 
 [ME] Alayala approved 60-second expiry and a 16-entry bound as initial values, and required concurrent requests to share one evidence download/verification. [YOU] OpenCode added the process-owned cache, publication-wide shared verification and fresh dataset-scoped projections. Current permissions and query capacity are checked per request; the fill owner retains its reservation until shared work stops. The backend suite ran 814 checks: 556 passed and 258 opt-in checks skipped. In an isolated interpreter using the retained evidence, warm reads took 0.10–0.11 ms with zero evidence GETs; four concurrent cold callers shared three GETs totaling 14,974,928 bytes. This measures the evidence stage, not the full HTTP request. [ME] Alayala then authorized the API rebuild and full timing check; the results follow in the next entry. See [implementation, setup correction and evidence limits](ai/sessions/2026-10-06-qa-03-cache-implementation.md) and the accepted [A19 cache rules](DECISIONS.md#a19--security-contract-and-local-execution-closed).

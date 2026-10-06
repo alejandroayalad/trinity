@@ -30,6 +30,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A24 | Technical / code | Publication first delivery: one worker host, executable operator reconciliation and separate Admin same-candidate retry; automatic crash recovery deferred. |
 | A25 | Product / business | Alayala's Figma mockups and the ChatGPT-created Trinity brand are the inputs for the planned Claude design handoff, with separate authorship records. |
 | A26 | Technical / code | React, TypeScript and Vite for the web frontend in `frontend/`; other packages need separate approval; exact versions under A17. |
+| A27 | Technical / code | Compress new JSON evidence with versioned storage identities; keep existing stored versions readable and retain all integrity checks. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -821,6 +822,37 @@ Status: selected by alayala on October 4, 2026, when he answered proposal Q1 ("y
 **Boundary:** A17 governs exact versions and the lockfile. A9/A16/A19/A20 and the current contracts govern data, roles and errors (A25). Spec D01 (accepted October 5): the browser keeps the session token in `sessionStorage`, sends it only in `Authorization: Bearer`, never in a URL, and clears it on sign-out, `401` and expiry. Alayala first answered "memory only" and then corrected it to `sessionStorage`. D02–D04 are accepted in the specification.
 
 **Evidence:** [frontend proposal](sdd/frontend/proposal.md) and [session record](ai/sessions/2026-10-04-frontend-plan-and-spec.md). No frontend code exists or has been tested.
+
+### A27 - Compressed refresh evidence
+
+Category: **Technical / code**.
+
+Status: alayala requested implementation on October 6, 2026 after the measured
+compression recommendation. Exact encoding and bundle fields below are AI-selected
+implementation details, not separately observed human verification.
+
+**Choice:** compress eligible new JSON/JSONL evidence using deterministic gzip
+level 1 when it reduces bytes. New storage bundles use format 2 and bind both
+original and stored hashes/sizes. Keep format 1 readable without rewriting it.
+Parquet and bootstrap objects remain unchanged. Use the Python standard library;
+no dependency, analytical schema, HTTP contract or database migration is added.
+The exact [storage format](docs/schema.md#compressed-evidence-storage) is canonical.
+
+**Reason and tradeoff:** run #12 exceeded the 300-second storage budget. Applying
+the implemented codec to its 48 planned artifacts reduced 103,338,932 bytes to
+4,304,973 bytes (95.83%), with exact original-byte recovery. This is a local
+measurement, not an end-to-end latency guarantee or proof of the earlier network
+delay. Retain all evidence instead of deleting detail; retain readback checks
+instead of trusting upload acknowledgments. Increasing a timeout is not a speedup.
+
+**Boundary:** keep conditional writes, retries, deadlines, permissions and
+publication gates. Upgrade all readers before allowing a new writer to produce
+format 2. Old binaries cannot read the new format. Existing and failed candidates
+are not recompressed in place. Per-request timing, incremental progress and
+parallel transfers are outside this compression-only change. Live deployment and
+a new refresh are separate operator actions.
+
+**Evidence:** [implementation and verification](ai/sessions/2026-10-06-refresh-evidence-compression.md).
 
 ## Proposed decisions
 
