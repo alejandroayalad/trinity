@@ -88,9 +88,10 @@ def load_candidate(root: Path, expected_receipt_sha256: str, storage, *, timeout
                 _results(diagnostics['evaluations']), validation['status'], result['warning_digest'],
                 result['warning_count'], result['approval_required'], sha256(validation_raw), sha256(diagnostics_raw))
             receipt = StoredCandidate(root, manifest.version_id, attempt, manifest.digest,
-                result['bundle_sha256'], tuple(StoredArtifact(**item) for item in bundle['artifacts']),
+                result['bundle_sha256'], tuple(StoredArtifact.from_dict(item, bundle['bundle_format'])
+                                              for item in bundle['artifacts']),
                 result['storage_evidence_path'], result['warning_digest'], result['warning_count'],
-                result['approval_required'])
+                result['approval_required'], bundle_format=bundle['bundle_format'])
         # Existing verification binds the summary hashes to the bundle and
         # checks every member. Hashing the summaries above does not trust them.
         verify_stored_candidate(report, receipt, storage, timeout_seconds=verification_deadline-time.monotonic())

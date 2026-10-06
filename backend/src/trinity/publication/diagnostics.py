@@ -3,6 +3,7 @@
 import io
 import re
 
+from trinity.adapters.s3 import StoredArtifact
 from trinity.connector.validate import (
     CheckResult, DIAGNOSTIC_CHECKS, DIAGNOSTIC_REGISTRY, REQUIRED_CHECKS,
     diagnostic_identity, required_checks_pass,
@@ -50,10 +51,10 @@ def read_verified_diagnostics(pinned, reader, deadline):
     try:
         version = str(pinned.publication.version_id)
 
-        def fetch(path, digest, size=None):
+        def fetch(path, digest, size=None, artifact=None):
             output = io.BytesIO()
             reader.read_into(version, path, output, deadline=deadline, max_bytes=MAX_EVIDENCE_BYTES,
-                             digest=digest, expected_size=size)
+                             digest=digest, expected_size=size, artifact=artifact)
             raw = output.getvalue()
             body = read_json(raw)
             if canonical_json(body) != raw:
@@ -68,7 +69,7 @@ def read_verified_diagnostics(pinned, reader, deadline):
         warning = dict(warning_digest=pinned.review_warning_digest, warning_count=pinned.review_warning_count,
                        approval_required=pinned.approval_required)
         if (set(bundle) != {*binding, *warning, 'bundle_format', 'published', 'artifacts'}
-                or type(bundle['bundle_format']) is not int or bundle['bundle_format'] != 1
+                or type(bundle['bundle_format']) is not int or bundle['bundle_format'] not in (1, 2)
                 or type(bundle['contract_version']) is not int
                 or bundle['published'] is not False
                 or any(bundle[key] != value for key, value in (binding | warning).items())
@@ -77,8 +78,7 @@ def read_verified_diagnostics(pinned, reader, deadline):
             raise ValueError
         artifacts = {}
         for item in bundle['artifacts']:
-            if set(item) != {'storage_path', 'byte_size', 'sha256'}:
-                raise ValueError
+            StoredArtifact.from_dict(item, bundle['bundle_format'])
             path = item['storage_path']
             safe_relative_path(path)
             if (path in artifacts or type(item['byte_size']) is not int or item['byte_size'] < 0
@@ -92,7 +92,8 @@ def read_verified_diagnostics(pinned, reader, deadline):
 
         def summary(name, fields):
             member = artifacts[f'{prefix}/{name}.json']
-            body = fetch(member['storage_path'], member['sha256'], member['byte_size'])
+            body = fetch(member['storage_path'], member['sha256'], member['byte_size'],
+                         StoredArtifact.from_dict(member, bundle['bundle_format']))
             if (set(body) != {*binding, *fields} or type(body['contract_version']) is not int
                     or any(body[key] != value for key, value in binding.items())):
                 raise ValueError

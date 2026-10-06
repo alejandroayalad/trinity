@@ -6,7 +6,7 @@ exclusive version reservation, durable stage journal and process deadlines.
 
 import asyncio
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import date
 import os
 from pathlib import Path
@@ -120,6 +120,7 @@ class StoredCandidate:
     warning_count: int
     approval_required: bool
     published: bool = False
+    bundle_format: int = 1
 
 
 def _storage_binding(report: ValidationReport) -> dict:
@@ -162,12 +163,14 @@ def _storage_snapshot(root: int) -> tuple[StoredArtifact, ...]:
 
     Execution journals for storage stay local: they change during the upload.
     Validation journals are complete snapshots and travel with their details.
+    Measure gzip-v1 evidence alongside its original identity; local files stay
+    untouched. Bootstrap objects and Parquet keep their original encoding.
     A prior local bundle blocks a new attempt; this slice has no resume command.
     """
     files = parquet._inventory(root)
     if "bundle.json" in files:
         raise StorageError("storage_already_attempted")
-    return tuple(StoredArtifact.from_bytes(path, _read_storage_file(root, path))
+    return tuple(StoredArtifact.from_bytes(path, _read_storage_file(root, path), compress=True)
                  for path in sorted(files) if not _local_execution_file(path))
 
 
@@ -184,8 +187,8 @@ def _same_local_files(root: int, artifacts: tuple[StoredArtifact, ...]) -> None:
     if actual != expected:
         raise StorageError("local_inventory_changed")
     for artifact in artifacts:
-        if StoredArtifact.from_bytes(artifact.storage_path, _read_storage_file(
-                root, artifact.storage_path)) != artifact:
+        data = _read_storage_file(root, artifact.storage_path)
+        if (len(data), sha256(data)) != (artifact.byte_size, artifact.sha256):
             raise StorageError("local_artifact_changed")
 
 
@@ -219,7 +222,8 @@ def store_candidate(
     Input is a saved-file validation report plus a trusted storage adapter.
     Reserve a local evidence directory. Recheck the report and snapshot all
     candidate files. Reserve the remote version with a fresh random token.
-    Upload each snapshot through conditional writes and SHA-256 readback.
+    Encode eligible evidence with gzip-v1, without changing local files.
+    Upload through conditional writes; verify stored and original SHA-256 hashes.
     Recheck local inputs, freeze bundle.json, and upload that bundle last.
     Reverify the full remote bundle before durably saving the local receipt.
 
@@ -269,27 +273,30 @@ def store_candidate(
                 verify_validation(report)
                 _check_snapshot_binding(report, artifacts)
                 _same_local_files(root, artifacts)
-                plan = canonical_json({**binding, "artifacts": [asdict(item) for item in artifacts]})
+                plan = canonical_json({**binding, "artifacts": [item.to_dict() for item in artifacts]})
                 parquet._write_bytes(root, f"{evidence_path}/plan.json", plan)
                 reservation = canonical_json({**binding, "preparation_token": token})
                 parquet._write_bytes(root, f"{evidence_path}/reservation.json", reservation)
                 reservation_artifact = operation.put_verified("reservation.json", reservation, reservation=True)
-                record("reserved", artifact=asdict(reservation_artifact))
+                record("reserved", artifact=reservation_artifact.to_dict())
                 for artifact in artifacts:
                     operation.checkpoint()
                     data = _read_storage_file(root, artifact.storage_path)
-                    if StoredArtifact.from_bytes(artifact.storage_path, data) != artifact:
+                    if (len(data), sha256(data)) != (artifact.byte_size, artifact.sha256):
                         raise StorageError("local_artifact_changed")
-                    operation.put_verified(artifact.storage_path, data)
-                    record("object_verified", artifact=asdict(artifact))
+                    operation.put_verified(artifact.storage_path, data, artifact=artifact)
+                    record("object_verified", artifact=artifact.to_dict())
 
                 verify_validation(report)
                 _same_local_files(root, artifacts)
                 operation.checkpoint()
                 all_artifacts = tuple(sorted((*artifacts, reservation_artifact),
                                              key=lambda item: item.storage_path))
-                bundle = canonical_json({"bundle_format": 1, **binding,
-                                         "artifacts": [asdict(item) for item in all_artifacts]})
+                # The bundle stays uncompressed so its existing pinned hash is
+                # the bootstrap proof. Only v2 members can select gzip-v1;
+                # their stored and original identities are both bound here.
+                bundle = canonical_json({"bundle_format": 2, **binding,
+                                         "artifacts": [item.to_dict() for item in all_artifacts]})
                 # Check the bundle size before freezing it. All other objects
                 # already have measured limits from the initial snapshot.
                 bundle_artifact = StoredArtifact.from_bytes("bundle.json", bundle)
@@ -297,7 +304,7 @@ def store_candidate(
                 if _read_storage_file(root, "bundle.json") != bundle:
                     raise StorageError("local_bundle_readback")
                 operation.put_verified("bundle.json", bundle)
-                record("bundle_verified", artifact=asdict(bundle_artifact))
+                record("bundle_verified", artifact=bundle_artifact.to_dict())
                 # Re-read earlier objects too. An upload acknowledgment or an
                 # intact bundle cannot hide a missing or changed member object.
                 for artifact in all_artifacts:
@@ -310,7 +317,7 @@ def store_candidate(
                     report.root, report.manifest.version_id, report.attempt_id,
                     report.manifest.digest, bundle_artifact.sha256, all_artifacts,
                     evidence_path, report.warning_digest, report.warning_count,
-                    report.approval_required,
+                    report.approval_required, bundle_format=2,
                 )
                 result = canonical_json({**binding, "status": "stored_unpublished",
                                          "bundle_sha256": receipt.bundle_sha256,
@@ -377,8 +384,12 @@ def verify_stored_candidate(report: ValidationReport, receipt: StoredCandidate,
             if f"{prefix}/failure.json" in files:
                 raise StorageError("storage_incomplete")
             bundle = _read_storage_file(root, "bundle.json")
-            expected = canonical_json({"bundle_format": 1, **binding,
-                                       "artifacts": [asdict(item) for item in receipt.artifacts]})
+            if type(receipt.bundle_format) is not int or receipt.bundle_format not in (1, 2):
+                raise StorageError("bundle_identity")
+            for item in receipt.artifacts:
+                StoredArtifact.from_dict(item.to_dict(), receipt.bundle_format)
+            expected = canonical_json({"bundle_format": receipt.bundle_format, **binding,
+                                       "artifacts": [item.to_dict() for item in receipt.artifacts]})
             if bundle != expected or sha256(bundle) != receipt.bundle_sha256:
                 raise StorageError("bundle_identity")
             # The local plan must describe exactly the saved candidate snapshot.
@@ -387,7 +398,8 @@ def verify_stored_candidate(report: ValidationReport, receipt: StoredCandidate,
             reservation = _read_storage_file(root, f"{prefix}/reservation.json")
             if reservation != canonical_json({**binding, "preparation_token": token}):
                 raise StorageError("reservation_identity")
-            artifacts = tuple(StoredArtifact(**item) for item in plan.pop("artifacts"))
+            artifacts = tuple(StoredArtifact.from_dict(item, receipt.bundle_format)
+                              for item in plan.pop("artifacts"))
             if canonical_json(plan) != canonical_json(binding):
                 raise StorageError("plan_identity")
             all_artifacts = tuple(sorted((*artifacts, StoredArtifact.from_bytes(
@@ -406,10 +418,10 @@ def verify_stored_candidate(report: ValidationReport, receipt: StoredCandidate,
             bundle_artifact = StoredArtifact.from_bytes("bundle.json", bundle)
             expected_events = [
                 {"event": "started", **binding, "preparation_token": token},
-                {"event": "reserved", **binding, "artifact": asdict(
-                    StoredArtifact.from_bytes("reservation.json", reservation))},
-                *({"event": "object_verified", **binding, "artifact": asdict(item)} for item in artifacts),
-                {"event": "bundle_verified", **binding, "artifact": asdict(bundle_artifact)},
+                {"event": "reserved", **binding, "artifact":
+                    StoredArtifact.from_bytes("reservation.json", reservation).to_dict()},
+                *({"event": "object_verified", **binding, "artifact": item.to_dict()} for item in artifacts),
+                {"event": "bundle_verified", **binding, "artifact": bundle_artifact.to_dict()},
                 {"event": "completed", **binding, "bundle_sha256": receipt.bundle_sha256},
             ]
             if canonical_json(events) != canonical_json(expected_events):

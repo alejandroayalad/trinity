@@ -3,7 +3,8 @@
 Read the active publication in a read-only database transaction. Measure three
 fresh evidence reads through the production verifier. Profile the last read to
 separate Python work from I/O; its overhead makes it a different timing sample.
-Print only timings, byte counts, safe artifact names and function statistics.
+Print only timings, decoded byte counts, safe artifact names and function statistics.
+Byte counts describe verified original files, not compressed network traffic.
 
 This is an operator probe, not a product endpoint or a dashboard benchmark. It
 does not create sessions, reserve query slots, launch containers or change data.
@@ -11,7 +12,7 @@ Run it through docker-entrypoint.sh so the configured database secret is loaded.
 Provider failures produce only safe error codes or exception class names.
 
 Use --compare for uncached, cold-cache, warm-cache and concurrent-cold samples.
-Use --container NAME from the host to load the four reviewed working-tree
+Use --container NAME from the host to load the reviewed working-tree
 modules into an isolated interpreter in that existing container. This changes
 no files, installed packages, API process or service configuration. It permits
 component comparison before the operator rebuilds the API image.
@@ -39,7 +40,8 @@ def in_container(container, *, compare):
     inside the container's existing entrypoint and environment.
     """
     root = Path(__file__).resolve().parents[1]
-    names = ('trinity.publication.diagnostics', 'trinity.publication.evidence_cache',
+    names = ('trinity.adapters.s3', 'trinity.queries.staging',
+             'trinity.publication.diagnostics', 'trinity.publication.evidence_cache',
              'trinity.queries.client', 'trinity.queries.config')
     sources = [(name, (root / 'backend' / 'src' / (name.replace('.', '/') + '.py')).read_text())
                for name in names]
@@ -81,7 +83,7 @@ def measure_evidence(pinned, execution, *, profiled=False, cache=None, dataset='
         # storage path supplied by an adapter or a future implementation.
         name = path.rsplit('/', 1)[-1]
         kind = name if name in {'bundle.json', 'validation.json', 'diagnostics.json'} else 'other'
-        reads.append({'kind': kind, 'bytes': size,
+        reads.append({'kind': kind, 'bytes': size, 'byte_basis': 'decoded',
                       'ms': round((time.perf_counter() - before) * 1000, 2)})
         return size
 

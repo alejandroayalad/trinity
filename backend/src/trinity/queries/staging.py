@@ -1,7 +1,6 @@
 """Read and seal exactly the selected files from a pinned published manifest."""
 
 from dataclasses import dataclass
-import hashlib
 import io
 import json
 import os
@@ -13,7 +12,7 @@ from uuid import UUID
 import pyarrow.parquet as pq
 
 from trinity.contracts.choices import ChoiceOperation
-from trinity.adapters.s3 import MAX_OBJECT_BYTES, StorageError, _error_kind
+from trinity.adapters.s3 import MAX_OBJECT_BYTES, StorageError, StoredArtifact, _error_kind, verified_chunks
 from trinity.contracts.datasets import DATASETS
 from trinity.contracts.manifest import read_manifest, safe_relative_path
 from trinity.errors import Problem
@@ -29,8 +28,15 @@ class PublishedReader:
     def __init__(self, client, settings, *, clock=time.monotonic, sleep=time.sleep):
         self.client, self.settings, self.clock, self.sleep = client, settings, clock, sleep
 
-    def read_into(self, version, path, output, *, deadline, max_bytes, digest, expected_size=None):
-        """Retry temporary failures only, restarting the same bounded output."""
+    def read_into(self, version, path, output, *, deadline, max_bytes, digest, expected_size=None,
+                  artifact=None):
+        """Read original bytes using only a trusted bundle's encoding descriptor.
+
+        Legacy objects and the bootstrap bundle/manifest stay unencoded. For a
+        compressed member, verify the stored bytes and bound decompression to
+        its original declared size. Never infer an encoding from S3 metadata.
+        Retry temporary failures only, restarting the same bounded output.
+        """
         if str(UUID(str(version))) != str(version):
             raise Problem(503, 'dependency_unavailable')
         safe_relative_path(path)
@@ -46,23 +52,22 @@ class PublishedReader:
                 body = response['Body']
                 if type(response.get('ContentLength')) is not int or response['ContentLength'] > max_bytes:
                     raise Problem(503, 'query_resource_limit')
-                count, checksum = 0, hashlib.sha256()
-                while True:
-                    deadline.remaining()
-                    chunk = body.read(min(1024 * 1024, max_bytes - count + 1))
-                    deadline.remaining()
-                    if not chunk: break
-                    count += len(chunk)
-                    if count > max_bytes:
-                        raise Problem(503, 'query_resource_limit')
-                    checksum.update(chunk); output.write(chunk)
-                if (count != response['ContentLength'] or expected_size is not None and count != expected_size
-                        or checksum.hexdigest() != digest):
+                member = artifact or StoredArtifact(path, digest,
+                    response['ContentLength'] if expected_size is None else expected_size)
+                if (member.storage_path != path or member.sha256 != digest
+                        or expected_size is not None and member.byte_size != expected_size):
                     raise Problem(503, 'dependency_unavailable')
+                count = 0
+                for chunk in verified_chunks(response, member, checkpoint=deadline.remaining, max_bytes=max_bytes):
+                    output.write(chunk)
+                    count += len(chunk)
                 output.flush(); output.seek(0)
                 return count
             except Problem:
                 raise
+            except StorageError as error:
+                code = 'query_resource_limit' if error.code == 'object_too_large' else 'dependency_unavailable'
+                raise Problem(503, code) from None
             except Exception as error:
                 if _error_kind(error) != 'temporary' or attempt == 2:
                     raise Problem(503, 'dependency_unavailable') from None

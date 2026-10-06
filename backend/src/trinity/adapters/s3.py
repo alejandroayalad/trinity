@@ -6,11 +6,14 @@ It never lists buckets, deletes objects, changes policies or publishes data.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import gzip
 import hashlib
 import math
+import re
 import time
 from uuid import UUID
+import zlib
 
 import boto3
 from botocore.config import Config
@@ -42,19 +45,151 @@ class StorageError(RuntimeError):
 
 @dataclass(frozen=True)
 class StoredArtifact:
-    """Identify an immutable object relative to one reserved version prefix."""
+    """Bind original file bytes and, for gzip-v1, their exact stored encoding.
+
+    Original hashes still bind validation details and local files. Compressed
+    hashes bind the S3 bytes separately, so a different encoding is not silently
+    accepted just because it expands to the same JSON. Bundle format 1 has only
+    the first three fields; format 2 can also carry the three encoding fields.
+    """
 
     storage_path: str
     sha256: str
     byte_size: int
+    encoding: str = "identity"
+    stored_sha256: str | None = None
+    stored_byte_size: int | None = None
+
+    def __post_init__(self):
+        safe_relative_path(self.storage_path)
+        pairs = [(self.byte_size, self.sha256)]
+        if self.encoding == "gzip-v1":
+            if not self.compressible(self.storage_path):
+                raise StorageError("object_identity")
+            pairs.append((self.stored_byte_size, self.stored_sha256))
+        elif (self.encoding != "identity" or self.stored_sha256 is not None
+              or self.stored_byte_size is not None):
+            raise StorageError("object_identity")
+        for size, digest in pairs:
+            if (type(size) is not int or size < 0 or type(digest) is not str
+                    or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                raise StorageError("object_identity")
+            if size > MAX_OBJECT_BYTES:
+                raise StorageError("object_too_large")
+
+    @staticmethod
+    def compressible(path: str) -> bool:
+        """Keep bootstrap objects and already-compressed Parquet unchanged."""
+        return path == "source-evidence.json" or (
+            path.startswith("evidence/") and path.endswith((".json", ".jsonl")))
+
+    def to_dict(self) -> dict:
+        """Preserve the exact old descriptor shape for unencoded objects."""
+        result = asdict(self)
+        if self.encoding == "identity":
+            for field in ("encoding", "stored_sha256", "stored_byte_size"):
+                del result[field]
+        return result
 
     @classmethod
-    def from_bytes(cls, path: str, data: bytes) -> "StoredArtifact":
-        """Measure exact bytes and reject unsafe names or the 64 MiB limit."""
+    def from_dict(cls, value: dict, bundle_format: int) -> "StoredArtifact":
+        """Reject unknown formats, surplus fields and compressed v1 members."""
+        fields = {"storage_path", "sha256", "byte_size"}
+        if type(bundle_format) is not int or bundle_format not in (1, 2):
+            raise StorageError("object_identity")
+        if set(value) != fields and not (
+                bundle_format == 2 and value.get("encoding") == "gzip-v1"
+                and set(value) == fields | {"encoding", "stored_sha256", "stored_byte_size"}):
+            raise StorageError("object_identity")
+        return cls(**value)
+
+    @classmethod
+    def from_bytes(cls, path: str, data: bytes, *, compress: bool = False) -> "StoredArtifact":
+        """Measure original bytes and use gzip only when it saves storage.
+
+        Level 1 keeps compression cheap. A zero timestamp makes repeated
+        encoding deterministic, including after an ambiguous upload response.
+        """
         safe_relative_path(path)
         if len(data) > MAX_OBJECT_BYTES:
             raise StorageError("object_too_large")
+        if compress and cls.compressible(path):
+            packed = gzip.compress(data, compresslevel=1, mtime=0)
+            if len(packed) < len(data):
+                return cls(path, sha256(data), len(data), "gzip-v1", sha256(packed), len(packed))
         return cls(path, sha256(data), len(data))
+
+    def encode(self, data: bytes) -> bytes:
+        """Encode only the measured original, never assign changed bytes a new hash."""
+        if len(data) != self.byte_size or sha256(data) != self.sha256:
+            raise StorageError("object_identity")
+        if self.encoding == "identity":
+            return data
+        packed = gzip.compress(data, compresslevel=1, mtime=0)
+        if len(packed) != self.stored_byte_size or sha256(packed) != self.stored_sha256:
+            raise StorageError("object_identity")
+        return packed
+
+
+def verified_chunks(response, artifact: StoredArtifact, *, checkpoint, max_bytes=MAX_OBJECT_BYTES):
+    """Yield bounded original bytes, checking both identities before completion.
+
+    The trusted bundle selects the encoding, not S3 metadata or magic-byte
+    guessing. Limit each decoded chunk and the complete output, even when a
+    tiny malicious gzip stream would expand beyond its declared size. Require
+    exactly one complete gzip member, with no trailing data. Callers own body
+    closure and must not use partial output after any exception.
+    """
+    size = artifact.stored_byte_size if artifact.encoding == "gzip-v1" else artifact.byte_size
+    digest = artifact.stored_sha256 if artifact.encoding == "gzip-v1" else artifact.sha256
+    if artifact.byte_size > max_bytes or size > MAX_OBJECT_BYTES:
+        raise StorageError("object_too_large")
+    if type(response.get("ContentLength")) is not int or response["ContentLength"] != size:
+        raise StorageError("object_identity")
+    # Adding 16 selects gzip framing, including its trailer/CRC validation.
+    decoder = zlib.decompressobj(16 + zlib.MAX_WBITS) if artifact.encoding == "gzip-v1" else None
+    wire_hash, original_hash = hashlib.sha256(), hashlib.sha256()
+    wire_count = original_count = 0
+    while True:
+        checkpoint()
+        chunk = response["Body"].read(min(_CHUNK_BYTES, size - wire_count + 1))
+        checkpoint()
+        if not chunk:
+            break
+        wire_count += len(chunk)
+        if wire_count > size:
+            raise StorageError("object_identity")
+        wire_hash.update(chunk)
+        while True:
+            checkpoint()
+            # Permit one excess byte only to detect a false declared length.
+            # Never use an unbounded decompress() or flush() on remote input.
+            limit = min(_CHUNK_BYTES, artifact.byte_size - original_count + 1)
+            try:
+                decoded = decoder.decompress(chunk, limit) if decoder else chunk
+            except zlib.error:
+                raise StorageError("object_identity") from None
+            checkpoint()
+            original_count += len(decoded)
+            if original_count > artifact.byte_size:
+                raise StorageError("object_identity")
+            original_hash.update(decoded)
+            if decoder and decoder.unused_data:
+                raise StorageError("object_identity")
+            if decoded:
+                yield decoded
+            if decoder is None:
+                break
+            # A small encoded block can produce several bounded output chunks.
+            # Drain that block before reading more bytes from the network.
+            chunk = decoder.unconsumed_tail
+            if not chunk and len(decoded) < limit:
+                break
+    checkpoint()
+    if (wire_count != size or wire_hash.hexdigest() != digest
+            or original_count != artifact.byte_size or original_hash.hexdigest() != artifact.sha256
+            or decoder is not None and not decoder.eof):
+        raise StorageError("object_identity")
 
 
 def _error_kind(error: Exception) -> str:
@@ -180,19 +315,8 @@ class StorageOperation:
                 response = self.storage.client.get_object(Bucket=self.storage.settings.bucket, Key=key)
                 body = response["Body"]
                 self.checkpoint()
-                digest, count = hashlib.sha256(), 0
-                while True:
-                    self.checkpoint()
-                    chunk = body.read(_CHUNK_BYTES)
-                    self.checkpoint()
-                    if not chunk:
-                        break
-                    count += len(chunk)
-                    if count > artifact.byte_size or count > MAX_OBJECT_BYTES:
-                        raise StorageError("object_identity")
-                    digest.update(chunk)
-                if count != artifact.byte_size or digest.hexdigest() != artifact.sha256:
-                    raise StorageError("object_identity")
+                for _chunk in verified_chunks(response, artifact, checkpoint=self.checkpoint):
+                    pass
                 return True
             except StorageError:
                 raise
@@ -216,7 +340,8 @@ class StorageOperation:
             self._wait(attempt)
         raise StorageError("object_read_failed")
 
-    def put_verified(self, path: str, data: bytes, *, reservation: bool = False) -> StoredArtifact:
+    def put_verified(self, path: str, data: bytes, *, reservation: bool = False,
+                     artifact: StoredArtifact | None = None) -> StoredArtifact:
         """Create once, then read back; reject conflicts and unresolved outcomes.
 
         A reservation contains a fresh random token. Its first conflict stops
@@ -225,7 +350,12 @@ class StorageOperation:
         identical existing artifact is safe only after full byte verification.
         Every retry retains IfNoneMatch='*'; no path overwrites an object.
         """
-        artifact = StoredArtifact.from_bytes(path, data)
+        self.checkpoint()
+        artifact = artifact or StoredArtifact.from_bytes(path, data)
+        if artifact.storage_path != path:
+            raise StorageError("object_identity")
+        data = artifact.encode(data)
+        self.checkpoint()
         key = self._key(path)
         ambiguous = False
         for attempt in range(1, 4):
