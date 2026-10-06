@@ -806,3 +806,13 @@ approval text with server-state candidate copy. Typecheck/lint, 113 unit tests
 and three simulated browser checks passed. Mobile/desktop screenshots were
 inspected; no retained mutation was sent. Human visual acceptance and builds
 remain [ME]. See [evidence](ai/sessions/2026-10-06-presentation-fixes.md).
+
+## Session reliability — October 6, 2026
+
+[ME] Alayala authorized original-report QA-01, QA-09 and startup QA-06 after
+requesting the presentation commits/push. [YOU] Codex separated local sign-out
+from confirmed server revocation, shared in-flight startup authority checks and
+added guarded startup Retry. Typecheck/lint, 128 unit tests and four simulated
+browser regressions passed. No retained session was logged out; backend
+revocation failure and human acceptance remain unverified. Build remains [ME].
+See [evidence](ai/sessions/2026-10-06-session-reliability.md).

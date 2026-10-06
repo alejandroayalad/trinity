@@ -1,7 +1,8 @@
 import { Navigate, Outlet } from 'react-router'
 import type { Capability, LandingScreen } from '../api/types'
 import { useSession } from './SessionProvider'
-import { ErrorState, LoadingRows } from '../components/feedback/States'
+import { PageError } from '../pages/shared'
+import { LoadingRows } from '../components/feedback/States'
 
 export const navigation: { to: string; label: string; capability: Capability }[] = [
   { to: '/dashboard', label: 'Overview', capability: 'national:read' },
@@ -14,9 +15,9 @@ export const landingPath = (screen: LandingScreen) => ({ waiting: '/waiting', se
 
 /** Do not mount a denied page: its query hooks must never send a request. */
 export function RequireCapability({ capability }: { capability?: Capability }) {
-  const { me, loading, error } = useSession()
+  const { me, loading, error, retryStartup } = useSession()
   if (loading) return <LoadingRows />
-  if (error) return <ErrorState error={error} />
+  if (error) return <PageError error={error} onRetry={retryStartup} />
   if (!me) return <Navigate to="/sign-in" replace />
   if (capability && !me.capabilities.includes(capability)) return <Navigate to={landingPath(me.landing_screen)} replace />
   return <Outlet />

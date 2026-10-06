@@ -190,8 +190,10 @@ export async function request<T>(method: Method, path: string, options: RequestO
   const requestId = response.headers.get('X-Request-ID')
   if (!response.ok) {
     const error = await readProblem(response, requestId)
+    // Ignore a denial from authority already cleared or replaced locally.
+    // SessionProvider separately handles expiry of its current startup check.
     if (response.status === 401 && token !== null && !options.skipSessionEnd
-        && (getAccessToken() === token || getAccessToken() === null)) unauthorizedHandler?.()
+        && getAccessToken() === token) unauthorizedHandler?.()
     throw error
   }
 
