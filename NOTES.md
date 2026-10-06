@@ -754,3 +754,16 @@ merge commit; nothing was pushed.
 ran `uv lock` in a container (only `awscrt` 0.36.0 added) and recorded the A17
 amendment. A check image imported `awscrt` and the backend offline suite passed
 (790 ran, 258 skips). Worker credential resolution remains unverified.
+
+## Explorer state — October 6, 2026
+
+[ME] Alayala scoped and authorized original-report QA-02/04/05/08 and analytical
+QA-06. [YOU] Codex extended existing frontend query handling with 300 ms search
+debounce, independent pagination visits, complete Reset, accessible dashboard
+loading and guarded read recovery. No backend cache or auth work was changed.
+Typecheck/lint and 100 unit tests passed; two simulated Playwright regressions
+passed. Live browser checks covered rapid ranges, current facility search,
+2000-row pagination followed by filter/Reset, and a prefiltered generator URL.
+QA-02 remains partial pending live network and backend-capacity evidence; browser
+cancellation does not prove server stop. Build and human acceptance remain [ME].
+See [scope and evidence](ai/sessions/2026-10-06-explorer-state-implementation.md).
