@@ -1,13 +1,19 @@
 import type { Cell, Column, Diagnostic } from '../api/types'
 import { isApiError } from '../api/client'
+import { Button } from '../components/controls/Button'
 import { MissingChip } from '../components/feedback/StatusBadge'
 import { ErrorState } from '../components/feedback/States'
 import { Callout } from '../components/feedback/Callout'
 import { Waiting } from './unavailable/Waiting'
 import { formatExact, formatFixed, isOutOfRange, offlineShare, parseDecimal } from '../lib/decimal'
 
-export function PageError({ error }: { error: unknown }) {
-  return isApiError(error, 'data_unavailable') ? <Waiting /> : <ErrorState error={error} />
+/**
+ * A failed read. `data_unavailable` is a server state with its own Waiting
+ * screen. Every other error can offer a Retry when the caller can refetch.
+ */
+export function PageError({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  if (isApiError(error, 'data_unavailable')) return <Waiting />
+  return <div className="stack"><ErrorState error={error} />{onRetry !== undefined && <Button onClick={onRetry}>Retry</Button>}</div>
 }
 // Show only review warnings. A review warning has severity 'warning' and
 // affected_count above zero. The backend counts warnings with the same rule.

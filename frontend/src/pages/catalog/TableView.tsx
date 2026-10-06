@@ -22,14 +22,19 @@ function DatasetTable({ datasetKey }: { datasetKey: DatasetKey }) {
   const [search] = useSearchParams()
   // This non-fetch cache entry belongs to the session and clears on sign-out.
   const [filters, setFilters] = useState<PreviewFilters>(() => search.has('facility') ? { facility: search.get('facility') ?? '' } : cache.getQueryData<PreviewFilters>(['filters', datasetKey]) ?? {})
+  // From and To are a draft. The table fetches only when the user clicks
+  // "Apply dates", so fast typing sends no preview requests.
+  const [dates, setDates] = useState(() => ({ start: filters.start ?? '', end: filters.end ?? '' }))
   const [notice, setNotice] = useState('')
   const [loadAll, setLoadAll] = useState(false)
   const catalog = useQuery({ queryKey: queryKeys.catalog, queryFn: getCatalog })
   const key = useMemo(() => queryKeys.preview(datasetKey, filters), [datasetKey, filters])
   const query = useInfiniteQuery({ queryKey: key, initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => getPreview(datasetKey, filters, 1000, pageParam),
+    queryFn: ({ pageParam, signal }) => getPreview(datasetKey, filters, 1000, pageParam, signal),
     getNextPageParam: (last) => last.data.next_cursor ?? undefined })
   const update = (next: PreviewFilters) => { setLoadAll(false); setFilters(next); cache.setQueryData(['filters', datasetKey], next) }
+  const applyDates = () => update({ ...filters, start: dates.start || undefined, end: dates.end || undefined })
+  const resetFilters = () => { setDates({ start: '', end: '' }); update({}) }
   useEffect(() => {
     if (isApiError(query.error, 'publication_changed')) {
       const timer = window.setTimeout(() => {
@@ -49,7 +54,6 @@ function DatasetTable({ datasetKey }: { datasetKey: DatasetKey }) {
   const mixed = pages.some((p) => p.publication.publication_event_id !== first?.publication.publication_event_id)
   const rows = mixed ? [] : pages.flatMap((p) => p.rows)
   const dataset = catalog.data?.data.datasets.find((d) => d.key === datasetKey)
-  const field = (name: keyof PreviewFilters, label: string, disabled = false) => <label>{label}<input type={name === 'start' || name === 'end' ? 'date' : 'text'} disabled={disabled} value={filters[name] ?? ''} onChange={(e) => update({ ...filters, [name]: e.target.value === '' ? undefined : e.target.value, ...(name === 'facility' ? { generator: undefined } : {}) })} /></label>
   let combined = 'Unavailable'
   if (first && rows.length) {
     const oi = first.columns.findIndex((c) => c.name === 'outage'), ci = first.columns.findIndex((c) => c.name === 'capacity')
@@ -58,8 +62,8 @@ function DatasetTable({ datasetKey }: { datasetKey: DatasetKey }) {
   }
   return <section className="stack"><Link to="/catalog">← Catalog</Link><h1 className="mono">{datasetKey}</h1><p>{dataset?.label}</p>
     {first && <p className="row">Rows from <ShortId value={first.publication.version_id} />.</p>}
-    <div className="panel filters">{field('start', 'From')}{field('end', 'To')}{datasetKey !== 'national_outages' && <FacilityChoices dataset={datasetKey} filters={filters} onChange={(facility) => update({ ...filters, facility, generator: undefined })} />}{datasetKey === 'generator_outages' && <GeneratorChoices filters={filters} onChange={(generator) => update({ ...filters, generator })} />}<Button onClick={() => update({})}>Reset filters</Button></div>
-    {notice && <p role="status">{notice}</p>}{query.isPending && <LoadingRows />}{query.error && !isApiError(query.error, 'publication_changed') && <PageError error={query.error} />}
+    <div className="panel filters"><label>From<input type="date" value={dates.start} onChange={(e) => setDates({ ...dates, start: e.target.value })} /></label><label>To<input type="date" value={dates.end} onChange={(e) => setDates({ ...dates, end: e.target.value })} /></label><Button onClick={applyDates}>Apply dates</Button>{datasetKey !== 'national_outages' && <FacilityChoices dataset={datasetKey} filters={filters} onChange={(facility) => update({ ...filters, facility, generator: undefined })} />}{datasetKey === 'generator_outages' && <GeneratorChoices filters={filters} onChange={(generator) => update({ ...filters, generator })} />}<Button onClick={resetFilters}>Reset filters</Button></div>
+    {notice && <p role="status">{notice}</p>}{query.isPending && <LoadingRows />}{query.error && !isApiError(query.error, 'publication_changed') && <PageError error={query.error} onRetry={() => void query.refetch()} />}
     {mixed ? <div role="status">The data changed. <Button onClick={() => { void cache.resetQueries({ queryKey: key, exact: true }) }}>Reload table</Button></div> : first && <div className="panel stack"><Diagnostics diagnostics={first.diagnostics} />{rows.length ? <DataTable columns={first.columns} rows={rows} /> : <p className="empty">No rows match these filters.</p>}
     {query.hasNextPage ? <><p>Showing {rows.length} rows. Load all rows to calculate the combined share.</p><div className="row"><Button disabled={query.isFetching} onClick={() => { void query.fetchNextPage() }}>Load more</Button><Button disabled={loadAll} onClick={() => setLoadAll(true)}>{loadAll ? 'Loading all rows…' : 'Load all rows'}</Button></div></> : <p>{rows.length} rows · Combined share: {combined}</p>}<p className="muted">○ Not reported means missing. 0 is a reported value.</p></div>}
   </section>

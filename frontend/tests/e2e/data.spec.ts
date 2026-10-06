@@ -39,6 +39,33 @@ test('Viewer dashboard uses real isolated published data and exposes no detail r
   await page.screenshot({ path: 'test-results/dashboard-viewer-1440.png', fullPage: true })
 })
 
+test('rapid dashboard preset clicks keep the last choice and recover without a rate error', async ({ page }) => {
+  const aborted: string[] = []
+  const rateLimited: string[] = []
+  page.on('requestfailed', (request) => { if (request.url().includes('/api/v1/dashboard/national')) aborted.push(request.url()) })
+  page.on('response', (response) => { if (response.url().includes('/api/v1/dashboard/national') && response.status() === 429) rateLimited.push(response.url()) })
+  await page.goto('/sign-in')
+  await page.getByLabel('Account', { exact: true }).fill('analyst')
+  await page.getByLabel('Password', { exact: true }).fill(env.TRINITY_TEST_ANALYST_PASSWORD ?? '')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: /Range end observation/ })).toBeVisible({ timeout: 30000 })
+  // Click without waiting, so the 1-year and 90-day requests are still in
+  // flight when the 30-day request starts. A client that does not cancel them
+  // fails the 2-active-requests admission limit and shows the rate error.
+  await page.getByRole('button', { name: 'Last 365 days', exact: true }).click()
+  await page.getByRole('button', { name: '90 days', exact: true }).click()
+  await page.getByRole('button', { name: '30 days', exact: true }).click()
+  // The last choice is the active one, and the browser cancelled the older
+  // requests, so no analytical response was rate limited.
+  await expect(page.getByRole('button', { name: '30 days', exact: true })).toHaveClass(/primary/)
+  await expect(page.getByRole('button', { name: 'Last 365 days', exact: true })).not.toHaveClass(/primary/)
+  await expect.poll(() => aborted.some((url) => url.includes('preset=1y'))).toBe(true)
+  await expect.poll(() => aborted.some((url) => url.includes('preset=90d'))).toBe(true)
+  expect(rateLimited).toEqual([])
+  await expect(page.getByText(/Too many requests/)).toHaveCount(0)
+  await expect(page.getByText('✕ Error')).toHaveCount(0)
+})
+
 test('Analyst loads published tables, exact entity choices, contributions and SQL', async ({ page }) => {
   await page.goto('/sign-in')
   await page.getByLabel('Account', { exact: true }).fill('analyst')
@@ -48,10 +75,17 @@ test('Analyst loads published tables, exact entity choices, contributions and SQ
   await page.getByRole('link', { name: 'Catalog', exact: true }).click()
   await page.getByRole('link', { name: 'generator_outages', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Generator', exact: true })).toBeDisabled()
-  await expect(page.getByRole('combobox', { name: 'Facility', exact: true }).locator('option[value="001a"]')).toHaveCount(1, { timeout: 30000 })
-  await page.getByRole('combobox', { name: 'Facility', exact: true }).selectOption('001a')
+  // The facility list loads on first open; focus is the open action here.
+  const facility = page.getByRole('combobox', { name: 'Facility', exact: true })
+  await facility.focus()
+  // Read the first published choice. Published IDs change between
+  // publications, so the test never pins one source ID.
+  const firstOption = facility.locator('option').nth(1)
+  await expect(firstOption).toBeAttached({ timeout: 30000 })
+  const facilityId = await firstOption.getAttribute('value')
+  await facility.selectOption(facilityId ?? '')
   await expect(page.getByRole('combobox', { name: 'Generator', exact: true })).toBeEnabled()
-  await expect(page.getByRole('cell', { name: '001a', exact: true }).first()).toBeVisible({ timeout: 30000 })
+  await expect(page.getByRole('cell', { name: facilityId ?? '', exact: true }).first()).toBeVisible({ timeout: 30000 })
   await page.getByRole('link', { name: 'SQL Explorer', exact: true }).click()
   await page.getByRole('button', { name: 'Run query', exact: true }).click()
   await expect(page.getByText(/rows · \d+ ms/)).toBeVisible({ timeout: 30000 })

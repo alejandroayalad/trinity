@@ -43,9 +43,10 @@ export type PreviewFilters = {
   generator?: string
 }
 
-export function getPreview(datasetKey: DatasetKey, filters: PreviewFilters, limit: number, cursor?: string) {
+export function getPreview(datasetKey: DatasetKey, filters: PreviewFilters, limit: number, cursor?: string, signal?: AbortSignal) {
   return request<PreviewResponse>('GET', `/datasets/${path(datasetKey)}/preview`, {
     query: { ...filters, limit: String(limit), cursor },
+    signal,
   })
 }
 
@@ -83,11 +84,11 @@ export function getSettings() {
   return request<SettingsResponse>('GET', '/settings')
 }
 
-export function getDashboard(query: { preset?: string; start?: string; end?: string }) {
-  return request<import('./types').DashboardResponse>('GET', '/dashboard/national', { query })
+export function getDashboard(query: { preset?: string; start?: string; end?: string }, signal?: AbortSignal) {
+  return request<import('./types').DashboardResponse>('GET', '/dashboard/national', { query, signal })
 }
-export function getMetric(period: string) {
-  return request<import('./types').MetricResponse>('GET', '/metrics/offline-share', { query: { period } })
+export function getMetric(period: string, signal?: AbortSignal) {
+  return request<import('./types').MetricResponse>('GET', '/metrics/offline-share', { query: { period }, signal })
 }
 export function saveSettings(body: import('./types').SettingsRequest, ifMatch: string) {
   return request<SettingsResponse>('PUT', '/settings', { body, ifMatch })
@@ -95,11 +96,11 @@ export function saveSettings(body: import('./types').SettingsRequest, ifMatch: s
 export function getScheduleStatus() {
   return request<import('./types').ScheduleStatus>('GET', '/settings/schedule-status')
 }
-export function getFacilities(dataset: DatasetKey, filters: PreviewFilters, search: string, cursor?: string) {
-  return request<import('./types').FacilityOptions>('GET', `/datasets/${path(dataset)}/facilities`, { query: { start: filters.start, end: filters.end, search: search || undefined, cursor } })
+export function getFacilities(dataset: DatasetKey, filters: PreviewFilters, search: string, cursor?: string, signal?: AbortSignal) {
+  return request<import('./types').FacilityOptions>('GET', `/datasets/${path(dataset)}/facilities`, { query: { start: filters.start, end: filters.end, search: search || undefined, cursor }, signal })
 }
-export function getGenerators(dataset: DatasetKey, filters: PreviewFilters, cursor?: string) {
-  return request<import('./types').GeneratorOptions>('GET', `/datasets/${path(dataset)}/generators`, { query: { start: filters.start, end: filters.end, facility: filters.facility, cursor } })
+export function getGenerators(dataset: DatasetKey, filters: PreviewFilters, cursor?: string, signal?: AbortSignal) {
+  return request<import('./types').GeneratorOptions>('GET', `/datasets/${path(dataset)}/generators`, { query: { start: filters.start, end: filters.end, facility: filters.facility, cursor }, signal })
 }
 export function recoverRun(runId: string, action: 'rerun' | 'warning', etag: string, idempotencyKey: string) {
   return request<ActionReceipt>(action === 'warning' ? 'DELETE' : 'POST', `/refresh-runs/${path(runId)}/${action}`, { body: action === 'warning' ? undefined : {}, ifMatch: etag, idempotencyKey })

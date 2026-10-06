@@ -16,6 +16,8 @@ export type RecordedRequest = {
   url: string
   headers: Headers
   body: unknown
+  /** The cancel signal the client passed, or null. A test asserts aborts on it. */
+  signal: AbortSignal | null
 }
 
 type Reply = Response | ((request: RecordedRequest) => Response | Promise<Response>)
@@ -49,6 +51,29 @@ export function problem(status: number, code: string, extra: Record<string, unkn
   )
 }
 
+/**
+ * Reject with the browser's AbortError as soon as the signal aborts. A
+ * pending reply promise cannot resolve afterwards, which is how the real
+ * fetch behaves when the caller cancels.
+ */
+function withAbort<T>(value: T | Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
+  if (signal == null) return Promise.resolve(value)
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new DOMException('Aborted', 'AbortError'))
+    if (signal.aborted) {
+      abort()
+      return
+    }
+    signal.addEventListener('abort', abort, { once: true })
+    Promise.resolve(value).then(
+      (result) => { signal.removeEventListener('abort', abort); resolve(result) },
+      // Pass an upstream failure through unchanged. A non-Error reason cannot
+      // come from the stub, which replies with Response or Error values.
+      (error: unknown) => { signal.removeEventListener('abort', abort); reject(error instanceof Error ? error : new Error('fetch stub reply failed')) },
+    )
+  })
+}
+
 export function stubFetch(routes: Routes): { calls: RecordedRequest[] } {
   const calls: RecordedRequest[] = []
   const counters = new Map<string, number>()
@@ -64,6 +89,7 @@ export function stubFetch(routes: Routes): { calls: RecordedRequest[] } {
       url: input,
       headers: new Headers(init.headers),
       body,
+      signal: init.signal ?? null,
     }
     calls.push(recorded)
 
@@ -73,7 +99,7 @@ export function stubFetch(routes: Routes): { calls: RecordedRequest[] } {
     const index = counters.get(key) ?? 0
     counters.set(key, index + 1)
     const reply = Array.isArray(route) ? route[Math.min(index, route.length - 1)] : route
-    const response = typeof reply === 'function' ? await reply(recorded) : reply
+    const response = await withAbort(typeof reply === 'function' ? reply(recorded) : reply, init.signal)
     // A Response body can be read once. Clone it so a repeated route still works.
     return response.clone()
   })
