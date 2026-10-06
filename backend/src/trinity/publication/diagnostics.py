@@ -12,7 +12,11 @@ from trinity.contracts.manifest import canonical_json, read_json, safe_relative_
 from trinity.errors import Problem
 from trinity.queries.preview_schemas import PreviewDiagnostic
 
-MAX_EVIDENCE_BYTES = 4 * 1024 * 1024
+# Each uncached verification reads validation.json and diagnostics.json. They embed
+# every check's detail bytes. A full live window (2024-10-02 to 2026-10-05) made
+# validation.json 14.9 MB, mostly V06 detail, so the earlier 4 MiB limit failed
+# every Preview. Alayala selected 64 MiB. A larger file still fails closed.
+MAX_EVIDENCE_BYTES = 64 * 1024 * 1024
 
 
 def read_preview_diagnostics(pinned, dataset, reader, deadline):
