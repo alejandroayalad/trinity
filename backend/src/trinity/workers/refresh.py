@@ -25,7 +25,7 @@ from trinity.connector.pipeline import _read_storage_file
 from trinity.contracts.manifest import read_json, sha256
 from trinity.refresh.evidence import _results
 from trinity.refresh.execution import ExecutionService
-from trinity.refresh.registration import CandidateRegistration
+from trinity.refresh.registration import CandidateRegistration, REGISTRATION_SECONDS
 
 
 def partial_results(root, attempt):
@@ -96,7 +96,7 @@ def register_receipt(database, run, root, storage_factory):
     return CandidateRegistration(database).register(run_id=run['id'],
         version_id=UUID(ref['version_id']),step_id=UUID(ref['validation_step_id']),
         fence=run['execution_fence'],root=root,receipt_sha256=ref['receipt_sha256'],
-        storage=storage_factory(),timeout_seconds=min(30,remaining))
+        storage=storage_factory(),timeout_seconds=min(REGISTRATION_SECONDS,remaining))
 
 
 class RefreshWorker:

@@ -782,6 +782,14 @@ evidence or exhausted limits record failure, never publication readiness.
 Publisher, setup writes and Admin review/recovery commands remain separate.
 The [current tasks](sdd/refresh-publication/tasks.md) state the tested boundary.
 
+**October 5, 2026 amendment:** Alayala raised the registration budget from 30 to
+150 seconds (`REGISTRATION_SECONDS` in `refresh/registration.py`). Live run #7
+stored and read back 49/49 objects, then failed registration at its 30-second
+deadline. A separate read-only readback of the same objects took 14.2 seconds at
+best, with five requests over one second. The budget is still saved once per run,
+still capped by the execution deadline, and still limited to three invocations.
+Tradeoff: a stuck registration can hold the refresh slot up to 150 seconds.
+
 ### A25 — Figma design and brand handoff
 
 Category: **Product / business**.

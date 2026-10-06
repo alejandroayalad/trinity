@@ -15,6 +15,12 @@ from trinity.contracts.manifest import read_json, sha256
 from trinity.errors import Problem
 from trinity.refresh.evidence import load_candidate
 
+# Registration reads every stored object back from S3 before it records the
+# candidate. A live run read 49 objects back in 14.2 seconds at best, and slow
+# requests made the earlier 30-second budget fail. Alayala selected 150 seconds.
+# The budget is saved once per run; retries and recovery never extend it.
+REGISTRATION_SECONDS = 150
+
 
 def _owned(connection, run_id, version_id, step_id, fence):
     """Lock in canonical order and reject a stale or unrelated writer."""
@@ -138,7 +144,7 @@ class CandidateRegistration:
         self.database = database
 
     def register(self, *, run_id, version_id, step_id, fence, root, receipt_sha256,
-                 storage, timeout_seconds=30):
+                 storage, timeout_seconds=REGISTRATION_SECONDS):
         """Reject stale ownership before reads and recheck it before commit.
 
         No public endpoint accepts root or receipt hashes. These come from the
@@ -153,14 +159,14 @@ class CandidateRegistration:
             if run['status'] == 'running':
                 # Save the first verification deadline before remote I/O. A
                 # recovered owner consumes another attempt inside this budget.
-                # Neither another delivery nor a crash can add thirty seconds.
+                # Neither another delivery nor a crash can extend that budget.
                 if run['registration_attempts'] >= 3:
                     raise Problem(409, 'candidate_ineligible')
                 budget = connection.execute('''UPDATE refresh_runs SET
                     registration_deadline_at=COALESCE(registration_deadline_at,
                         LEAST(execution_deadline_at,clock_timestamp()+%s*interval '1 second')),
                     registration_attempts=registration_attempts+1 WHERE id=%s
-                    RETURNING registration_deadline_at''', (min(30,timeout_seconds),run_id)).fetchone()
+                    RETURNING registration_deadline_at''', (min(REGISTRATION_SECONDS,timeout_seconds),run_id)).fetchone()
                 deadline_at = budget['registration_deadline_at']
                 timeout_seconds = min(timeout_seconds,
                     (deadline_at-datetime.now(UTC)).total_seconds())

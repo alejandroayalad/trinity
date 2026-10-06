@@ -629,7 +629,7 @@ credentials in command arguments or queue payloads.
 
 Successful preparation and stopped-worker recovery verify/import the retained
 receipt and end at `publishing` with one obligation or `awaiting_approval`.
-Registration shares its saved 30-second deadline and at most three invocations
+Registration shares its saved 150-second deadline (A23 amendment) and at most three invocations
 across crashes; neither extraction nor budgets restart. Recovery requires proven
 process termination, valid fenced ownership and the original evidence bytes.
 Live enablement remains a separate gate.
