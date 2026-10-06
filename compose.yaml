@@ -31,6 +31,12 @@ x-worker: &worker
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]
 
+# Custody checks compare the host recorded by the refresh worker with
+# socket.gethostname(). Compose gives each container its own hostname, so every
+# role that opens the refresh root uses this one shared name. All of them run on
+# one Docker machine and share one volume, so file locks still work between them.
+# Override TRINITY_WORKER_HOSTNAME only to reconcile a run that recorded another host.
+#
 # Roles that also hold refresh custody files and use S3. TRINITY_S3_ENDPOINT_URL
 # is left out on purpose: an empty value is rejected; add it only for a non-AWS
 # endpoint. AWS credentials come from the host ~/.aws (see x-aws-volumes).
@@ -156,6 +162,7 @@ services:
   # Runs the refresh pipeline. The only role that loads the EIA key.
   refresh:
     <<: *worker
+    hostname: ${TRINITY_WORKER_HOSTNAME:-trinity-worker}
     # Read the key from the secret file so it is not in `docker inspect`.
     entrypoint:
       - sh
@@ -177,6 +184,7 @@ services:
   # Redispatches or imports work from stopped refresh workers. No EIA key.
   recovery:
     <<: *worker
+    hostname: ${TRINITY_WORKER_HOSTNAME:-trinity-worker}
     command: ["python", "-m", "trinity.workers", "recovery"]
     depends_on: *custody-depends
     environment: *custody-env
@@ -185,6 +193,7 @@ services:
   # Sends committed publication outbox rows to BullMQ. No S3 or EIA access.
   publication-outbox:
     <<: *worker
+    hostname: ${TRINITY_WORKER_HOSTNAME:-trinity-worker}
     command: ["python", "-m", "trinity.workers", "publication-outbox"]
     depends_on: *custody-depends
     environment:
@@ -196,6 +205,7 @@ services:
   # Verifies and activates candidates. Run exactly one; do not scale.
   publication:
     <<: *worker
+    hostname: ${TRINITY_WORKER_HOSTNAME:-trinity-worker}
     command: ["python", "-m", "trinity.workers", "publication"]
     depends_on: *custody-depends
     environment: *custody-env
