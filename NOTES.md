@@ -767,3 +767,13 @@ passed. Live browser checks covered rapid ranges, current facility search,
 QA-02 remains partial pending live network and backend-capacity evidence; browser
 cancellation does not prove server stop. Build and human acceptance remain [ME].
 See [scope and evidence](ai/sessions/2026-10-06-explorer-state-implementation.md).
+
+## Presentation fixes — October 6, 2026
+
+[ME] Alayala requested original-report QA-07/10/11 after Explorer delivery.
+[YOU] Codex made chart coordinates responsive to displayed width, preserved
+ordered duplicate SQL headers with unique React keys, and replaced unconditional
+approval text with server-state candidate copy. Typecheck/lint, 113 unit tests
+and three simulated browser checks passed. Mobile/desktop screenshots were
+inspected; no retained mutation was sent. Human visual acceptance and builds
+remain [ME]. See [evidence](ai/sessions/2026-10-06-presentation-fixes.md).
