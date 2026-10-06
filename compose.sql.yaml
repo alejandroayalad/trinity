@@ -14,6 +14,17 @@ services:
       TRINITY_S3_REGION: ${TRINITY_S3_REGION:?Set the region}
       AWS_CONFIG_FILE: /run/query-aws/config
       AWS_SHARED_CREDENTIALS_FILE: /run/query-aws/credentials
+      # An `aws login` profile renews its token in the login cache. Keep the
+      # AWS config read-only and mount only that cache directory writable.
+      AWS_LOGIN_CACHE_DIRECTORY: /run/query-aws-login/cache
+      # Preview, Dashboard and choices stay closed unless this is exactly "true".
+      TRINITY_PREVIEW_ENABLED: ${TRINITY_PREVIEW_ENABLED:-false}
+      # Cursor signing keys. Local values come from .env; keep them out of Git.
+      # Tradeoff: as plain environment values they appear in `docker inspect`.
+      TRINITY_PREVIEW_CURSOR_KEYS_JSON: ${TRINITY_PREVIEW_CURSOR_KEYS_JSON:-}
+      TRINITY_PREVIEW_CURSOR_ACTIVE_KEY_ID: ${TRINITY_PREVIEW_CURSOR_ACTIVE_KEY_ID:-}
+      TRINITY_REFRESH_CURSOR_KEYS_JSON: ${TRINITY_REFRESH_CURSOR_KEYS_JSON:-}
+      TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID: ${TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID:-}
     # The trusted API needs the daemon socket; the query container never gets it.
     group_add: ["${TRINITY_DOCKER_GID:?Set the daemon socket group ID}"]
     depends_on:
@@ -23,6 +34,7 @@ services:
       - query_stage:/var/lib/trinity/queries
       - ${TRINITY_DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
       - ${TRINITY_QUERY_AWS_DIRECTORY:?Set the existing read-profile directory}:/run/query-aws:ro
+      - ${TRINITY_QUERY_AWS_DIRECTORY:?Set the existing read-profile directory}/login:/run/query-aws-login
   query_stage_init:
     image: ${TRINITY_QUERY_IMAGE:?Set the immutable image ID}
     pull_policy: never

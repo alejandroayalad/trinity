@@ -3,6 +3,7 @@
 Startup reads API configuration and opens a lazy database pool. Product requests
 fail closed if PostgreSQL is unavailable; health reports process liveness only.
 """
+import os
 from contextlib import asynccontextmanager
 from typing import Literal
 
@@ -84,5 +85,15 @@ def create_app(*, settings=None, service=None, query_service=None, preview_servi
     return application
 
 
+def preview_enabled_from(environ) -> bool:
+    """Return True only for the exact text "true" in TRINITY_PREVIEW_ENABLED.
+
+    Preview, Dashboard and choice routes read published Parquet through the query
+    runtime. They stay closed (503) unless the operator sets this value. Any other
+    value, including "1" or "TRUE", keeps them closed, so a typo cannot open them.
+    """
+    return environ.get("TRINITY_PREVIEW_ENABLED") == "true"
+
+
 # Uvicorn imports this object through "trinity.main:app"; startup needs no EIA key.
-app = create_app()
+app = create_app(enable_preview=preview_enabled_from(os.environ))

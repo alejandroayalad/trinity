@@ -1,7 +1,7 @@
 """Check liveness separately from protected application availability."""
 import unittest
 from fastapi.testclient import TestClient
-from trinity.main import create_app
+from trinity.main import create_app, preview_enabled_from
 
 
 class HealthTests(unittest.TestCase):
@@ -32,3 +32,12 @@ class HealthTests(unittest.TestCase):
                                  "/api/v1/candidates/{version_id}/publication-retry",
                                  "/api/v1/candidates/{version_id}/discard"})
         self.assertEqual(response.status_code, 401)
+
+
+class PreviewSwitchTests(unittest.TestCase):
+    def test_preview_opens_only_for_exact_true(self):
+        # Preview, Dashboard and choices stay closed unless the operator opts in.
+        self.assertTrue(preview_enabled_from({"TRINITY_PREVIEW_ENABLED": "true"}))
+        for value in (None, "", "1", "TRUE", "yes", " true"):
+            environ = {} if value is None else {"TRINITY_PREVIEW_ENABLED": value}
+            self.assertFalse(preview_enabled_from(environ), value)
