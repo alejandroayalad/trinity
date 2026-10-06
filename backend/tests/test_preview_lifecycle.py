@@ -3,6 +3,7 @@ from dataclasses import replace
 import json
 from pathlib import Path
 import tempfile
+import threading
 from unittest.mock import Mock, patch
 import unittest
 from uuid import uuid4
@@ -121,6 +122,26 @@ class PreviewLifecycleTests(unittest.TestCase):
                 self.execution.execute(replace(self.prepared,deadline=deadline))
             self.assertEqual(caught.exception.code,'query_resource_limit' if oom else 'query_timeout')
             self.assertEqual(self.events[-4:],['stopping','removed','cleaning','released'])
+
+
+    def test_disconnect_while_container_runs_ends_it_and_releases_capacity(self):
+        # supervised_call sets this event when the browser aborts its request.
+        # The event is set from inside inspect() so the container is already
+        # running when the cancel arrives. The next poll must stop the wait.
+        cancelled = threading.Event()
+        deadline = QueryDeadline(30)
+        deadline.cancelled = cancelled
+        def running(_identifier):
+            cancelled.set()
+            return {'State': {'Running': True, 'ExitCode': 0, 'OOMKilled': False}}
+        self.docker.inspect.side_effect = running
+        with self.assertRaises(Problem) as caught:
+            self.execution.execute(replace(self.prepared, deadline=deadline))
+        self.assertEqual((caught.exception.status, caught.exception.code), (504, 'query_timeout'))
+        # Cleanup removes the container before it releases the slot.
+        self.docker.remove_stopped.assert_called_once()
+        self.assertEqual(self.events[-4:], ['stopping', 'removed', 'cleaning', 'released'])
+        self.attached.close.assert_called_once()
 
 
 class PreviewStagingTests(unittest.TestCase):
