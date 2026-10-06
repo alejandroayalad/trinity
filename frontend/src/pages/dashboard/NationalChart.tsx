@@ -7,6 +7,19 @@ import { add, round, scaleBy, subtract, toText, formatFixed, isOutOfRange, parse
 
 /** SVG receives integer pixel positions. Source measurements stay exact decimals. */
 export function NationalChart({ days, selected, onSelect }: { days: NationalDay[]; selected: string | null; onSelect: (period: string | null) => void }) {
+  const viewport = useRef<SVGSVGElement>(null)
+  const [width, setWidth] = useState(800)
+  // Match SVG coordinates to its displayed width. A fixed desktop viewBox
+  // shrinks text on phones even when CSS gives the chart enough height.
+  useEffect(() => {
+    const svg = viewport.current
+    if (!svg || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width))
+    })
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [])
   const pattern = useId()
   const clip = useId()
   const [hover, setHover] = useState<number | null>(null)
@@ -50,9 +63,13 @@ export function NationalChart({ days, selected, onSelect }: { days: NationalDay[
   const left = reduced ? x0 : domain.x0, right = reduced ? x1 : domain.x1
   const moving = !reduced && domain.moving
   const ticks = target.ticks
-  const x = (index: number) => left === right ? 400 : 40 + (dayNumber(days[index].period) - left) * 720 / (right - left)
-  const gapLeft = (index: number) => Math.max(40, x(index) - 360 / Math.max(right - left, 1))
-  const gapWidth = (index: number) => Math.max(0, Math.min(760, x(index) + 360 / Math.max(right - left, 1)) - gapLeft(index))
+  // Reserve enough space for percentage tick text, including negative values.
+  const plotLeft = Math.max(40, Math.max(...ticks.map((tick) => tick.length + 1)) * 8 + 12)
+  const plotRight = Math.max(plotLeft + 1, width - 16)
+  const plotWidth = plotRight - plotLeft
+  const x = (index: number) => left === right ? (plotLeft + plotRight) / 2 : plotLeft + (dayNumber(days[index].period) - left) * plotWidth / (right - left)
+  const gapLeft = (index: number) => Math.max(plotLeft, x(index) - plotWidth / 2 / Math.max(right - left, 1))
+  const gapWidth = (index: number) => Math.max(0, Math.min(plotRight, x(index) + plotWidth / 2 / Math.max(right - left, 1)) - gapLeft(index))
   const y = (value: string) => (260n - (positionBetween(parseDecimal(value), min, max, 220n) ?? 0n)).toString()
   const active = Math.min(Math.max(0, days.length - 1), hover ?? Math.max(0, days.findIndex((d) => d.period === selected)))
   const segments: { index: number; value: string }[][] = []
@@ -62,7 +79,7 @@ export function NationalChart({ days, selected, onSelect }: { days: NationalDay[
       segments[segments.length - 1].push({ index, value: day.offline_share_percent })
     }
   }
-  return <div className="stack"><svg className="national-chart" viewBox="0 0 800 310" role="application" aria-label="National offline share. Use arrow keys to inspect dates, Enter to pin, Escape to clear." tabIndex={0} onKeyDown={(e) => {
+  return <div className="stack"><svg ref={viewport} className="national-chart" viewBox={`0 0 ${width} 310`} role="application" aria-label="National offline share. Use arrow keys to inspect dates, Enter to pin, Escape to clear." tabIndex={0} onKeyDown={(e) => {
     if (moving) return
     if (['ArrowLeft', 'ArrowRight', 'Enter', 'Escape'].includes(e.key)) e.preventDefault()
     if (e.key === 'ArrowLeft') setHover(Math.max(0, active - 1))
@@ -70,14 +87,14 @@ export function NationalChart({ days, selected, onSelect }: { days: NationalDay[
     if (e.key === 'Enter') onSelect(days[active]?.period ?? null)
     if (e.key === 'Escape') { onSelect(null); setHover(null) }
   }}>
-    <defs><pattern id={pattern} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" className="hatch" /></pattern><clipPath id={clip}><rect x="40" y="35" width="720" height="230" /></clipPath></defs>
-    {ticks.map((tick) => <g key={tick}><line x1="40" x2="760" y1={y(tick)} y2={y(tick)} className="gridline" /><text x="2" y={y(tick)}>{tick}%</text></g>)}
+    <defs><pattern id={pattern} width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" className="hatch" /></pattern><clipPath id={clip}><rect x={plotLeft} y="35" width={plotWidth} height="230" /></clipPath></defs>
+    {ticks.map((tick) => <g key={tick}><line x1={plotLeft} x2={plotRight} y1={y(tick)} y2={y(tick)} className="gridline" /><text x="2" y={y(tick)}>{tick}%</text></g>)}
     <g clipPath={`url(#${clip})`}><g className="chart-reveal">
     {days.map((day, i) => <g key={day.period}>{day.offline_share_percent === null && <rect x={gapLeft(i)} y="40" width={gapWidth(i)} height="220" fill={`url(#${pattern})`} />}
       <rect x={gapLeft(i)} y="35" width={gapWidth(i)} height="230" fill="transparent" onMouseEnter={() => { if (!moving) setHover(i) }} onMouseLeave={() => setHover(null)} onClick={() => { if (!moving) onSelect(day.period) }}><title>{day.period}: {day.offline_share_percent ?? 'Not reported'}</title></rect></g>)}
     {segments.map((segment) => <g key={segment[0].index} pointerEvents="none"><polyline className="chart-line" points={segment.map((point) => `${x(point.index)},${y(point.value)}`).join(' ')} />{segment.filter((point) => segment.length === 1 || isOutOfRange(parseDecimal(point.value))).map((point) => <circle key={point.index} cx={x(point.index)} cy={y(point.value)} r="3" className={isOutOfRange(parseDecimal(point.value)) ? 'outlier' : 'chart-dot'} />)}</g>)}
     </g></g>
     {!moving && (hover !== null || selected !== null) && <line x1={x(active)} x2={x(active)} y1="35" y2="265" className="crosshair" pointerEvents="none" />}
-    <text x="40" y="295">{fromDayNumber(Math.round(left))}</text><text x="760" y="295" textAnchor="end">{fromDayNumber(Math.round(right))}</text>
+    <text x="2" y="295">{fromDayNumber(Math.round(left))}</text><text x={width - 2} y="295" textAnchor="end">{fromDayNumber(Math.round(right))}</text>
   </svg><p aria-live="polite">{days[active]?.period} · {days[active]?.offline_share_percent == null ? '○ Not reported' : `${formatFixed(parseDecimal(days[active].offline_share_percent), 2)}%`}</p><p className="muted">Orange: reported share · Hatched: not reported · Ring: out of range</p></div>
 }

@@ -281,3 +281,28 @@ test('diagnostics show only warnings that affected rows', () => {
   expect(screen.getByText('Outage is negative.')).toBeInTheDocument()
   expect(screen.queryByText('Info only.')).not.toBeInTheDocument()
 })
+
+test.each([
+  ['not_ready', 'not_started', 'active', 'validating', 'Validation is not complete. Approval requirements are not yet known.'],
+  ['not_required', 'not_started', 'active', 'validated', 'No review approval is required. This candidate follows automatic publication after the required checks pass.'],
+  ['required', 'not_started', 'active', 'validated', 'Review warnings require Admin approval before publication. The current publication stays in place.'],
+  ['approved', 'not_started', 'active', 'validated', 'Review warnings were approved. The current publication stays in place until publication succeeds.'],
+  ['not_required', 'queued', 'active', 'validated', 'Publication is in progress. The current publication stays in place until this candidate is published successfully.'],
+  ['approved', 'publishing', 'active', 'validated', 'Publication is in progress. The current publication stays in place until this candidate is published successfully.'],
+  ['approved', 'failed', 'active', 'validated', 'Publication failed. This attempt did not replace the current publication.'],
+  ['not_ready', 'blocked', 'active', 'rejected', 'Publication is blocked. Approval cannot bypass required checks.'],
+  ['not_required', 'published', 'active', 'validated', 'This candidate was published successfully.'],
+  ['discarded', 'blocked', 'discarded', 'validated', 'This candidate was discarded and cannot be published.'],
+  ['not_required', 'blocked', 'superseded', 'validated', 'This candidate was superseded and will not replace the current publication.'],
+])('candidate copy reflects %s / %s / %s without sending a command', async (review, status, disposition, validation, expected) => {
+  const admin = { ...me, role: 'admin', capabilities: [...me.capabilities, 'refresh:read', 'candidate:review'] }
+  const { calls } = stubFetch({
+    'GET /api/v1/me': json(200, admin),
+    'GET /api/v1/refresh-runs/run': json(200, { run_id: 'run', run_seq: '1', revision: '1', requested_at: publication.published_at, status: 'succeeded', candidate: { version_id: 'candidate' }, warning: null, actions: [], steps: [], next_steps_cursor: null, poll_after_seconds: null }),
+    'GET /api/v1/candidates/candidate': json(200, { version_id: 'candidate', disposition, validation_status: validation, validation: { passed_required_count: 16, expected_required_count: 16 }, diagnostics: [], review_status: review, publication: { status }, actions: [] }),
+  })
+  mount('/refresh/run')
+  await screen.findByText(expected)
+  expect(screen.queryByText('The current publication stays in place until approval and successful publication.')).not.toBeInTheDocument()
+  expect(calls.every((call) => call.method === 'GET')).toBe(true)
+})

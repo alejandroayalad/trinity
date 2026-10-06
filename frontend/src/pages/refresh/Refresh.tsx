@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-quer
 import { Link, useNavigate, useParams } from 'react-router'
 import { getCandidate, getRun, getRuns, recoverRun, sendCandidateCommand, startRefresh, type CandidateCommand } from '../../api/endpoints'
 import { isApiError, type ApiResult } from '../../api/client'
-import type { Action, ActionReceipt, RunStatus, Step } from '../../api/types'
+import type { Action, ActionReceipt, Candidate, RunStatus, Step } from '../../api/types'
 import { STEP_STAGES } from '../../api/types'
 import { queryKeys } from '../../api/queryKeys'
 import { useSession } from '../../session/SessionProvider'
@@ -89,13 +89,26 @@ function RunPage({ runId }: { runId: string }) {
   </section>
 }
 const candidateActions: { action: Action['action']; path: CandidateCommand; label: string }[] = [{ action: 'approve', path: 'approval', label: 'Approve' }, { action: 'publication_retry', path: 'publication-retry', label: 'Retry publication' }, { action: 'discard', path: 'discard', label: 'Discard' }]
+/** Describe the server outcome without inferring permission to run an action. */
+function candidateCopy(candidate: Candidate): string {
+  if (candidate.disposition === 'discarded' || candidate.review_status === 'discarded') return 'This candidate was discarded and cannot be published.'
+  if (candidate.disposition === 'superseded') return 'This candidate was superseded and will not replace the current publication.'
+  if (candidate.publication.status === 'published') return 'This candidate was published successfully.'
+  if (candidate.publication.status === 'failed') return 'Publication failed. This attempt did not replace the current publication.'
+  if (candidate.publication.status === 'blocked' || candidate.validation_status === 'rejected') return 'Publication is blocked. Approval cannot bypass required checks.'
+  if (candidate.publication.status === 'queued' || candidate.publication.status === 'publishing') return 'Publication is in progress. The current publication stays in place until this candidate is published successfully.'
+  if (candidate.review_status === 'required') return 'Review warnings require Admin approval before publication. The current publication stays in place.'
+  if (candidate.review_status === 'approved') return 'Review warnings were approved. The current publication stays in place until publication succeeds.'
+  if (candidate.review_status === 'not_required') return 'No review approval is required. This candidate follows automatic publication after the required checks pass.'
+  return 'Validation is not complete. Approval requirements are not yet known.'
+}
 function CandidatePanel({ versionId, revision }: { versionId: string; revision: string }) {
   const query = useQuery({ queryKey: [...queryKeys.candidate(versionId), revision], queryFn: () => getCandidate(versionId) })
   const command = useCommand(), [selected, setSelected] = useState<typeof candidateActions[number] | null>(null)
   if (query.isPending) return <LoadingRows />
   if (query.error) return <PageError error={query.error} />
   const candidate = query.data.data
-  return <section className="panel stack"><h2>Candidate review</h2><ShortId value={candidate.version_id} /><p>{candidate.validation.passed_required_count} / {candidate.validation.expected_required_count} required checks passed</p><p>Review: {candidate.review_status} · Publication: {candidate.publication.status}</p><Diagnostics diagnostics={candidate.diagnostics} /><p>The current publication stays in place until approval and successful publication.</p>
+  return <section className="panel stack"><h2>Candidate review</h2><ShortId value={candidate.version_id} /><p>{candidate.validation.passed_required_count} / {candidate.validation.expected_required_count} required checks passed</p><p>Review: {candidate.review_status} · Publication: {candidate.publication.status}</p><Diagnostics diagnostics={candidate.diagnostics} /><p>{candidateCopy(candidate)}</p>
     <div className="row">{candidateActions.filter((a) => candidate.actions.some((available) => available.action === a.action && available.enabled)).map((a) => <Button key={a.action} disabled={!query.data.etag || command.busy} onClick={() => setSelected(a)}>{a.label}</Button>)}</div>
     {command.error !== null && (isApiError(command.error) && command.error.status === 412 ? <p role="alert">This candidate changed. Review it again.</p> : <PageError error={command.error} />)}
     {selected && <ConfirmDialog title={`${selected.label} candidate?`} confirmLabel={selected.label} tone={selected.action === 'discard' ? 'destructive' : 'primary'} busy={command.busy} onCancel={() => setSelected(null)} onConfirm={() => {

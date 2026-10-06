@@ -49,8 +49,10 @@ export function Share({ outage, capacity }: { outage: Cell | undefined; capacity
 }
 const labels: Record<string, string> = { period: 'Day', facility: 'Facility ID', facilityName: 'Facility', generator: 'Unit', capacity: 'Capacity MW', outage: 'Outage MW', percentOutage: 'Source %' }
 export function DataTable({ columns, rows, sql = false }: { columns: Column[]; rows: Cell[][]; sql?: boolean }) {
+  // SQL may return duplicate column names. Position identifies each header
+  // because rows follow the same ordered column array, without renaming it.
   const outage = columns.findIndex((c) => c.name === 'outage')
   const capacity = columns.findIndex((c) => c.name === 'capacity')
-  return <div className="table-scroll" tabIndex={0} role="region" aria-label={sql ? 'SQL results' : 'Dataset rows'}><table><thead><tr>{columns.map((c) => <th key={c.name}>{sql ? c.name : labels[c.name] ?? c.name}{sql && c.unit ? ` (${c.unit})` : ''}</th>)}{!sql && <th>Offline share</th>}</tr></thead>
+  return <div className="table-scroll" tabIndex={0} role="region" aria-label={sql ? 'SQL results' : 'Dataset rows'}><table><thead><tr>{columns.map((c, index) => <th key={index}>{sql ? c.name : labels[c.name] ?? c.name}{sql && c.unit ? ` (${c.unit})` : ''}</th>)}{!sql && <th>Offline share</th>}</tr></thead>
     <tbody>{rows.map((row, index) => <tr key={index}>{row.map((cell, i) => <td key={i}>{cell === null ? <MissingChip label={sql ? 'NULL' : undefined} /> : typeof cell === 'string' && columns[i].type === 'decimal' && !sql ? formatExact(cell) : String(cell)}</td>)}{!sql && <td><Share outage={row[outage]} capacity={row[capacity]} /></td>}</tr>)}</tbody></table></div>
 }
