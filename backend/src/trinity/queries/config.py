@@ -9,8 +9,13 @@ from botocore.config import Config
 from trinity.adapters.docker import Docker
 from trinity.config import S3Settings
 from trinity.errors import Problem
+from trinity.publication.evidence_cache import EvidenceCache
 from trinity.queries.client import QueryExecution
 from trinity.queries.staging import PublishedReader
+
+# One bounded cache per trusted process. Readers and containers remain per
+# request; recovery creates no evidence entry. Tests can inject an empty cache.
+EVIDENCE_CACHE = EvidenceCache()
 
 
 def execution_factory(database, *, recovery=False):
@@ -20,6 +25,7 @@ def execution_factory(database, *, recovery=False):
         if not root.is_absolute() or root.is_symlink() or not root.is_dir():raise ValueError
         deployment=UUID(os.environ['TRINITY_QUERY_DEPLOYMENT_ID'])
         reader=None
+        namespace=()
         if not recovery:
             settings=S3Settings(bucket=os.environ['TRINITY_S3_BUCKET'],prefix=os.environ['TRINITY_S3_PREFIX'],
                             region=os.environ['TRINITY_S3_REGION'])
@@ -29,9 +35,11 @@ def execution_factory(database, *, recovery=False):
             client=session.client('s3',region_name=settings.region,config=Config(connect_timeout=2,read_timeout=2,
                 retries={'total_max_attempts':1},ignore_configured_endpoint_urls=True))
             reader=PublishedReader(client,settings)
+            namespace=(str(deployment),settings.bucket,settings.prefix,settings.region,profile)
         docker=Docker(os.environ['TRINITY_DOCKER_SOCKET'],os.environ['TRINITY_QUERY_IMAGE'],
                       os.environ['TRINITY_QUERY_STAGE_VOLUME'])
-        return QueryExecution(database,docker,reader,root,deployment)
+        return QueryExecution(database,docker,reader,root,deployment,
+                              evidence_cache=None if recovery else EVIDENCE_CACHE,evidence_namespace=namespace)
     except Problem:raise
     except Exception:raise Problem(503,'dependency_unavailable') from None
 

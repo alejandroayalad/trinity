@@ -20,16 +20,34 @@ MAX_EVIDENCE_BYTES = 64 * 1024 * 1024
 
 
 def read_preview_diagnostics(pinned, dataset, reader, deadline):
-    """Verify bundle/member hashes and complete evaluations before projecting notes.
+    """Verify evidence without caching, then return only the requested dataset.
+
+    Keep this uncached entry point for explicit verification and controlled
+    executions. Production can reuse the same verifier through EvidenceCache.
+    """
+    if dataset not in DATASETS:
+        raise Problem(503, 'dependency_unavailable')
+    return project_diagnostics(read_verified_diagnostics(pinned, reader, deadline), dataset)
+
+
+def project_diagnostics(summaries, dataset):
+    """Return new public models for one dataset from immutable verified summaries."""
+    if dataset not in DATASETS:
+        raise Problem(503, 'dependency_unavailable')
+    return [PreviewDiagnostic.model_validate_json(raw) for scope, raw in summaries if scope == dataset]
+
+
+def read_verified_diagnostics(pinned, reader, deadline):
+    """Verify bundle/member hashes and complete evaluations before retaining notes.
 
     Read only the bundle and two summaries from the pinned version. Required and
     diagnostic detail bytes are already embedded in these summaries. Verify their
     identities against the bundle without loading another analytical dataset.
     Missing or partial evidence fails closed, including when no warning is listed.
+    Return immutable (dataset, JSON) pairs containing safe note fields only. The
+    trusted cache can share this proof across datasets without retaining details.
     """
     try:
-        if dataset not in DATASETS:
-            raise ValueError
         version = str(pinned.publication.version_id)
 
         def fetch(path, digest, size=None):
@@ -119,14 +137,17 @@ def read_preview_diagnostics(pinned, dataset, reader, deadline):
             raise ValueError
         # Counts describe the frozen dataset, not the current page. D09 is never
         # a preview note, even for Admin; raw diagnostic details stay trusted.
-        result = [PreviewDiagnostic(code=item['code'], severity=item['severity'], scope=dataset,
-                                    message=item['message'], affected_count=str(item['affected_count']))
-                  for item in summaries if item['dataset_key'] == dataset and item['code'] != 'D09'
-                  and item['affected_count'] > 0]
-        if len(result) > 32:
-            raise ValueError
+        result = []
+        for dataset in DATASETS:
+            notes = [PreviewDiagnostic(code=item['code'], severity=item['severity'], scope=dataset,
+                                       message=item['message'], affected_count=str(item['affected_count']))
+                     for item in summaries if item['dataset_key'] == dataset and item['code'] != 'D09'
+                     and item['affected_count'] > 0]
+            if len(notes) > 32:
+                raise ValueError
+            result.extend((dataset, note.model_dump_json()) for note in notes)
         deadline.remaining()
-        return result
+        return tuple(result)
     except Problem:
         raise
     except Exception:
