@@ -8,6 +8,10 @@
 
 [ME] Alayala requested backend profiling and optimization for slow dashboard/preview reads. [YOU] OpenCode measured the production evidence verifier against the retained publication: four unprofiled calls took 2.52–10.39 s, downloading about 15 MB each before analytical execution. The [profile and proposed cache rules](ai/sessions/2026-10-05-qa-03-evidence-read-profile.md) separate measured evidence-read cost from unmeasured full-request/container latency. A reproducible operator probe is included and was run successfully. A bounded cache of verified diagnostic summaries is proposed under A19; no cache implementation, deployment or latency improvement is claimed yet.
 
+## QA-01 request handling — October 5, 2026
+
+[ME] Alayala requested a small SDD cycle for QA-01 and then authorized the implementation. [YOU] Claude (OpenCode) traced the request path, wrote the [slice records](sdd/qa-01-request-handling/proposal.md) and implemented the client fix. Tracing corrected the proposed server work: the backend already cancels a disconnected analytical request and releases its slot, so the defect was the missing client `AbortSignal`. React Query signals now reach `fetch`, Catalog dates need Apply, `/facilities` loads on first open, and `PageError` offers a Retry. One automatic retry handles `429 rate_limited` with `Retry-After` ≤ 5 s. Checks: typecheck, lint and 85 Vitest tests passed; the new Playwright regression passed against the retained API. The Viewer e2e still fails on its fixed date after the 2026-10-05 publication (pre-existing). See the [session](ai/sessions/2026-10-05-qa-01-request-handling.md).
+
 ## Retained persona password rotation — October 5, 2026
 
 [ME] Alayala lost the retained persona passwords and asked for the safest bounded rotation, with no change to setup or refresh state, stopping before the mutation. He approved the design. [YOU] Claude (OpenCode) added `python -m trinity.auth.rotate`, which updates only the chosen password hashes, and tests that compare every table before and after. [ME] He ran the rotation on the retained database. [YOU] Read-only snapshots before and after show only the rotated hashes plus the expected effects of his S20 check. See the [rotation session](ai/sessions/2026-10-05-retained-persona-password-rotation.md) and the A20 refinement.
@@ -754,6 +758,31 @@ merge commit; nothing was pushed.
 ran `uv lock` in a container (only `awscrt` 0.36.0 added) and recorded the A17
 amendment. A check image imported `awscrt` and the backend offline suite passed
 (790 ran, 258 skips). Worker credential resolution remains unverified.
+
+[ME] Watched live run #7 fail registration after a complete S3 save and selected
+a 150-second registration budget. [YOU] Measured a 14.2-second best-case readback
+(49/49 checksums match), added `REGISTRATION_SECONDS`, a regression test and the
+A23 amendment. The backend offline suite passed (793 ran, 258 skips).
+
+[ME] Found run #8 stuck in `publishing` and asked to stop it. [YOU] Traced the
+cause: `custody()` requires the refresh host, and each Compose container had its
+own hostname. Added a shared `hostname` (`TRINITY_WORKER_HOSTNAME`, default
+`trinity-worker`) to the four custody roles. Ran `publication-recover` on the
+recorded host: run #8 became `publication_failed` with one warning; nothing was
+published and the S3 candidate is retained.
+
+[ME] Approved A (SQL runtime) then B (open Preview) and confirmed SQL Explorer
+returned published facility rows. [YOU] Built the query image, added runtime
+settings to `.env`, made the `aws login` cache writable in `compose.sql.yaml`,
+added the exact-`true` `TRINITY_PREVIEW_ENABLED` switch with a test, generated
+local cursor keys and recorded the A19 note. Backend offline suite: 794 ran, OK,
+258 skips. Dashboard, Catalog tables and filters await the UI check.
+
+[ME] Saw Dashboard and Catalog tables fail with `query_resource_limit` and chose
+a 64 MiB evidence limit. [YOU] Traced it to `read_preview_diagnostics` reading a
+14.9 MB `validation.json` under a 4 MiB cap; raised `MAX_EVIDENCE_BYTES`, added two
+regression tests (fail on old limit, pass on new) and the A19 note. Offline suite:
+796 ran, OK, 258 skips.
 
 ## Explorer state — October 6, 2026
 
