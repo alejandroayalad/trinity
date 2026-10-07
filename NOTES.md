@@ -1,5 +1,20 @@
 # Engineering Notes — Trinity
 
+## Root README rewrite - October 6, 2026
+
+[ME] Alayala asked for a substantially better README informed by public repositories.
+[YOU] OpenCode read the Metabase, Evidence, Immich and SQLPad READMEs, traced the
+current local setup, and replaced overlapping root delivery logs with a product
+overview, roles, setup, architecture, SQL example, findings reproduction, verification
+and documentation links. The image remains labeled as a design reference; the
+canonical authorship record below is preserved. Existing local runtime tradeoffs,
+the PostgreSQL version discrepancy and pending clean-checkout acceptance stay visible.
+[YOU] Checked local links and shell syntax, reviewed the diff, and reran the offline
+findings command: all historical claims reproduced and both report files matched
+the retained outputs byte for byte. Application test counts remain dated evidence.
+[ME] Alayala then authorized committing and pushing this documentation slice.
+See the [research, source trace and documentation checks](ai/sessions/2026-10-06-readme-public-repository-rewrite.md).
+
 ## Frontend integration delivery checks - October 6, 2026
 
 [ME] Alayala requested committing the remaining work, creating the complete
