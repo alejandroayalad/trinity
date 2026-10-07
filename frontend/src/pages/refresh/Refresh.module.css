@@ -1,0 +1,143 @@
+/* Refresh list, run detail and candidate review (spec UF-R*). */
+.reason {
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.stack:empty {
+  display: none;
+}
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-7);
+  margin-top: var(--space-6);
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-2);
+  font-size: 13.5px;
+}
+
+.strip :global(.mono) {
+  font-size: var(--text-sm);
+}
+
+.list {
+  margin-top: var(--space-5);
+}
+
+.more {
+  margin-top: var(--space-4);
+}
+
+.titleBadge {
+  display: inline-flex;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.runId {
+  color: var(--color-muted-2);
+  font-size: var(--text-sm);
+}
+
+.block {
+  max-width: 760px;
+  margin-top: var(--space-7);
+}
+
+.warningLine {
+  display: block;
+  margin-top: 4px;
+}
+
+.activeNote {
+  margin-top: var(--space-6);
+  color: var(--color-muted);
+  font-size: 13.5px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--space-5);
+}
+
+.attempts {
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  max-width: 760px;
+  margin-top: var(--space-7);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-dialog);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cardLabel {
+  color: var(--color-muted);
+  font-size: var(--text-label);
+}
+
+.cardId {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.cardText {
+  margin-top: 14px;
+  color: var(--color-ink-2);
+  font-size: var(--text-body);
+}
+
+.callout {
+  margin-top: 14px;
+}
+
+.passed {
+  margin-top: 14px;
+  color: var(--color-success-fg);
+  font-size: var(--text-body);
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--space-5);
+}
+
+.cardActions button {
+  padding: 0 16px;
+}
+
+.note {
+  margin-top: 10px;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}

@@ -32,15 +32,15 @@ test('table waits for all pages, then weights capacities rather than averaging s
   await screen.findByText('Showing 1 rows. Load all rows to calculate the combined share.')
   expect(screen.queryByText(/Combined share:/)).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
-  await screen.findByText('2 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 100 MW ÷ 1,000 MW = 10.00% (summed outage ÷ summed capacity).')
   expect(screen.getByText('○ Not reported')).toBeInTheDocument()
 })
 test('publication change drops old rows before restarting the first page', async () => {
   const { calls } = stubFetch({ 'GET /api/v1/me': json(200, me), 'GET /api/v1/catalog': json(200, catalog), 'GET /api/v1/datasets/national_outages/preview': [json(200, page), problem(409, 'publication_changed'), json(200, { ...page, rows: [['2026-10-02', '200', '40', null]], next_cursor: null })] })
   mount('/catalog/national_outages'); await screen.findByRole('button', { name: 'Load more' }); fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
   await screen.findByText('The data was updated. The table restarted from the first page.')
-  await screen.findByText('1 rows · Combined share: 20.00%')
-  expect(screen.queryByText('2026-10-01')).not.toBeInTheDocument()
+  await screen.findByText('Combined offline share for these rows: 40 MW ÷ 200 MW = 20.00% (summed outage ÷ summed capacity).')
+  expect(screen.queryByText('1 Oct 2026')).not.toBeInTheDocument()
   expect(calls.filter((c) => c.path.endsWith('/preview')).at(-1)?.search.has('cursor')).toBe(false)
 })
 test('SQL renders exact strings and NULL without claiming missing observations', async () => {
@@ -102,16 +102,16 @@ test('settings stale revision reloads instead of overwriting another Admin edit'
   const settings = { setup_completed_at: '2026-10-01T00:00:00Z', schedule_enabled: true, daily_time: '06:00', timezone: 'UTC', revision: '1', updated_at: '2026-10-01T00:00:00Z', updated_by: 'test' }
   stubFetch({ 'GET /api/v1/me': json(200, admin), 'GET /api/v1/settings': [json(200, settings, { ETag: '"settings-1"' }), json(200, { ...settings, daily_time: '08:00', revision: '2' }, { ETag: '"settings-2"' })], 'GET /api/v1/settings/schedule-status': json(200, { next_check_local: null, blocker: null }), 'PUT /api/v1/settings': problem(412, 'revision_mismatch') })
   mount('/settings'); fireEvent.change(await screen.findByLabelText('Time'), { target: { value: '07:00' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Save schedule' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   await screen.findByText('Settings changed in another session. Review and save again.')
   expect(screen.getByLabelText('Time')).toHaveValue('08:00')
-  expect(screen.getByRole('button', { name: 'Save schedule' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
 })
 
 test('disabled candidate actions stay hidden even when validation details exist', async () => {
   const admin = { ...me, role: 'admin', capabilities: [...me.capabilities, 'refresh:read'] }
   stubFetch({ 'GET /api/v1/me': json(200, admin), 'GET /api/v1/refresh-runs/run': json(200, { run_id: 'run', run_seq: '1', revision: '1', requested_at: publication.published_at, status: 'failed', candidate: { version_id: 'candidate' }, warning: null, actions: [], steps: [], next_steps_cursor: null, poll_after_seconds: null }), 'GET /api/v1/candidates/candidate': json(200, { version_id: 'candidate', validation: { passed_required_count: 15, expected_required_count: 16 }, diagnostics: [], review_status: 'not_ready', publication: { status: 'blocked' }, actions: [{ action: 'approve', enabled: false, reason_code: 'candidate_ineligible' }] }) })
-  mount('/refresh/run'); await screen.findByText('15 / 16 required checks passed')
+  mount('/refresh/run'); await screen.findByText('15 of 16 required checks passed.')
   expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Run again' })).not.toBeInTheDocument()
 })
@@ -135,9 +135,9 @@ test('dashboard distinguishes zero capacity and rejects invalid custom ranges be
   const summary = { period: '2026-10-02', capacity: '100', outage: '102.4', percentOutage: null, offline_share_percent: '102.40', reason: null }
   const { calls } = stubFetch({ 'GET /api/v1/me': json(200, { ...me, capabilities: ['national:read'] }), 'GET /api/v1/dashboard/national': json(200, { publication, range: page.range, days: [previous, summary], summary, diagnostics: [], freshness: catalog.freshness }) })
   mount('/dashboard')
-  await screen.findByText('Previous-day share (2026-10-01) is unavailable: zero capacity.')
+  await screen.findByText('Previous day (1 Oct): share unavailable, zero capacity.')
   expect(screen.getAllByText(/102.40%/).length).toBeGreaterThan(0)
-  expect(screen.getAllByText(/Out of range/).length).toBeGreaterThan(0)
+  expect(screen.getAllByText(/Outside 0–100/).length).toBeGreaterThan(0)
   fireEvent.click(screen.getByRole('button', { name: 'Custom range' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2025-01-01' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-01-02' } })
@@ -192,7 +192,7 @@ for (const action of [
     })
     mount('/refresh/failed-run')
     const button = await screen.findByRole('button', { name: action.label })
-    expect(screen.getByText('Refresh failed')).toBeInTheDocument()
+    expect(screen.getByText('✕ Run failed')).toBeInTheDocument()
     fireEvent.click(button)
     expect(calls.filter((call) => call.method !== 'GET')).toHaveLength(0)
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: action.label }))
@@ -227,12 +227,12 @@ for (const setup of [false, true]) {
       'GET /api/v1/refresh-runs': json(200, { items: [], actions: [], active_run: null, blocker: null, unresolved_warning: null, next_cursor: null }),
     })
     mount('/')
-    if (!setup) fireEvent.click(await screen.findByRole('link', { name: 'Schedule' }))
+    if (!setup) fireEvent.click(await screen.findByRole('link', { name: 'Settings' }))
     await screen.findByRole('heading', { name: setup ? 'Set up Trinity' : 'Schedule' })
     expect(screen.getByRole('switch', { name: 'Schedule enabled' })).toBeChecked()
     expect(screen.getByLabelText('Time', { exact: true })).toHaveValue('06:15')
     expect(screen.getByLabelText('Timezone')).toHaveValue('America/Merida')
-    const save = screen.getByRole('button', { name: setup ? 'Complete setup' : 'Save schedule' })
+    const save = screen.getByRole('button', { name: setup ? 'Complete setup' : 'Save' })
     if (setup) expect(save).toBeEnabled()
     else expect(save).toBeDisabled()
     fireEvent.click(screen.getByRole('switch', { name: 'Schedule enabled' }))
@@ -242,11 +242,11 @@ for (const setup of [false, true]) {
     fireEvent.click(save)
     if (setup) await screen.findByRole('heading', { name: 'Refresh' })
     else {
-      await screen.findByText('Schedule saved.')
+      await screen.findByText('Saved. No refresh was started.')
       expect(screen.getByRole('switch', { name: 'Schedule enabled' })).not.toBeChecked()
       expect(screen.getByLabelText('Time', { exact: true })).toHaveValue(edited.daily_time)
       expect(screen.getByLabelText('Timezone')).toHaveValue(edited.timezone)
-      expect(screen.getByRole('button', { name: 'Save schedule' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
       await screen.findByText('Schedule is disabled.')
     }
     const writes = calls.filter((call) => call.method !== 'GET')
@@ -262,9 +262,9 @@ for (const role of ['viewer', 'analyst']) {
       const { calls } = stubFetch({ 'GET /api/v1/me': json(200, { ...me, role, landing_screen: 'waiting', capabilities: role === 'viewer' ? ['national:read'] : me.capabilities }) })
       mount(path)
       await screen.findByRole('heading', { name: 'Nothing to show yet' })
-      expect(screen.queryByRole('link', { name: 'Schedule' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument()
       expect(screen.queryByRole('switch', { name: 'Schedule enabled' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Save schedule|Complete setup/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Save$|Complete setup/ })).not.toBeInTheDocument()
       expect(calls.every((call) => call.method === 'GET' && call.path === '/api/v1/me')).toBe(true)
     })
   }
@@ -305,4 +305,44 @@ test.each([
   await screen.findByText(expected)
   expect(screen.queryByText('The current publication stays in place until approval and successful publication.')).not.toBeInTheDocument()
   expect(calls.every((call) => call.method === 'GET')).toBe(true)
+})
+
+// Visible text must not contain a snake_case machine code (spec UF-X01).
+// Dataset keys are data, not codes, so the check skips mono table names.
+function expectNoRawCodes() {
+  const text = document.body.textContent ?? ''
+  const codes = text.match(/\b[a-z]+(?:_[a-z]+)+\b/g)?.filter((token) => !/_outages$/.test(token)) ?? []
+  expect(codes).toEqual([])
+}
+
+test('Admin shell groups navigation and counts the run awaiting review', async () => {
+  const active = { run_id: '10440f6a-0000-4000-8000-000000000001', status: 'awaiting_approval', requested_at: '2026-10-03T00:00:00Z', finished_at: null }
+  const admin = { ...me, user_id: 'admin', role: 'admin', capabilities: [...me.capabilities, 'refresh:read', 'settings:read'], admin_context: { setup_completed: true, refresh_blocker: null, active_run: active, actions: [] } }
+  stubFetch({ 'GET /api/v1/me': json(200, admin), 'GET /api/v1/refresh-runs': json(200, { items: [active], next_cursor: null, active_run: active, unresolved_warning: null, blocker: null, actions: [{ action: 'start_refresh', enabled: false, reason_code: 'review_required' }] }) })
+  mount('/refresh')
+  await screen.findByRole('heading', { name: 'Refresh' })
+  const nav = screen.getAllByRole('navigation', { name: 'Main navigation' })[0]
+  expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['Dashboard', 'Catalog', 'SQL Explorer', 'Refresh1 run awaiting review', 'Settings'])
+  expect(within(nav).getByText('Administration')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '! Run 10440f6a awaits review' })).toBeInTheDocument()
+  expect(screen.getByText('Resolve the candidate awaiting review first.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Start refresh' })).toBeDisabled()
+  expectNoRawCodes()
+})
+
+test('run review shows the timeline, the warning message and no raw codes', async () => {
+  const admin = { ...me, role: 'admin', capabilities: [...me.capabilities, 'refresh:read', 'candidate:review'] }
+  const step = (stage: string, seq: string) => ({ step_id: stage, step_seq: seq, stage, work_key: stage, attempt: 1, status: 'succeeded', started_at: '2026-10-03T00:00:00Z', finished_at: '2026-10-03T00:00:38Z', progress: { processed_count: '1', total_count: '1', unit: 'tasks' }, error_code: null, error_summary: null })
+  const run = { run_id: 'run', run_seq: '4', revision: '1', requested_at: '2026-10-03T00:00:00Z', status: 'awaiting_approval', candidate: { version_id: 'candidate', review_status: 'required', publication_status: 'not_started' }, warning: null, actions: [], steps: [step('extract', '1'), step('prepare', '2'), step('validate', '3')], next_steps_cursor: null, poll_after_seconds: null }
+  const candidate = { version_id: 'candidate', disposition: 'active', validation_status: 'validated', validation: { passed_required_count: 16, expected_required_count: 16 }, diagnostics: [{ code: 'share_out_of_range', severity: 'warning', scope: 'national', message: 'One day is outside 0–100.', affected_count: '1' }], review_status: 'required', publication: { status: 'not_started' }, actions: [{ action: 'approve', enabled: true, reason_code: null }, { action: 'discard', enabled: true, reason_code: null }] }
+  stubFetch({ 'GET /api/v1/me': json(200, admin), 'GET /api/v1/refresh-runs/run': json(200, run), 'GET /api/v1/candidates/candidate': json(200, candidate, { ETag: '"c-1"' }) })
+  mount('/refresh/run')
+  await screen.findByText('One day is outside 0–100.')
+  expect(screen.getByText('! Warning')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Run #4' })).toBeInTheDocument()
+  expect(screen.getByText('Waiting on you.')).toBeInTheDocument()
+  expect(screen.getAllByRole('img', { name: 'Done' })).toHaveLength(4)
+  expect(screen.getByRole('img', { name: 'Needs review' })).toBeInTheDocument()
+  expect(screen.getByText("Discard drops this candidate. It can't be brought back.")).toBeInTheDocument()
+  expectNoRawCodes()
 })

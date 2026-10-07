@@ -19,3 +19,18 @@ export function chartDomain(values: Decimal[]) {
   for (let value = min; value <= max; value += step) ticks.push(value.toString())
   return { min: parseDecimal(min.toString()), max: parseDecimal(max.toString()), ticks }
 }
+
+/**
+ * Choose the day indexes that get an x-axis label: the first day, the days
+ * at one third and two thirds, and the last day (handoff B.3). A plot under
+ * 480px wide keeps only the first and last label, so labels never overlap
+ * at 320px. Duplicate indexes are removed for short ranges.
+ *
+ * Example: 90 days on a 900px plot give [0, 30, 59, 89].
+ */
+export function xTickIndexes(count: number, plotWidth: number): number[] {
+  if (count <= 0) return []
+  const last = count - 1
+  const picks = plotWidth < 480 ? [0, last] : [0, Math.round(last / 3), Math.round((2 * last) / 3), last]
+  return [...new Set(picks)]
+}

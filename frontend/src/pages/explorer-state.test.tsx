@@ -69,7 +69,7 @@ test('Reset cancels pending debounce, clears linked filters, and leaves unopened
     'GET /api/v1/datasets/generator_outages/facilities': json(200, { publication, items: [{ facility: '0046', facilityName: 'old choice' }], next_cursor: null }),
   })
   mount('/catalog/generator_outages?facility=0046')
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
   expect(screen.getByLabelText('Facility')).toHaveValue('0046')
   expect(calls.some((c) => c.path.endsWith('/generators'))).toBe(false)
   fireEvent.focus(screen.getByLabelText('Search facilities'))
@@ -189,7 +189,7 @@ test('preview Retry uses the latest applied filters and does not duplicate activ
   await waitFor(() => expect(previewCalls(calls)).toHaveLength(3))
   expect(previewCalls(calls).at(-1)?.search.get('start')).toBe('2026-10-01')
   await act(async () => { pending.resolve(json(200, page)); await pending.promise })
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
 })
 
 test('facility Retry recovers the current search', async () => {
@@ -209,7 +209,7 @@ test('contribution Retry recovers the selected day', async () => {
   })
   mount('/dashboard')
   fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
-  await screen.findByRole('heading', { name: 'Reported facility contributions · 2026-10-02' })
+  await screen.findByRole('heading', { name: 'Facility outage contributions 2 Oct 2026' })
   expect(previewCalls(calls)).toHaveLength(2)
   expect(previewCalls(calls).every((c) => c.search.get('start') === summary.period && c.search.get('end') === summary.period)).toBe(true)
 })
@@ -221,7 +221,7 @@ test('Reset aborts in-flight choices and a late response cannot restore them', a
     'GET /api/v1/datasets/facility_outages/facilities': () => pending.promise,
   })
   mount('/catalog/facility_outages')
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
   fireEvent.focus(screen.getByLabelText('Search facilities'))
   await waitFor(() => expect(calls.some((c) => c.path.endsWith('/facilities'))).toBe(true))
   fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
@@ -237,7 +237,7 @@ test('changing parent facility clears an exact linked generator without eagerly 
     'GET /api/v1/datasets/generator_outages/facilities': json(200, { publication, items: [{ facility: '0002', facilityName: 'Second' }], next_cursor: null }),
   })
   mount('/catalog/generator_outages?facility=0001&generator=01')
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
   expect(screen.getByLabelText('Generator')).toHaveValue('01')
   expect(previewCalls(calls)[0].search.get('generator')).toBe('01')
   fireEvent.focus(screen.getByLabelText('Facility'))

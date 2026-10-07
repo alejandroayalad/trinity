@@ -1,0 +1,77 @@
+/* Catalog and table view (spec UF-C*). */
+.list {
+  margin-top: var(--space-7);
+}
+
+.label {
+  color: var(--color-ink-2);
+}
+
+.crumbCurrent {
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.filters select {
+  min-width: 160px;
+}
+
+.choice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.choiceExtra {
+  flex-basis: 100%;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.count {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: var(--space-4);
+  color: var(--color-ink-2);
+  font-size: var(--text-sm);
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: 6px;
+}
+
+.legend {
+  color: var(--color-muted);
+}
+
+.notice {
+  margin-top: var(--space-3);
+}

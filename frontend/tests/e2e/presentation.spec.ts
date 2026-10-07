@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
 })
 
-test('mobile and desktop chart labels retain readable size without clipping', async ({ page }, testInfo) => {
+test('mobile and desktop chart labels keep their fixed size without clipping', async ({ page }, testInfo) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route('**/api/v1/**', (route) => {
@@ -25,22 +25,25 @@ test('mobile and desktop chart labels retain readable size without clipping', as
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await expect.poll(async () => chart.evaluate((svg) => Math.abs(svg.getBoundingClientRect().width - (svg as SVGSVGElement).viewBox.baseVal.width))).toBeLessThan(1)
-    const layout = await chart.evaluate((svg) => {
-      const bounds = svg.getBoundingClientRect()
-      return [...svg.querySelectorAll('text')].map((text) => {
-        const box = text.getBoundingClientRect()
-        return { label: text.textContent, height: box.height, left: box.left - bounds.left, right: box.right - bounds.left, width: bounds.width }
+    // Tick labels are HTML outside the SVG, so they never scale with it.
+    // The handoff sets them at 11px; each must stay inside the chart frame.
+    const layout = await page.evaluate(() => {
+      const frame = document.querySelector('[role="application"]')!.parentElement!.parentElement!.getBoundingClientRect()
+      return [...document.querySelectorAll('[data-part="tick-x"], [data-part="tick-y"]')].map((label) => {
+        const box = label.getBoundingClientRect()
+        return { label: label.textContent, axis: label.getAttribute('data-part'), size: getComputedStyle(label).fontSize, height: box.height, left: box.left - frame.left, right: box.right - frame.left, width: frame.width }
       })
     })
-    expect(layout.every((label) => label.height >= 13)).toBe(true)
-    expect(layout.every((label) => label.left >= 0 && label.right <= label.width)).toBe(true)
-    const dates = layout.filter((label) => label.label?.startsWith('2026-'))
-    expect(dates[0].right).toBeLessThan(dates[1].left)
+    expect(layout.every((label) => label.size === '11px' && label.height >= 11)).toBe(true)
+    expect(layout.every((label) => label.left >= 0 && label.right <= label.width + 1)).toBe(true)
+    const dates = layout.filter((label) => label.axis === 'tick-x')
+    expect(dates.length).toBeGreaterThanOrEqual(2)
+    for (let i = 1; i < dates.length; i += 1) expect(dates[i - 1].right).toBeLessThan(dates[i].left)
     await testInfo.attach(`labels-${width}`, { body: JSON.stringify(layout), contentType: 'application/json' })
     await chart.screenshot({ path: testInfo.outputPath(`chart-${width}.png`) })
   }
   await chart.focus(); await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'Selected observation · 2026-10-04' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Selected observation · 4 Oct 2026' })).toBeVisible()
   expect(errors).toEqual([])
 })
 

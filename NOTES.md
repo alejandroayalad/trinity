@@ -1,5 +1,34 @@
 # Engineering Notes — Trinity
 
+## UI fidelity to the Figma handoff - October 6, 2026
+
+[ME] Alayala reported that the frontend did not match his Figma mockups. He asked for
+an SDD change drafted in parallel and then implemented, and he waived per-screen
+approval for matching the handoff screenshots. [YOU] OpenCode found the cause: a
+global stylesheet with a different layout model, plus built components that no page
+used. It drafted [sdd/ui-fidelity](sdd/ui-fidelity/proposal.md) with four agents and
+rebuilt the shell and pages with CSS Modules and the existing tokens. It also mapped
+raw codes to sentences and added synthetic 1440/924/320 px captures. The design remains
+alayala's ([attribution](#figma-mockups-brand-and-claude-handoff--october-4-2026)).
+Checks and remaining differences: [acceptance](sdd/ui-fidelity/acceptance.md). The
+live-stack browser specs were not run. alayala has not yet reviewed the state captures.
+See the [session](ai/sessions/2026-10-06-ui-fidelity.md).
+
+## Root README rewrite - October 6, 2026
+
+[ME] Alayala asked for a substantially better README informed by public repositories.
+[YOU] OpenCode read the Metabase, Evidence, Immich and SQLPad READMEs, traced the
+current local setup, and replaced overlapping root delivery logs with a product
+overview, roles, setup, architecture, SQL example, findings reproduction, verification
+and documentation links. The image remains labeled as a design reference; the
+canonical authorship record below is preserved. Existing local runtime tradeoffs,
+the PostgreSQL version discrepancy and pending clean-checkout acceptance stay visible.
+[YOU] Checked local links and shell syntax, reviewed the diff, and reran the offline
+findings command: all historical claims reproduced and both report files matched
+the retained outputs byte for byte. Application test counts remain dated evidence.
+[ME] Alayala then authorized committing and pushing this documentation slice.
+See the [research, source trace and documentation checks](ai/sessions/2026-10-06-readme-public-repository-rewrite.md).
+
 ## Frontend integration delivery checks - October 6, 2026
 
 [ME] Alayala requested committing the remaining work, creating the complete

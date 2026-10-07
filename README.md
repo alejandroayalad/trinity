@@ -1,163 +1,342 @@
-# Trinity — Arkham Outage Explorer
+<p align="center">
+  <img src="docs/design-reference/2026-10-04-explorer-handoff/assets/mark-orange.png" alt="Trinity" width="80">
+</p>
 
-**Current integration status - October 6, 2026:** the frontend, request/session
-reliability fixes, shared evidence cache and compressed refresh evidence are
-implemented. The retained Docker stack is activated. Live run #13 published
-successfully with compressed bundle format 2: storage 39.95 s, total execution
-100.67 s. Delivery checks passed: frontend typecheck/lint/build, 128 unit/component
-tests, 9 browser regressions with synthetic API responses, and 571 backend tests
-(258 opt-in skips). See [delivery evidence and remaining acceptance](ai/sessions/2026-10-06-frontend-main-delivery.md),
-[frontend setup](frontend/README.md) and [backend setup](backend/README.md).
-Full visual/accessibility acceptance and clean-checkout rehearsal remain open.
-This current status supersedes the historical implementation/readiness statements below.
+# Trinity
 
-**Plant filter backend — October 5, 2026:** Plant and generator choice endpoints are implemented with full-range distinct results, latest-name search and publication-bound paging. See [usage and checks](backend/README.md#plant-and-generator-filter-choices) and [implementation evidence](ai/sessions/2026-10-05-plant-filter-implementation.md). They share the preview execution gate; retained activation and frontend clicks remain separate.
+**Explore U.S. nuclear outages. Trace every result to a validated data version.**
 
-**National dashboard handoff — October 5, 2026:** Steps 2–3 are implemented; Step 4 passed 101 combined tests with zero skips. Step 5 readiness and prerequisites are recorded in the [real acceptance and operator handoff](ai/sessions/2026-10-05-dashboard-runtime-and-operator-handoff.md). National reads reuse the shared preview runtime. Retained operator readiness is **not ready**: no active publication, and the installed retained API lacks the national routes and preview switch. Execution is still disabled by default in this branch. See the handoff for final automated results and the retained prerequisites.
+Trinity turns the U.S. Energy Information Administration's daily nuclear outage data into a role-aware dashboard, dataset browser, and read-only SQL workspace. It stores validated Parquet datasets in application-owned S3 storage, so exploration does not make live requests to EIA.
 
-Trinity is the selected product name for the Arkham Outage Explorer challenge. It will let users explore U.S. nuclear outage data persisted in application-owned storage, without fetching live EIA data for each analytical request. A14 records alayala's interpretation of “locally.”
+Built for the **Arkham Outage Explorer** engineering challenge.
 
-**Current frontend continuation — October 5, 2026:** steps 3–9 are implemented
-locally on `frontend`, with sign-in, dashboard, Catalog/tables, SQL, Refresh and
-Settings plus their missing backend endpoints. See [run the frontend](frontend/README.md),
-[measured checks and remaining acceptance](ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md)
-and the [task checklist](sdd/frontend/tasks.md). Human visual acceptance, complete
-browser acceptance and retained-system enablement remain open. This status
-supersedes older statements below that the frontend or these endpoints do not exist;
-those paragraphs retain their historical evidence boundaries.
+[Run locally](#run-locally) · [Architecture](#architecture) · [Data and findings](#data-and-findings) · [SQL](#try-a-query) · [Verification](#verification) · [Documentation](#documentation)
 
-**Design handoff — October 4, 2026:** alayala created the interface mockups himself in Figma. The earlier Trinity brand reference was created with ChatGPT. He plans to pass both to Claude to apply the brand to his interface design. See [authorship and workflow](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026), [A25](DECISIONS.md#a25--figma-design-and-brand-handoff) and the [retained screenshots and handoff](ai/sessions/2026-10-04-figma-brand-handoff.md). This records design inputs; Claude adaptation and frontend delivery are not yet verified.
+## What you can do
 
-**Refresh continuation:** `feat/refresh-publication` now extends merged SQL/Preview. Admin admission, durable BullMQ dispatch and fenced preparation are implemented with disposable-service checks. Linear migrations and verified candidate registration preserve Preview-compatible evidence fields. Task 5 now connects receipt routing/recovery and Admin candidate detail. [Current tasks](sdd/refresh-publication/tasks.md) track measured verification; Publication implementation and acceptance are tracked in the [implementation and acceptance](ai/sessions/2026-10-04-publication-implementation-acceptance.md) record.
+- **Follow the national fleet.** View daily outage trends, same-day capacity, calculated offline share, and the underlying table values.
+- **Explore three levels of detail.** Browse national, facility, and generator datasets with date filters and publication-bound pagination.
+- **Ask questions in SQL.** Run a supported single-table `SELECT` against published data in an isolated DataFusion container.
+- **Refresh without replacing usable data too early.** Track scheduled or manual refreshes while readers keep using the last valid publication.
+- **Review the evidence.** Inspect validation results, approve candidates with review warnings, and recover eligible failed work without erasing history.
 
-**Previous delivery:** `feat/catalog-permissions`: catalog is complete; SQL is implemented with remaining verification tracked in its [current checklist](sdd/single-table-sql/tasks.md); preview integration and Step 4 automated acceptance passed. Step 5 operator tooling is implemented; the [handoff](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md) records checks and the closure boundary. Retained migration/publication linkage and the retained-account run remain incomplete; preview execution stays disabled. Step 4 results remain in the [acceptance record](ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md). See the [reconciliation and remaining boundaries](ai/sessions/2026-10-04-catalog-sql-preview-reconciliation.md) and [session index by theme](ai/sessions/README.md).
+### Three roles, enforced by the API
 
-**Publication delivery:** [A24](DECISIONS.md#a24--build-publication-first-delivery) Tasks 1–6 are authorized and implemented locally. Atomic publication, Admin approval/retry/discard and executable operator recovery passed all essential local acceptance gates. See [implementation and acceptance](ai/sessions/2026-10-04-publication-implementation-acceptance.md); focused commits and push are now authorized; live activation and a PR remain outside this delivery. See the [full-system live acceptance plan](docs/live-system-acceptance-plan.md).
-
-**Publication dependency:** Step 5, Refresh and publication, as [accepted under A16](DECISIONS.md#a16--approved-api-flow-and-detailed-contract). Implement the candidate-to-active-publication lifecycle before claiming real-data SQL/preview delivery.
-
-**Status: Parquet preparation Steps 1–5 implemented and offline-tested; session closed October 4, 2026.** The backend has a FastAPI health endpoint, bounded three-route extraction, exact Parquet files, saved-file validation, a trusted S3 adapter and a supervised preparation command. All 185 offline tests passed at closure. The separate [October 1–2 live verification](evidence/live-preparation/2026-10-04-october-1-2/README.md) now passed all 16 required checks, stored an unpublished candidate and independently verified 50 S3 objects. It used the recorded uncommitted parser fix; the original three-day window and fresh locked setup remain unverified. The outage explorer is not yet implemented. See the [closure and S3 handoff](ai/sessions/2026-10-04-parquet-preparation-steps-2-5-close.md).
-
-**Phase 3 — findings scripts:** [One offline report command](evidence/findings/README.md) reproduces the reconciliation, AN-01–AN-03, weighted-percentage example, and daily keys from bundled historical EIA inputs. The saved-data run passed all 16 claim checks and 82,650 exact MW comparisons. These results do not verify the separate live EIA → preparation → S3 gate. Keep the existing AWS setup; verify it with real execution evidence.
-
-Current authentication handoff: [local login implementation](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md). Login/logout, `/me`, Admin settings reads, migrations and persona provisioning are implemented and tested with native PostgreSQL 17.11 and real HTTP; see [local setup](backend/README.md#local-api-and-three-personas). Backend handoff: [backend structure accepted](ai/sessions/2026-10-03-backend-structure-accepted.md), following the [stack review and correction](ai/sessions/2026-10-03-backend-stack-review-and-layout.md#author-correction-and-accepted-stack). [docs/schema.md](docs/schema.md) and A9 remain canonical for data/publication behavior; [docs/backend.md](docs/backend.md) records A15's accepted file structure and responsibility boundaries. Use the [application field guide](docs/application-model-guide.md) for the discussion explanations. A10–A14 select Python, FastAPI, Psycopg 3, Alembic, PyArrow, datafusion-python, SQLGlot, and application-owned S3 storage. [Backend instructions](backend/README.md) describe the implemented commands. Current delivery: local-login slice reviewed; two-day EIA/S3 verification completed with an uncommitted parser correction and exact evidence. Next: review that correction and evidence. A16 API flow, A17 dependencies and A18 staged SQL scope remain accepted. Maintain data evidence — ongoing; see [FINDINGS.md](FINDINGS.md).
-
-Dependency versions are accepted under [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed), including the exact release table and locked installation policy. Compatibility verification is pending. [A16](docs/api-contract.md) records the approved API flow and expanded request/response contract; [A19 security contract](docs/security-contract.md) records accepted authentication, SQL, container isolation, admission and limits. [OpenAPI](docs/openapi.json) defines 22 HTTP operations (20 product operations plus local login/logout). [A18](DECISIONS.md#a18--sql-scope-by-stage-closed) accepts the staged SQL scope; A19 selects the function list and arithmetic/CASE; parser/engine implementation and measured checks are recorded in the [SQL checklist](sdd/single-table-sql/tasks.md).
-
-**Catalog handoff — October 4, 2026:** `GET /api/v1/catalog` is implemented with national-only Viewer metadata, all three datasets for Analyst/Admin, and one consistent publication/freshness snapshot. The delivery regression passed 239 offline tests; 36 opt-in database tests were skipped there and passed separately in the 70-check auth/catalog runner. See the [current review](ai/sessions/2026-10-04-catalog-review-and-delivery.md). Real loopback HTTP covered all personas with synthetic state. Your retained-account Docker operator check passed for all three personas with no active publication; see [operator evidence](ai/sessions/2026-10-04-catalog-docker-operator-check.md), [operator instructions](backend/README.md#catalog-metadata-and-operator-check) and [implementation evidence](ai/sessions/2026-10-04-catalog-permissions-implementation.md). Preview rows and frontend remain later slices. The separately implemented SQL backend and its remaining runtime checks are documented in [SQL delivery](backend/SQL.md).
-
-Catalog reading order: [SDD and delivery guide](sdd/catalog-permissions/README.md). Session history: [grouped by theme](ai/sessions/README.md).
-
-## Intended behavior
-
-| Role | Access |
+| Account | Access |
 |---|---|
-| Viewer | National trends only. No facility or generator detail through any product path. |
-| Analyst | All analytical datasets, filtered previews, and permitted read-only SQL. |
-| Admin | Analyst access, manual refresh, shared settings, and candidate review, warning recovery and approval when validated data has review warnings. |
+| `viewer` | National dashboard, trends, and daily values. No facility/generator detail or SQL workspace. |
+| `analyst` | Dashboard, all three datasets, filtered previews, and permitted read-only SQL. |
+| `admin` | Analyst access plus initial shared setup, schedule settings, refreshes, candidate review, and recovery actions. |
 
-Scheduled refreshes and manual Admin refreshes use the same validation process. Initial account setup runs once for the shared account. The schedule defaults to daily, with an Admin-selected time and timezone. After required validation, warning-free candidates publish automatically; candidates with review warnings need Admin approval. Publication policy is fixed. Admins can change the daily schedule. Required failures/incomplete checks block publication. One lifecycle is admitted at a time; pending review and unresolved failures block new work until the approved recovery action.
+Accounts are provisioned locally with passwords you choose. There are no bundled passwords or external identity-provider requirements. Hiding a control in the interface does not replace server-side authorization.
 
-## Selected architecture direction
+<details>
+<summary><strong>View the dashboard design reference</strong></summary>
 
-| Component | Responsibility |
+This is the supplied design reference with illustrative values, not a screenshot of the running application. Visual acceptance remains in progress.
+
+![Trinity dashboard design reference showing fleet offline share, outage, capacity, and daily trend navigation](docs/design-reference/2026-10-04-explorer-handoff/screenshots/02-dashboard-top.png)
+
+See the [reference provenance](docs/design-reference/2026-10-04-explorer-handoff/PROVENANCE.md) and [design authorship record](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026).
+
+</details>
+
+## Run locally
+
+The local application uses Docker Compose for the backend and Vite for the frontend. **The base setup starts login and the application shell; real-data exploration also needs the query runtime, S3 configuration, and a published dataset in step 3.**
+
+### Prerequisites
+
+| Tool or service | Required for |
 |---|---|
-| Connector and PyArrow | Fetch the three EIA routes, validate records, and prepare typed Parquet datasets. |
-| Application-owned S3 | Hold immutable data versions and their manifest files under A9/A14. |
-| PostgreSQL | Store settings, refresh outcomes, approvals, and the published data version. |
-| datafusion-python | Query the permitted published Parquet files. Outage rows are not copied into PostgreSQL for user queries. |
-| SQLGlot and backend policy | Inspect SQL structure and enforce the supported grammar and table permissions before analytical reads. |
-| BullMQ and Redis | Run the full refresh pipeline in background workers with bounded concurrency; PostgreSQL outbox records preserve dispatch requests. |
-| Seeded local authentication | Authenticate Viewer, Analyst and Admin accounts; the backend enforces the same application permissions. Clerk is future production work under A20. |
-| Backend and frontend | Enforce access and query rules; provide login, catalog, preview, SQL, and the selected Admin features. |
+| Git and repository access | Clone the source. |
+| Docker with Compose | PostgreSQL, the API, background workers, and isolated query containers. The recorded local setup used Docker 29.8.1 / Compose 5.5.1 on macOS arm64. |
+| Node.js **24.21.0** and npm | Frontend installation and development; pinned in `frontend/.nvmrc`. |
+| CPython **3.14.8** and uv **0.12.23** | Native backend development and tests. The API Docker image includes its own Python environment. |
+| EIA API key and private AWS S3 storage | Fetch and publish real data. Existing published data can be queried without contacting EIA. |
 
-These are responsibilities, not a deployment diagram. [Data contract v1](docs/schema.md) specifies schemas, validation, immutable versions, and publication invariants. [Backend architecture](docs/backend.md) maps them to the accepted feature-based package and separate query runtime. Docker Compose is selected for local execution; frontend and public hosting remain open. Exact security implementation and verification remain pending. A17 selects dependency versions; compatibility verification remains pending. See [DECISIONS.md](DECISIONS.md), including the later A22–A24 refinements.
+Dependency locks are committed in `backend/uv.lock` and `frontend/package-lock.json`.
 
-## Setup, running, and tests
+### 1. Start the API and create the local accounts
 
-The selected local execution target is Docker Compose. `compose.yaml` supplies PostgreSQL 17.11 and the API; startup, migrations and a synthetic persona flow were verified locally on October 4, 2026 ([Docker session](ai/sessions/2026-10-04-docker-local-setup.md)). The supplied challenge requires local execution (page 7) and a repository link (page 8), not a public application URL. AWS/hosting remains undecided. See the [source review](ai/sessions/2026-10-03-security-contract-and-api-split.md#challenge-delivery-evidence).
-
-The minimum backend setup is documented in [backend/README.md](backend/README.md). It exposes health, local login/logout, `/me` and read-only Admin settings; this is not a complete challenge submission. Follow the local API setup before starting it.
-
-With CPython 3.14.8, uv 0.12.23 and the API database URL configured as described in the backend setup:
-
-```bash
-cd backend
-uv sync --locked
-uv run --locked python -m unittest discover -s tests -v
-uv run --locked uvicorn trinity.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
+```sh
+git clone https://github.com/alejandroayalad/trinity.git
+cd trinity
 ```
 
-To run all three EIA routes for one fixed date window and save sanitized retrieval evidence, use the [extraction command](backend/README.md#retrieve-all-three-routes-and-save-evidence). It records failures as well as successes and returns a nonzero exit code when any route fails.
+From the repository root, enter a local PostgreSQL password. This prompt syntax is for **zsh**:
 
-The separate [preparation command](backend/README.md#prepare-a-stored-candidate--step-5) connects extraction, exact files, validation and verified storage. Configure and verify private S3 protection before live use. Command success identifies an unpublished candidate; it does not change application publication state.
+```zsh
+read -rs 'TRINITY_POSTGRES_PASSWORD?Local PostgreSQL password: '
+export TRINITY_POSTGRES_PASSWORD
+docker compose up -d --build --wait
+docker compose run --rm api alembic upgrade head
+docker compose run --rm api python -m trinity.auth.seed
+```
 
-The health response is `{"status":"ok"}`. It reports process liveness, not data readiness. API startup requires the database URL; health requires no EIA key, login, working database, Redis or S3 connection. Trusted connector code can call `trinity.config.load_eia_settings()` to read `EIA_API_KEY` from the process environment; see [EIA configuration](backend/README.md#eia-configuration).
+The seed command asks privately for `viewer`, `analyst`, and `admin` passwords of 15–1024 characters. Rerunning it preserves existing accounts and passwords. Reuse the original database password when restarting an existing installation.
 
-| Required README content | Status |
+Check liveness and open the implemented API documentation:
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:8000/health
+```
+
+Expected: `{"status":"ok"}`. API docs: <http://127.0.0.1:8000/docs>. Health reports process liveness, not database or data readiness. The API listens on `127.0.0.1:8000`; PostgreSQL is on `127.0.0.1:15432`.
+
+### 2. Start the frontend
+
+In a second terminal, from the repository root:
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Open <http://127.0.0.1:5173> and use one of your provisioned accounts. Vite proxies `/api` to the local backend. No EIA key or AWS credential belongs in frontend configuration.
+
+Before the first publication, Viewer and Analyst see the waiting state. Admin completes shared setup once. Keep the schedule disabled until the workers and storage are configured; saving setup does not itself publish data.
+
+### 3. Enable real-data exploration and refresh
+
+The base Compose file does not enable analytical execution. The complete local stack adds [`compose.sql.yaml`](compose.sql.yaml) and the `workers` profile.
+
+Build the query image from this checkout and use its immutable image ID:
+
+```sh
+docker build -f backend/Dockerfile.query -t trinity-query:local backend
+export TRINITY_QUERY_IMAGE="$(docker image inspect trinity-query:local --format '{{.Id}}')"
+```
+
+Configure these values in your private operator environment before starting the full stack:
+
+| Configuration | What to supply |
 |---|---|
-| Prerequisites, configuration, and local startup | Backend dependency resolution and locked installation verified; API + PostgreSQL Compose startup verified (see [backend setup](backend/README.md#run-with-docker-compose)); full application startup remains pending. `backend/.env.example` documents the environment-based EIA key loader. |
-| Seeded users for Viewer, Analyst, and Admin | Implemented through repeatable hidden-input provisioning and tested with three synthetic personas. Supply your own local passwords; [A20](DECISIONS.md#a20--seeded-local-authentication-for-the-challenge-closed) selects local seeded accounts; Clerk configuration is not required. |
-| Automated test command and results | The PR branch after main integration passed 220 offline checks; the prior local-auth acceptance passed 25 real PostgreSQL checks; see the [implementation evidence](ai/sessions/2026-10-04-fastapi-local-auth-implementation.md). Phase 3 separately passed 202 offline checks, including 17 findings tests; see the [findings record](ai/sessions/2026-10-04-findings-scripts-reproduction.md). The earlier Parquet closure passed 185 offline tests on CPython 3.14.8, including 18 preparation-command tests. These use synthetic HTTP/storage, real temporary Parquet and spawned processes. The earlier October 3 live extraction is separate [evidence](evidence/2026-10-03-first-live-eia-run.md); it does not verify the new preparation command or S3 protection. |
-| Connector failures: credentials, network, and bad data | A9 specifies failed-candidate handling and durable recovery obligations. A19 selects three total attempts for temporary external failures with one- and three-second waits within the operation deadline; denied access, invalid SQL and failed validation are not retried. Refresh-stage deadlines and runtime checks remain pending. Preserve the last valid publication. |
-| Data reproduction commands and schema diagram | [Analytical and application ER diagrams](docs/schema.md) are specified. [Findings reproduction](evidence/findings/README.md) includes the reviewed historical exports, sanitized API probes, checksums, command, and measured outputs. No key or network access is needed. |
+| `TRINITY_POSTGRES_PASSWORD`, `EIA_API_KEY` | The original local database password and your EIA key, delivered through Compose secrets. [EIA configuration](backend/README.md#eia-configuration). |
+| `TRINITY_S3_BUCKET`, `TRINITY_S3_PREFIX`, `TRINITY_S3_REGION` | An existing private storage location with verified conditional-write and retention protection. [Storage requirements](backend/README.md#immutable-storage-library--step-4). |
+| Worker AWS profile | The supplied Compose file uses `trinity-writer` from the host's `~/.aws`. Configure that profile with access to your storage. |
+| `TRINITY_QUERY_AWS_DIRECTORY`, `TRINITY_QUERY_READ_PROFILE` | An absolute path to an existing AWS profile directory and its published-data read profile. Compose mounts its `config`/`credentials` location read-only and its `login/` cache separately. |
+| `TRINITY_QUERY_DEPLOYMENT_ID`, `TRINITY_QUERY_STAGE_VOLUME` | A stable UUID and dedicated staging-volume name. Preserve both across restarts. |
+| `TRINITY_DOCKER_SOCKET_HOST`, `TRINITY_DOCKER_GID` | Your Docker daemon's Unix socket path and actual group ID. The trusted API uses them to launch isolated queries. |
+| `TRINITY_PREVIEW_ENABLED` | Exactly `true` to enable Dashboard, previews, and entity choices. |
+| Cursor signing keys | Separate Preview and Refresh key rings, as described below. These authenticate pagination bookmarks. |
 
-### Local authentication setup contract
+<details>
+<summary>Cursor-key configuration</summary>
 
-A20 selects local login as the challenge default. The implemented seed step creates accounts named `viewer`, `analyst`, and `admin`, one per persona. The evaluator supplies passwords locally during setup; store only salted password hashes. Keep actual passwords, session tokens and local secret files out of Git and logs. `.env.example` will contain placeholders only. Seeding must be repeatable without duplicating users, resetting existing passwords/roles or deleting history.
+Set `TRINITY_PREVIEW_CURSOR_KEYS_JSON` and `TRINITY_REFRESH_CURSOR_KEYS_JSON` to separate JSON objects mapping a key ID to an unpadded base64url encoding of 32 random bytes. Set `TRINITY_PREVIEW_CURSOR_ACTIVE_KEY_ID` and `TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID` to the corresponding IDs.
 
-The [backend setup](backend/README.md#local-api-and-three-personas) provides migration, seed, start and safe persona-check commands. Real HTTP tests exercised all three personas in a disposable PostgreSQL database. Supply local passwords to provision your own retained accounts. Login returns an opaque session; permissions remain server-controlled. No Clerk account, key, provisioning or request is part of this flow. This removes the authentication provider dependency only; the existing EIA/storage setup requirements remain.
+Example shape only: `{"local-v1":"<43-character base64url key>"}` with active ID `local-v1`. Use independently generated keys, not this placeholder. Keep them in private configuration and reuse them across restarts; the application does not generate them at startup. See the [Preview cursor design](sdd/dataset-preview/design.md) and [Refresh configuration](backend/README.md#refresh-dispatch-and-preparation--tasks-24).
 
-Clerk is deferred production work behind `auth/service.py`; the challenge does not implement two providers or switch providers after an authentication failure.
+</details>
 
-## Documents required by Arkham
+The Python application reads process environment variables; it does not automatically load an `.env` file. Compose can use the root `.env` for interpolation. Keep private configuration out of Git. See [query-runtime setup](backend/SQL.md#configure-the-local-services) for the mount and recovery details.
 
-| File | Purpose |
+With the configuration complete, run from the repository root in the configured terminal:
+
+```sh
+docker compose -f compose.yaml -f compose.sql.yaml --profile workers config --quiet
+docker compose -f compose.yaml -f compose.sql.yaml build api
+docker compose -f compose.yaml -f compose.sql.yaml --profile workers up -d --wait
+```
+
+The migration and account-seeding steps above must already be complete. Use one worker host and one publication consumer. The query image must match the API's runtime protocol.
+
+Sign in as `admin`, finish shared setup if needed, then open **Refresh → Start refresh**. A refresh retrieves EIA data and writes to your configured S3 storage. Follow the run to publication; review warnings require Admin approval, while required validation failures block publication. Once published, sign in as Viewer or Analyst to explore it.
+
+**Local deployment limits:** the supplied Compose configuration mounts the host AWS profile directory into storage workers and gives the trusted API Docker access. The recorded local read profile can also write; a separate read-only role and stronger secret delivery remain open for shared deployment. Public hosting is not configured. A clean-checkout rehearsal of this full sequence is still pending.
+
+To stop the complete stack while retaining its named volumes:
+
+```sh
+docker compose -f compose.yaml -f compose.sql.yaml --profile workers down
+```
+
+For the base setup alone, use `docker compose down`. Do not add `-v` if you want to retain local state and evidence. See [troubleshooting](#troubleshooting) for first-run failures.
+
+## Architecture
+
+**PostgreSQL owns application state. DataFusion queries outage data in Parquet.** The application does not copy outage rows into PostgreSQL for user SQL.
+
+```mermaid
+flowchart LR
+    UI[React frontend] --> API[FastAPI]
+    API --> PG[(PostgreSQL state)]
+    PG -->|Committed outbox requests| D[Dispatcher]
+    D --> Q[BullMQ / Redis]
+    Q --> W[Refresh and publication workers]
+    EIA[EIA API] -->|Daily observations| W
+    W -->|Validated Parquet and evidence| S3[(Application-owned S3)]
+    W -->|Atomic publication| PG
+    API --> T[Trusted file staging]
+    S3 -->|Authorized published files| T
+    T --> DF[Isolated DataFusion container]
+    DF -->|Bounded results| API
+```
+
+| Part | Responsibility |
 |---|---|
-| [README.md](README.md) | Setup, users, architecture, assumptions, limits, and document index. |
-| [DECISIONS.md](DECISIONS.md) | Accepted choices, alternatives, reasons, and unresolved required topics. |
-| [FINDINGS.md](FINDINGS.md) | Reconciliation, real anomalies, and reproducible evidence. |
-| [NOTES.md](NOTES.md) | Engineering Notes: human/AI contributions, AI errors, and verification. Arkham also permits these notes inside README. |
+| React, TypeScript, Vite | Role-aware pages, filters, SQL editor, refresh progress, and settings. |
+| Python, FastAPI, Psycopg, Alembic | Sessions, authorization, HTTP contracts, explicit state transactions, and migrations. |
+| EIA connector and PyArrow | Bounded retrieval, exact decimal parsing, typed Parquet, and saved-file validation. |
+| S3 | Immutable versions, manifests, sanitized source evidence, and validation evidence. |
+| BullMQ and Redis | Background delivery; the PostgreSQL outbox preserves committed dispatch obligations. |
+| SQLGlot and DataFusion | Restricted SQL validation followed by analytical execution over permitted published files. |
 
-## Documents selected by alayala
+### How data becomes visible
 
-| File | Purpose |
+1. An Admin action or the daily scheduler records a refresh and its outbox request in one database transaction.
+2. Workers fetch all three EIA routes for one fixed window, prepare Parquet, and validate the exact saved files.
+3. A complete candidate with no review warnings proceeds automatically. Review warnings require approval tied to that candidate's evidence. Failed or incomplete required checks cannot be approved away.
+4. Publication verifies the candidate and changes the active version atomically. Each analytical request stays on the publication it captured.
+
+If EIA retrieval or validation fails, the previous publication stays available. Before the first successful publication, the application reports data unavailable. One refresh lifecycle is admitted at a time, including pending review and unresolved failures.
+
+**Tradeoffs:** separate state and analytical storage avoids a second outage database, but requires coordinated publication and file verification. Per-query containers isolate execution at the cost of startup overhead. Publication crash recovery requires an operator under the current one-host design. See [architecture](docs/backend.md), [security](docs/security-contract.md), and [decisions](DECISIONS.md) for the contracts and rationale.
+
+## Data and findings
+
+The source is the [EIA Open Data API](https://www.eia.gov/opendata/). Trinity's supported history starts at **2024-10-02**. Each refresh re-fetches that window through the latest national observation date to capture source revisions.
+
+| Analytical table | One row represents | Daily key |
+|---|---|---|
+| `national_outages` | The U.S. fleet on one date | `period` |
+| `facility_outages` | One facility on one date | `period`, `facility` |
+| `generator_outages` | One generator within a facility on one date | `period`, `facility`, `generator` |
+
+Capacity and outage are stored as `DECIMAL(24,6)` in **MW**, not MWh. Identifiers remain strings. The daily calculated metric is:
+
+```text
+offline_share_percent = 100 × outage / capacity
+```
+
+Use capacity from the same day. For an aggregate within one date and dataset, sum MW before dividing; do not average percentages. Missing observations mean **not reported**, not zero outage. Zero capacity yields a null ratio. Source `percentOutage` remains separate from the calculated metric. The [schema and ER diagrams](docs/schema.md) define the complete rules.
+
+### Three findings that shaped the implementation
+
+| Observation | Why it matters |
 |---|---|
-| [PRODUCT.md](PRODUCT.md) | One-page product scope and selected additions. |
-| [AGENTS.md](AGENTS.md) | Shared AI working instructions. |
-| [CLAUDE.md](CLAUDE.md) | Entry point to the same shared instructions. |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Code readability, comment, and docstring rules for human and AI contributors. |
-| [docs/schema.md](docs/schema.md) | Finalized v1 data contract, validation checks, logical fields, and analytical/application ER diagrams. |
-| [Parquet preparation proposal](sdd/parquet-preparation/proposal.md), [specification](sdd/parquet-preparation/spec.md), [design](sdd/parquet-preparation/design.md) and [tasks](sdd/parquet-preparation/tasks.md) | Steps 1–5 implemented, with 185 passing offline tests and authorized session closure. Real S3 protection and live preparation remain separate gates. |
-| [FastAPI/local login proposal](sdd/fastapi-local-auth/proposal.md), [specification](sdd/fastapi-local-auth/spec.md), [design](sdd/fastapi-local-auth/design.md) and [tasks](sdd/fastapi-local-auth/tasks.md) | Implemented A20 local-login slice; real PostgreSQL/HTTP evidence is in the linked tasks and session. Compose and evaluator walkthrough remain unverified. |
-| [One-table SQL proposal](sdd/single-table-sql/proposal.md), [specification](sdd/single-table-sql/spec.md), [design](sdd/single-table-sql/design.md), [tasks](sdd/single-table-sql/tasks.md) and [pairing review](sdd/single-table-sql/pairing-gate.md) | SQL policy, DataFusion, admission/staging, isolated execution/recovery and HTTP delivery are committed. See [measured evidence and remaining acceptance boundaries](ai/sessions/2026-10-04-sql-delivery-commits.md). |
-| [Catalog and permissions proposal](sdd/catalog-permissions/proposal.md), [specification](sdd/catalog-permissions/spec.md), [design](sdd/catalog-permissions/design.md) and [tasks](sdd/catalog-permissions/tasks.md) | Step 5, slice 1 implemented and automated-tested; see the [implementation evidence](ai/sessions/2026-10-04-catalog-permissions-implementation.md). Retained-account operator check passed; frontend navigation remains pending. |
-| [Dataset preview proposal](sdd/dataset-preview/proposal.md), [specification](sdd/dataset-preview/spec.md), [design](sdd/dataset-preview/design.md) and [tasks](sdd/dataset-preview/tasks.md) | Specification approved; design/tasks drafted with staged offline, real runtime and operator evidence. Reuse confirmed frozen validation evidence; verify its publication/preview linkage and shared SQL execution before delivery. Steps 2–3 code is implemented; [Step 4 acceptance](ai/sessions/2026-10-04-dataset-preview-step-4-acceptance.md#final-checkpoint) records passing automated runtime/regression evidence. Step 5 adds the guarded [operator checker](ai/sessions/2026-10-04-dataset-preview-step-5-handoff.md); retained migration/publication linkage and operator acceptance remain pending. |
-| [Publication proposal](sdd/publication/proposal.md), [specification](sdd/publication/spec.md), [design](sdd/publication/design.md) and [tasks](sdd/publication/tasks.md) | A24 scope approved; manual operator recovery and Admin retry are required delivery. Tasks 1–6 authorized and implemented; measured results are in the acceptance record. |
-| [docs/backend.md](docs/backend.md) | Accepted backend file structure, process boundaries, transaction ownership, validation/recovery responsibilities, and pending contracts. |
-| [Refresh/publication integration contract](sdd/refresh-publication/integration-contract.md) and [Build Refresh SDD](sdd/refresh-publication/proposal.md) | Preview-compatible migrations and verified candidate registration implemented; remaining Refresh admission, dispatcher, worker and publisher tracked in the SDD. |
-| [docs/api-contract.md](docs/api-contract.md) | Approved A16 human flow, endpoint requests/responses/errors, pagination and recovery; security rules are maintained separately. |
-| [docs/security-contract.md](docs/security-contract.md) | Accepted A19 roles, SQL policy, container/S3 boundaries, admission, limits, retry rules and required verification. |
-| [docs/openapi.json](docs/openapi.json) | Machine-readable HTTP schemas for 22 specified API operations; six are implemented by the local-login, catalog and SQL slices. |
-| [Application model field guide](docs/application-model-guide.md) | Why the application fields exist; reconciled explanations from the Obsidian discussion. |
-| [A4 session](ai/sessions/2026-10-02-a4-state-and-outage-queries.md) and [document session](ai/sessions/2026-10-02-document-baseline.md) | Evidence of decisions, contributions, corrections, checks, and handoff. |
+| National reported capacity rose **2,436.2 MW** overnight with the same 55 facilities. | A fixed capacity denominator would distort offline share. The seasonal explanation remains unconfirmed. |
+| Palisades entered the saved dataset already **100% offline**, with 389 consecutive fully offline records in the inspected window. | First appearance is not evidence of a new breakdown; earlier dates must not become invented zero-outage rows. |
+| The facility API advertised **95 rows** but returned **55** for October 1, 2026. | Pagination must verify returned records and coverage rather than trust the advertised facility total. |
 
-## Assumptions and limits
+Alayala's original analysis, follow-up checks, source explanations, and scope limits are in [FINDINGS.md](FINDINGS.md). **Maintain data evidence — ongoing.**
 
-One shared application/account is in scope. There is no selected multi-organization or registration flow. Selecting DataFusion does not select Rust. The business guide's hypothetical examples are not EIA findings.
+### Reproduce the findings without credentials
 
-The backend includes locked dependencies, a health endpoint, bounded EIA extraction, retained evidence, exact Parquet preparation, saved-file validation, verified-storage code and 185 offline tests. The first live extraction passed for one fixed date ([evidence](evidence/2026-10-03-first-live-eia-run.md)). The preparation pipeline has a successful October 1–2 live EIA/S3 result with independent readback; see the recorded tested patch and limits above. The final submission still needs full-history preparation evidence, remaining product source code, full-product acceptance, later feature migrations, and self-contained data reproduction. The entity-relationship diagrams are specified in the data contract. The initial commits import documents; later commits record implementation incrementally without squashing or rewriting history.
+From the repository root, with Python installed:
 
-The private repository is `alejandroayalad/trinity`. `EIA API KEY.md`, `First Aproximation.md`, and `IMPLEMENTATION BEFORE.md` are excluded. The challenge PDF, business guide, original analysis scripts, and bulk exports remain local. References to these items identify historical sources, not included artifacts. Historical session checks have not been rerun by this import.
+```sh
+python3 scripts/generate_report.py --inputs evidence/findings/inputs --out backend/artifacts/findings
+```
 
-Source: `Software Engineer - Technical Challenge.pdf`, pages 2–8, plus the accepted decisions in this folder.
+Choose a new output directory on every run. Expected: exit `0` and `Historical claims reproduced: True`. The command writes `REPORT.md`, `report.json`, and `reconciliation.csv` using bundled historical inputs; it makes no network requests.
 
-## Delivery structure and slices
+The retained report covers **731 days**, reproduces **16 historical claim checks**, and records **82,650 exact MW comparisons** with zero differences. This verifies the saved-data claims, not every EIA historical page or a new publication. See the [reproduction guide](evidence/findings/README.md).
 
-Keep required documents at the root, the data contract in `docs/schema.md`, backend architecture in `docs/backend.md`, and supporting records in `ai/sessions/`. A15 selects the feature tree in `backend/src/trinity/`, with backend migrations and tests beside `src/`. It includes the connector and separate API, worker, and query-runtime entrypoints. This supersedes the earlier tentative top-level connector grouping. `frontend/` remains separate; add supporting scripts only when needed. The health API, connector, analytical contracts and S3 adapter are implemented. Add other feature files as their behavior is implemented; the remaining selected tree is the roadmap.
+## Try a query
 
-1. **Maintain data evidence — ongoing.** Extend findings and preserve reproducible evidence throughout delivery.
-2. Import selected documentation in focused commits with actual commit timestamps and original work dates in the records.
-3. Implement against A9's data, validation, and publication contract. Implement A19 security boundaries and verify them locally before enabling untrusted queries.
-4. Implement and verify working slices: extraction/model/metric, authenticated catalog and preview, restricted SQL, refresh/publication/settings, and the complete interface. Update relevant decisions, findings, and Engineering Notes with each slice.
-5. Verify a clean checkout using the README, test all three personas, reproduce findings, and rehearse the live explanation before submission.
+After a dataset is published, sign in as `analyst` or `admin` and open **SQL**:
+
+```sql
+SELECT period, capacity, outage
+FROM national_outages
+ORDER BY period DESC
+LIMIT 30;
+```
+
+This reads the 30 most recent national observations in the active publication. Results preserve exact numeric values as decimal strings in the API.
+
+The supported grammar includes a single-table `SELECT`, explicit columns, filters, sorting, grouping, arithmetic, searched `CASE`, and `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `ROUND`, `COALESCE`, and `NULLIF`. Joins, CTEs, subqueries, writes, and external file/URL readers are rejected.
+
+Default SQL bounds are **1,000 result rows**, **5 MiB per response**, **30 seconds for analytical execution including file staging**, and **1 GiB per query container**. Shared admission allows two active analytical requests per user and four deployment-wide. The container has no network, credentials, or Docker socket; it receives only authorized published Parquet files mounted read-only. See the [SQL contract](sdd/single-table-sql/spec.md) and [security limits](docs/security-contract.md).
+
+## Verification
+
+### Run the local checks
+
+Frontend, from `frontend/`:
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+Backend, from `backend/`, with the pinned Python and uv versions:
+
+```sh
+uv sync --locked
+uv run --locked python -m unittest discover -s tests -v
+```
+
+The default backend run skips opt-in service tests when their configuration is absent. Use the dedicated runners for [PostgreSQL/authentication](backend/README.md#run-authentication-and-catalog-acceptance), [isolated SQL](backend/SQL.md#reproduce-local-evidence), [refresh/publication](backend/README.md#refresh-dispatch-and-preparation--tasks-24), and [browser acceptance](frontend/README.md#verify). They require the documented local services and use disposable fixtures; skipped checks are not passes.
+
+### Recorded delivery evidence — October 6, 2026
+
+| Check | Recorded result |
+|---|---|
+| Frontend typecheck, lint, and production build | Passed. |
+| Frontend unit/component tests | 128 passed. |
+| Browser regressions | 9 passed in Chromium with synthetic API responses. |
+| Default backend suite | 571 passed; 258 opt-in tests skipped. |
+| Live refresh #13 | Published the October 2, 2024–October 6, 2026 window; all 16 required checks passed. |
+
+These are dated results from the [integration delivery record](ai/sessions/2026-10-06-frontend-main-delivery.md), not a claim that every current checkout or runtime scenario has passed. The live run took 100.67 seconds overall, including 39.95 seconds for storage; one observation is not a performance guarantee.
+
+### Known limits and remaining acceptance
+
+- Full visual/accessibility approval, all browser acceptance scenarios, and a clean-checkout evaluator rehearsal remain open.
+- The supplied runtime and integration runners use **PostgreSQL 17.11**. [A17](DECISIONS.md#a17--dependency-versions-and-update-policy-closed) still lists **18.6**; that documented version discrepancy remains unresolved.
+- Local execution is the delivery target. Public ingress, HTTPS hosting, and shared-deployment credential separation still need work.
+- Publication uses one worker host and explicit operator crash reconciliation. Multi-host failover and automatic publication crash recovery are deferred.
+- One shared account is in scope. Registration, multiple organizations, export, SQL autocomplete, and query history are outside v1.
+- The supported data window is not the full EIA history back to 2007. Agreement across routes cannot detect an omission shared by all three.
+
+## Troubleshooting
+
+| Symptom | Check |
+|---|---|
+| Health succeeds, but login returns `auth_unavailable` | Apply migrations, seed the accounts, and confirm the original database password. Health does not test authentication storage. |
+| Viewer/Analyst sees the waiting screen | The installation has no active publication. Stored files or a prepared candidate alone do not publish data. |
+| Dashboard or preview returns `503` | Confirm `TRINITY_PREVIEW_ENABLED=true`, cursor keys, S3/profile access, and the matching query image/socket/staging configuration. |
+| Pagination returns `publication_changed` | Restart from the first page. A cursor belongs to one publication and one set of filters. |
+| A new refresh is blocked | Inspect the current run, candidate review, or unresolved failure. Use its supported approval/recovery action. |
+| Publication remains blocked after a crash | Follow [operator reconciliation](backend/README.md#publication-worker-and-operator-recovery); do not clear database reservations or replace evidence locks manually. |
+
+## Repository map
+
+```text
+backend/             FastAPI application, connector, workers, query runtime, migrations, tests
+frontend/            React application, unit/component tests, browser checks
+docs/                Data, API, security, and architecture contracts; design references
+evidence/            Saved source evidence and reproducible findings
+scripts/             Findings report and diagnostic commands
+sdd/                 Feature proposals, specifications, designs, and task records
+ai/sessions/         Dated implementation, review, and verification history
+compose.yaml         Base API/database and optional background workers
+compose.sql.yaml     Query execution, staging, and recovery services
+```
+
+## Documentation
+
+| Read this | For |
+|---|---|
+| [DECISIONS.md](DECISIONS.md) | Accepted choices, alternatives, tradeoffs, and unresolved topics. |
+| [FINDINGS.md](FINDINGS.md) | Data analysis, anomalies, reproducible checks, and evidence limits. |
+| [NOTES.md](NOTES.md) | Human/AI contributions, corrections, and verification records. |
+| [PRODUCT.md](PRODUCT.md) | Selected product scope and user flows. |
+| [Data contract](docs/schema.md) | Analytical schemas, application ER diagrams, metrics, and publication invariants. |
+| [API contract](docs/api-contract.md) / [OpenAPI](docs/openapi.json) | HTTP operations, request/response schemas, and recovery behavior. |
+| [Security contract](docs/security-contract.md) | Permissions, SQL policy, isolation, limits, and trust boundaries. |
+| [Backend architecture](docs/backend.md) | Feature ownership, process boundaries, and transactions. |
+| [Backend guide](backend/README.md) / [SQL runtime](backend/SQL.md) / [Frontend guide](frontend/README.md) | Component setup, commands, and focused checks. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Code readability, comment, docstring, and review conventions. |
+
+Some component guides and session records retain dated slice-level status statements. Use the [October 6 integration record](ai/sessions/2026-10-06-frontend-main-delivery.md) for the latest recorded delivery baseline and the current contracts for behavior.
+
+### Authorship and AI use
+
+Alayala owns the product choices, original EIA analysis, and Figma interface mockups. The earlier brand reference was created with ChatGPT. AI-assisted implementation and later changes are recorded separately in [Engineering Notes](NOTES.md), with the canonical [design attribution](NOTES.md#figma-mockups-brand-and-claude-handoff--october-4-2026) and [Explorer package provenance](docs/design-reference/2026-10-04-explorer-handoff/PROVENANCE.md). Design examples are not EIA findings or evidence of completed visual acceptance.

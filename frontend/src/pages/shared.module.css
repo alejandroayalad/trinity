@@ -1,0 +1,122 @@
+/* Page parts shared by several pages (spec UF-B04, UF-C06, UF-Q07). */
+
+/* A page section: a top rule, then its content. */
+.section {
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.sectionTitle {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  letter-spacing: var(--tracking-h2);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stackGap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Data table: no header fill, 12px muted header, 14px body, light row rules. */
+.tableScroll {
+  overflow-x: auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.table th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--color-border-3);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.table .number {
+  text-align: right;
+}
+
+/* SQL results: mono cells in a bordered 440px scroll box with a sticky header. */
+.sqlScroll {
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+}
+
+.sqlTable {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.sqlTable th {
+  position: sticky;
+  top: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sqlTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-3);
+  white-space: nowrap;
+}
+
+.unit {
+  color: var(--color-muted-2);
+}
+
+.outOfRange {
+  margin-left: 6px;
+  color: var(--color-warning-fg);
+  font-size: var(--text-label);
+}
+
+.retryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.retryRow > :first-child {
+  flex: 1 1 320px;
+}
