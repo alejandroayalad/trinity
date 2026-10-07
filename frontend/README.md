@@ -9,6 +9,22 @@ For EC2 hosting of both frontend and backend, see
 [Caddy deployment](../docs/deployment.md). The production web image serves the
 compiled bundle; Vite remains the local development server.
 
+## Vercel deployment preparation
+
+Import the repository with Root Directory `frontend` and the Vite preset.
+`vercel.json` selects `npm ci`, `npm run build`, and output directory `dist`.
+It forwards `/api/*` unchanged to `https://54.224.94.9`, disables API response
+caching, and supplies the React page fallback without rewriting missing
+`/assets/*` files to HTML. No frontend API key or AWS credential is needed.
+
+Select Node 24.x. Vercel manages the minor/patch release, so check the build log
+against the repository's exact 24.21.0 pin; compatibility is not yet verified.
+The EC2 address is currently unreserved. Update the rewrite if it changes.
+This is local preparation, not a completed deployment or a replacement of A28.
+After deployment, check login/logout, dashboard/SQL, a nested-page reload, a
+missing asset (404), and an unauthenticated `/api/v1/me` (JSON 401, not HTML).
+The existing EC2 deployment remains available.
+
 ## Run locally
 
 Use Node.js **24.21.0** (`.nvmrc`). From this directory:

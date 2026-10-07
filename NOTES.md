@@ -991,3 +991,12 @@ routing checks and live configuration/TLS checks, and prepared two incremental
 commits for a history-preserving merge. No secret file or unrelated work is part
 of this delivery. Full data/recovery acceptance remains separate from the
 completed deployment session.
+
+## Vercel frontend preparation — October 7, 2026
+
+[ME] Alayala signed in to Vercel after selecting frontend deployment preparation.
+[YOU] Added local build/routing configuration and deployment guidance. [ME] Ran
+`npm --prefix frontend run build`; the supplied screenshot shows Vite build and
+bundle-content checks passed. [ME] Authorized Git delivery including the schema
+documentation. Vercel deployment remains pending; EC2 is the deployed application.
+See the [preparation record](ai/sessions/2026-10-07-vercel-frontend-preparation.md).
