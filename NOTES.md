@@ -1021,3 +1021,37 @@ The executable syntax tree is unchanged; 16 focused lifecycle tests passed.
 Real Docker/PostgreSQL acceptance was not rerun. [ME] Authorized commit and push
 of this bounded change.
 See the [readability record](ai/sessions/2026-10-07-query-execution-readability.md).
+
+### Refresh run 4 diagnosis — October 7, 2026
+
+[ME] Supplied failed refresh screenshots and requested debugging. [YOU] used
+read-only EC2 SQL and retained metadata to confirm facility request expiry at
+30.03 seconds and generator HTTP 504 followed by retry expiry within the shared
+30-second page budget. The deployed connector hash matches local source. No new
+EIA calls, retries, recovery actions or deployment changes were performed.
+Underlying EIA/network latency remains unknown; a bounded retry-policy review is
+proposed. See [run 4 evidence](ai/sessions/2026-10-07-refresh-run4-request-deadlines.md).
+
+### EIA timeout adjustment — October 7, 2026
+
+[ME] Selected 90 seconds per EIA attempt within a 150-second page budget.
+[YOU] implemented separate attempt/page deadlines and preserved parent budgets,
+retry counts, cancellation and incomplete-publication protections. The EIA,
+retrieval and preparation suites passed 74 tests; diff checks passed. No code
+was deployed. The requested direct EIA probe remains blocked by Instance Connect
+failure and SSH timeout. See [implementation and limits](ai/sessions/2026-10-07-eia-attempt-page-timeout-budgets.md).
+
+[ME] Restored EC2 Instance Connect access. [YOU] directly queried EIA from EC2:
+national and the exact failed run-5 facility/generator pages all returned HTTP
+200 in 0.30/0.10/0.22 seconds. This establishes current reachability for those
+pages, not complete retrieval or success of the proposed longer timeout. No
+refresh, publication or deployment was performed. The same session records
+query parameters, retained failures and diagnostic setup corrections.
+
+[ME] Authorized deployment. [YOU] backed up the EC2 source/image, built a single
+connector-file image layer, checked its retry behavior without network access,
+and replaced only the idle refresh worker. Live import verifies 90/150 seconds
+and the exact tested source hash. Other containers and the active publication
+pointer were preserved; HTTPS/auth smoke checks passed. No full refresh was
+started, and no commit or push was performed. Deployment identifiers and rollback
+reference are in the same timeout session.

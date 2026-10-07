@@ -206,6 +206,72 @@ class RetryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(caught.exception.code, "request_deadline")
         self.assertEqual(len(requests), 1)
 
+    async def test_slow_attempt_times_out_then_retries_same_page(self):
+        # A stalled transport models the live request that previously consumed
+        # the entire page budget. Scale time down; keep a larger page allowance.
+        requests = []
+
+        async def handler(request):
+            requests.append(request)
+            if len(requests) == 1:
+                await asyncio.Event().wait()
+            return success()
+
+        with patch("trinity.connector.client._ATTEMPT_TIMEOUT_SECONDS", 0.02), \
+                patch("trinity.connector.client._PAGE_TIMEOUT_SECONDS", 1), \
+                patch("trinity.connector.client.sleep", new_callable=AsyncMock) as backoff:
+            async with EIAClient(transport=httpx.MockTransport(handler)) as client:
+                result = await client.fetch_national(start=_DAY, end=_DAY)
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(requests[0].url, requests[1].url)
+        self.assertEqual(result.metadata.retries, 1)
+        self.assertEqual(result.metadata.attempts[0].error_code, "timeout")
+        self.assertIsNone(result.metadata.attempts[0].http_status)
+        self.assertEqual(result.metadata.attempts[1].http_status, 200)
+        backoff.assert_awaited_once_with(1.0)
+
+    async def test_page_budget_interrupts_slow_retry_after_504(self):
+        # The total page budget must stop a pending retry before its separate
+        # attempt timer. A 504 must not reset the parent deadline.
+        requests = []
+
+        async def handler(request):
+            requests.append(request)
+            if len(requests) == 1:
+                return httpx.Response(504)
+            await asyncio.Event().wait()
+
+        with patch("trinity.connector.client._ATTEMPT_TIMEOUT_SECONDS", 1), \
+                patch("trinity.connector.client._PAGE_TIMEOUT_SECONDS", 0.05), \
+                patch("trinity.connector.client.sleep", new_callable=AsyncMock) as backoff:
+            async with EIAClient(transport=httpx.MockTransport(handler)) as client:
+                with self.assertRaises(EIAClientError) as caught:
+                    await client.fetch_national(start=_DAY, end=_DAY)
+        self.assertEqual(caught.exception.code, "request_deadline")
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(caught.exception.metadata.retries, 1)
+        self.assertEqual(caught.exception.metadata.attempts[0].http_status, 504)
+        self.assertEqual(caught.exception.metadata.attempts[1].error_code, "interrupted")
+        backoff.assert_awaited_once_with(1.0)
+
+    async def test_request_defaults_keep_connection_setup_short(self):
+        # Verify the selected I/O policy on a real constructed request without
+        # sending it externally. The hard timers use these named policy values.
+        from trinity.connector.client import _ATTEMPT_TIMEOUT_SECONDS, _PAGE_TIMEOUT_SECONDS
+
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            return success()
+
+        async with EIAClient(transport=httpx.MockTransport(handler)) as client:
+            await client.fetch_national_page(start=_DAY, end=_DAY)
+        self.assertEqual(_ATTEMPT_TIMEOUT_SECONDS, 90)
+        self.assertEqual(_PAGE_TIMEOUT_SECONDS, 150)
+        self.assertEqual(requests[0].extensions["timeout"],
+                         {"connect": 10, "read": 90, "write": 90, "pool": 90})
+
     async def test_collection_deadline_interrupts_backoff_without_resetting(self):
         # Keep the normal page limit, but shorten the whole-route limit. This
         # proves retry waits stay inside the route budget as well as the page budget.

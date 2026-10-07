@@ -34,7 +34,11 @@ _KEY_IN_URL = re.compile(r"(api_key=)[^&\s\"']+", re.IGNORECASE)
 _PRIVATE_FIELDS = {"request", "api_key", "apikey", "authorization", "cookie", "set-cookie"}
 _RETRYABLE_STATUSES = {429, 500, 502, 503, 504}
 _RETRY_DELAYS = (1.0, 3.0)
-_PAGE_TIMEOUT_SECONDS = 30.0
+# A slow attempt must leave room for recovery within the shared page budget.
+# For example, a 90-second timeout and one-second wait leave 59 seconds for
+# the next attempt. Route and supervisor deadlines can stop either earlier.
+_ATTEMPT_TIMEOUT_SECONDS = 90.0
+_PAGE_TIMEOUT_SECONDS = 150.0
 _RETRYABLE_TRANSPORT_ERRORS = (
     httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout,
     httpx.ReadError, httpx.WriteError, httpx.RemoteProtocolError,
@@ -283,7 +287,7 @@ class EIAClient:
         self._http = httpx.AsyncClient(
             base_url=_BASE_URL,
             headers={"Accept": "application/json"},
-            timeout=httpx.Timeout(30.0, connect=10.0),
+            timeout=httpx.Timeout(_ATTEMPT_TIMEOUT_SECONDS, connect=10.0),
             follow_redirects=False,
             trust_env=False,
             transport=transport,
@@ -587,7 +591,7 @@ class EIAClient:
             self.before_attempt({"kind": "eia", "route": route,
                                  "offset": int(params["offset"]), "attempt": attempt})
         if tracker is None:
-            return await self._http.get(route, params=params)
+            return await self._send_request(route, params)
         started = utc_now()
         reply = None
         api_status = "no_response"
@@ -596,7 +600,7 @@ class EIAClient:
         try:
             # Save response evidence before page validation. Even a rejected page
             # can explain why the route failed, but it is not an accepted data page.
-            reply = await self._http.get(route, params=params)
+            reply = await self._send_request(route, params)
             api_status = "unknown"
             if reply.status_code != 200:
                 error_code = "http_error"
@@ -649,3 +653,17 @@ class EIAClient:
                 actual_row_count=count, error_code=error_code,
                 sanitized_response=body, response_sha256=digest,
             ))
+
+    async def _send_request(self, route: str, params: dict[str, str]) -> httpx.Response:
+        """Bound one HTTP attempt and classify its expiry as a retryable timeout.
+
+        HTTPX limits individual I/O waits. The enclosing timer also caps a
+        response that keeps delivering small chunks without finishing. Parent
+        page/route cancellation still propagates without starting another retry.
+        """
+        try:
+            async with asyncio.timeout(_ATTEMPT_TIMEOUT_SECONDS):
+                return await self._http.get(route, params=params)
+        except TimeoutError:
+            # Use fixed text so retained errors never include a credential URL.
+            raise httpx.ReadTimeout("EIA attempt deadline exceeded.") from None

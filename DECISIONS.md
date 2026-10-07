@@ -752,6 +752,18 @@ proposals until implemented and verified. No new dependency or live EIA/S3 run o
 
 Category: **Technical / code**.
 
+**October 7, 2026 EIA timeout amendment:** Alayala explicitly selected 90 seconds
+per HTTP attempt within a shared 150-second page budget after retained refresh
+failures showed the former 30-second page budget expiring during slow requests
+and retries. Each attempt now has a total timer in addition to HTTPX I/O limits;
+connection setup remains capped at 10 seconds. Preserve at most three attempts,
+one/three-second retry waits, and the existing discovery, route, preparation and
+worker deadlines. Parent deadlines can stop attempts earlier; three full
+90-second attempts are not promised. This replaces the connector's former
+30-second I/O/page settings, not analytical-query or publication limits.
+Local implementation and synthetic checks do not establish EC2 deployment or
+live EIA completion. See the [implementation record](ai/sessions/2026-10-07-eia-attempt-page-timeout-budgets.md).
+
 Status: implemented under alayala's explicit task 3–4 authorization, with task 2
 acceptance closure. Synthetic/disposable verification is recorded in the
 [dispatch and worker session](ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).

@@ -245,7 +245,7 @@ async def fetch_pages():
     return national, facility, generator
 ```
 
-The one-page methods accept `start` and `end` as dates, a nonnegative `offset` (default 0), and `length` from 1 to 5,000 (default 5,000). Each returns one validated response page, with at most three identical request attempts for temporary failures. Requests use daily frequency, all three measurements and ascending sorting by the route's daily key. The client uses HTTPS and rejects redirects. HTTPX I/O timeouts remain 30 seconds (10 seconds for connection setup); a separate 30-second total page deadline now covers all attempts, waits and response processing.
+The one-page methods accept `start` and `end` as dates, a nonnegative `offset` (default 0), and `length` from 1 to 5,000 (default 5,000). Each returns one validated response page, with at most three identical request attempts for temporary failures. Requests use daily frequency, all three measurements and ascending sorting by the route's daily key. The client uses HTTPS and rejects redirects. Each HTTP attempt has a 90-second total deadline; HTTPX I/O timeouts are also 90 seconds, with 10 seconds for connection setup. A separate 150-second total page deadline covers all attempts, waits and response processing. Enclosing route and supervisor deadlines can stop the work earlier. See the [A23 timeout amendment](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution).
 
 ### Retry policy
 
@@ -253,7 +253,7 @@ Retry HTTP 429, 500, 502, 503 and 504 with at most **three total attempts**. Wai
 
 HTTP statuses outside that allowlist, including 400/401, fail immediately. Arbitrary connection errors (which may indicate TLS/configuration problems), pool timeouts, local protocol errors, invalid JSON, HTTP-200 API error bodies and failed response validation are not retried.
 
-Retries preserve route, date bounds, offset, page size and all other request parameters. A retry never resets either the page deadline or the enclosing route deadline. Expiry during a request or backoff stops further attempts. Caller cancellation propagates without retry. Page expiry reports `request_deadline`; route expiry reports `pagination_deadline`.
+Retries preserve route, date bounds, offset, page size and all other request parameters. A retry never resets either the page deadline or the enclosing route deadline. An attempt timeout may retry within the remaining budget; page or route expiry during a request or backoff stops further attempts. For example, a 90-second first attempt and a one-second wait leave at most 59 seconds for the next attempt. Caller cancellation propagates without retry. Page expiry reports `request_deadline`; route expiry reports `pagination_deadline`.
 
 `EIAResponsePage.data` contains source rows with strings and unit metadata preserved. `response` retains sanitized source metadata; `total` is the parsed advertised count, `api_version` identifies the API release, and `warnings` preserves sanitized top-level warnings. Empty pages are valid. The facility advertised total is not used to infer completeness.
 
