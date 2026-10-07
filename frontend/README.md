@@ -5,6 +5,10 @@ existing scaffold. See the [task record](../sdd/frontend/tasks.md) and
 [implementation evidence](../ai/sessions/2026-10-05-frontend-steps-3-9-continuation.md).
 Human visual acceptance and retained-system enablement remain separate.
 
+For EC2 hosting of both frontend and backend, see
+[Caddy deployment](../docs/deployment.md). The production web image serves the
+compiled bundle; Vite remains the local development server.
+
 ## Run locally
 
 Use Node.js **24.21.0** (`.nvmrc`). From this directory:

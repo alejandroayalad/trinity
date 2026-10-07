@@ -31,6 +31,7 @@ This is the main decision record. A1–A4 were moved from `First Aproximation.md
 | A25 | Product / business | Alayala's Figma mockups and the ChatGPT-created Trinity brand are the inputs for the planned Claude design handoff, with separate authorship records. |
 | A26 | Technical / code | React, TypeScript and Vite for the web frontend in `frontend/`; other packages need separate approval; exact versions under A17. |
 | A27 | Technical / code | Compress new JSON evidence with versioned storage identities; keep existing stored versions readable and retain all integrity checks. |
+| A28 | Technical / code | First EC2 deployment hosts both frontend and backend; Caddy serves the compiled frontend and proxies the API. |
 
 ### A1 — arrangement of decisions: closed
 
@@ -914,6 +915,94 @@ establish retry eligibility. Existing A9/A16 publication/recovery rules remain
 unchanged. The [Task 5 handoff](ai/sessions/2026-10-04-refresh-task5-receipt-routing.md)
 now records synthetic/disposable acceptance; it was not rerun for this SDD.
 No tasks, implementation, migration execution or publication activation is authorized.
+
+### A28 — EC2 web deployment
+
+Category: **Technical / code**.
+
+Status: alayala selected one AWS EC2 server for the first deployment and requested
+implementation of frontend/backend hosting with a choice of Nginx or Caddy.
+Codex selected Caddy under that request. No domain is currently available.
+
+**Choice:** Deploy both frontend and backend on the same EC2 Docker host. Use
+Caddy 2.11.7 to serve the compiled React/Vite bundle and proxy unchanged
+`/api/v1/...` requests to FastAPI. Keep PostgreSQL, Redis and query containers
+private. Preserve the existing workers, S3 custody and query supervisor. Node
+24.21.0 runs only during the locked frontend build. This hosting choice supersedes
+the earlier undecided-hosting statements in A14/A19; their security/data rules
+and A24's recovery boundary remain in force.
+
+**Reason and alternative:** Caddy combines static serving, reverse proxying and
+automatic domain certificate renewal. Nginx with separate certificate automation
+would add operating steps for this single-server demo. No npm/Python dependency
+or authentication change is selected. The pinned Caddy image is a new deployment
+dependency; its routing and constrained-container checks are recorded separately.
+
+**Initial operating boundary:** Until a public TLS route is configured, bind the
+web ports to loopback and use an SSH tunnel. Do not expose plaintext preview
+HTTP publicly. Full unattended AWS credentials, backups/restore, Redis persistence,
+retained migrations/accounts, query/worker activation and public TLS acceptance
+were separate gates. Later amendments below record completed startup and public
+TLS checks; backups/restore and full data acceptance remain unverified.
+
+**Approved host-runtime refinement:** After reviewing the OS, package sources,
+preservation plan and exact commands, alayala explicitly approved Docker 29.8.2
+as a side-by-side static daemon on the existing Amazon Linux host. The native
+repository offered no compatible Engine; no Fedora/CentOS repository was added.
+The installed Amazon packages and configuration remain intact. The new systemd
+override retains external containerd/runc and the original classic `overlay2`
+store. Manual security updates are the accepted operating tradeoff. Live Server
+API 1.56 and the supervisor constructor check passed. At this gate, deployment
+remained stopped; the later staged-rollout approval below superseded that stop.
+See the implementation session for proof.
+
+**Approved EC2 identity refinement — October 6, 2026:** Alayala approved using
+the attached `trinity-ec2-runtime` role directly. Both named AWS profiles contain
+only the region and resolve temporary credentials from instance metadata.
+Reject the extra writer-role assumption for this single-host deployment: the
+attached role already has candidate-prefix GetObject/PutObject permission.
+Both profiles have the same IAM authority, including the trusted query
+supervisor; profile names do not provide read/write isolation. This is an
+explicit single-host credential-delivery tradeoff to A19's permission-separation
+design. The application still restricts published-object selection, and isolated
+query executors retain no network or credentials. No static AWS key is stored.
+Bounded host/container S3 verification is approved. Exact evidence and remaining
+limits are in the runtime audit.
+
+**Approved staged rollout — October 7, 2026:** Alayala authorized the backend
+image build and EC2 verification, followed by PostgreSQL/Redis, migrations and
+account seeding, then API/Caddy. Verify each stage before enabling workers.
+Alayala explicitly selected PostgreSQL 17.11 for this deployment, retaining the
+tested A21 Compose configuration instead of A17's 18.6 selection for this host.
+This does not authorize an upgrade of an existing database.
+
+**Approved queue persistence — October 7, 2026:** Alayala approved Redis AOF
+with `appendfsync everysec` on the retained Redis volume, preserving noeviction
+and the existing snapshot defaults. He approved manual worker restarts so
+recovery retains its stopped-worker checks. This EC2 overlay resolves the
+configuration choice for this host; automatic recovery, backups/restore and
+end-to-end data acceptance remain unverified. Every-second sync can lose about
+one second of writes after a host failure; it does not guarantee lossless queue
+delivery. See [Redis persistence](https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/).
+
+**Approved public access — October 7, 2026:** Alayala requested access without
+SSH. With no domain available, Codex configured the current EC2 IPv4 address
+with Let's Encrypt's `shortlived` ACME profile in the existing Caddy 2.11.7 image.
+Use public TCP80 for HTTPS redirects/challenges and TCP443 for TLS, preserving a
+separate loopback8080 SSH preview. API, database and Redis ports stay unpublished.
+The fifth Compose layer mounts the reviewed non-secret Caddy config read-only;
+no frontend rebuild or credential rotation is needed. Caddy retains certificate
+state in its existing volume and manages renewal. Initial trusted issuance and
+public HTTP/auth checks passed; a future renewal has not yet been observed.
+The current address is not an Elastic IP and can change after EC2 stop/start;
+revalidate the address/configuration before exposing a replacement address.
+See [Let's Encrypt IP certificates](https://letsencrypt.org/2026/01/15/6day-and-ip-general-availability)
+and [Caddy ACME profiles](https://caddyserver.com/docs/caddyfile/directives/tls).
+
+See [deployment instructions](docs/deployment.md) and
+[implementation evidence](ai/sessions/2026-10-06-ec2-caddy-web.md). Sources:
+[Caddy SPA/API routing](https://caddyserver.com/docs/caddyfile/patterns),
+[automatic HTTPS](https://caddyserver.com/docs/automatic-https).
 
 ## Arkham decision topics still to complete
 

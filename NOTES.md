@@ -889,3 +889,93 @@ added guarded startup Retry. Typecheck/lint, 128 unit tests and four simulated
 browser regressions passed. No retained session was logged out; backend
 revocation failure and human acceptance remain unverified. Build remains [ME].
 See [evidence](ai/sessions/2026-10-06-session-reliability.md).
+
+## EC2 frontend and Caddy — October 6, 2026
+
+[ME] Alayala selected AWS, created the EC2 instance, supplied SSH access and
+requested both frontend/backend hosting with a proxy implementation. No domain
+is available. [YOU] Codex installed server prerequisites and implemented A28's
+Caddy web image/Compose overlay, private SSH preview and deployment instructions.
+The existing application, design attribution and ongoing UI fidelity work were
+preserved. Five synthetic routing checks passed locally and five passed on EC2;
+Compose/private-port and Caddy domain configuration checks passed. These are
+hosting checks, not retained-account, refresh/publication, public TLS or compiled
+frontend proof. The EC2 Docker package exposes API 1.44; the query supervisor
+requires >=1.47, so its upgrade remains a confirmed deployment blocker. Builds
+and EIA-key commands remain [ME]. See
+[scope, results and remaining gates](ai/sessions/2026-10-06-ec2-caddy-web.md).
+
+[ME] Alayala later reviewed and approved the exact Docker upgrade, requiring a
+stop before full deployment. [YOU] Codex retained a stopped-state runtime backup
+and switched only to the side-by-side Docker 29.8.2 daemon. Live Server API 1.56
+and the actual supervisor constructor check passed. Image IDs and original-file
+checksums match; Compose and external containerd/runc remain unchanged. This
+resolves the API blocker above. No application was started; full query/runtime
+acceptance remains open. Static-daemon security updates require deliberate work.
+
+[ME] Alayala requested the complete EC2 runtime configuration before any startup.
+[YOU] Codex prepared the [variable audit and approval draft](docs/ec2-runtime-configuration.md),
+an IAM-profile override, non-secret templates and a preflight check. EC2 has no
+instance role; five environment values remain unresolved. The real draft fails
+as intended. Synthetic Compose validation passed locally and on EC2 (13 service
+definitions, no containers created). No secret or IAM policy was installed;
+approval and real runtime/IAM checks remain pending.
+
+
+[ME] Alayala attached the EC2 instance role and approved direct use by both AWS
+profiles, with no Trinity startup. [YOU] Codex installed the non-secret profile
+file and removed the extra AssumeRole requirement. Host and disposable bridge
+container checks passed for IMDSv2/STS, S3 conditional upload, exact readback and
+duplicate-write rejection. The container used pinned Python/SDK dependencies,
+UID 10001 and the intended read-only profile mount. It was removed; zero
+containers remain. Two non-secret diagnostic S3 objects are retained. The final
+backend image is still absent, so full-image/application acceptance remains
+pending. See the [runtime audit](docs/ec2-runtime-configuration.md) and session
+for permissions, artifact identities, accepted shared-role limits and checks.
+
+
+[ME] On October 7, alayala requested EC2 environment completion after cloning.
+[YOU] Codex preserved seven already-supplied env values, restricted the file to
+root:root 0600, and added the remaining reviewed settings without printing or
+rotating secrets. Transferred the missing non-secret Compose overlays/validator
+into the clone. All 21 interpolations resolve; preflight and Compose config
+checks pass. The inspected AMD64 query image matches the supplied reference.
+No services, volumes, migrations or EIA requests were started. Backend-image
+and application acceptance remain pending; details are in the runtime audit.
+
+[ME] Alayala authorized staged EC2 deployment and retained PostgreSQL 17.11.
+[YOU] Built the locked AMD64 backend on EC2; final-image imports, attached-role
+S3 access and Docker query-constructor checks passed. Started only PostgreSQL
+and Redis, verified private ports and backend connectivity, retained an empty-DB
+backup and applied migrations through 0007_refresh_registration. Twenty tables
+are present with no accounts/jobs/publication and scheduling disabled. Private
+account seeding is next; API/Caddy and workers remain stopped. This is deployment
+stage evidence, not full query, refresh/publication or recovery acceptance.
+See the [deployment session](ai/sessions/2026-10-06-ec2-caddy-web.md).
+
+[ME] Alayala supplied a private password note for all three accounts and approved
+Redis AOF everysec with manual worker restarts. [YOU] Seeded through the existing
+function without logging/copying credentials, verified all three accounts, then
+started API and Caddy in order. HTTP login/role/logout checks passed for all roles.
+Redis's synthetic persistence probe survived a graceful restart. Started seven
+background services individually after their prerequisites passed. All 11
+services are running, with no restart counts; scheduling remains disabled and
+there are no jobs or publication. SSH preview returned HTTP200 locally.
+Initial setup, real data and operator/query/recovery acceptance remain pending;
+see the [staged rollout evidence](ai/sessions/2026-10-06-ec2-caddy-web.md).
+
+[ME] Alayala requested public access. [YOU] Configured trusted IP HTTPS through
+existing Caddy and a fifth Compose layer; retained the SSH preview and private
+backend/database/Redis ports. Existing AWS80/443 rules were observed, not changed.
+Only Caddy was recreated; no rebuild or secret rotation. Public trusted TLS,
+HTTP308, browser login-page load and three-role login/authorization/logout checks
+passed. The certificate renews through Caddy's retained state; future renewal
+has not yet been observed. Public address stability and data acceptance remain
+separate gates. See the [public-access evidence](ai/sessions/2026-10-06-ec2-caddy-web.md).
+
+[ME] Alayala requested this session's merge to main. [YOU] Isolated the deployment
+implementation and handoff from already-merged UI work, repeated all five Caddy
+routing checks and live configuration/TLS checks, and prepared two incremental
+commits for a history-preserving merge. No secret file or unrelated work is part
+of this delivery. Full data/recovery acceptance remains separate from the
+completed deployment session.
