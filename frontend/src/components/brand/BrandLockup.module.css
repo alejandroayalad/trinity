@@ -1,0 +1,69 @@
+.lockup {
+  display: flex;
+  align-items: center;
+}
+
+.words {
+  display: flex;
+  flex-direction: column;
+}
+
+.letters {
+  display: block;
+  height: auto;
+}
+
+.caption {
+  color: var(--color-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mark {
+  display: block;
+  height: auto;
+}
+
+/* Sidebar size: 28px mark, 84px letters, 9.5px caption. */
+.nav {
+  gap: 10px;
+}
+
+.nav .mark {
+  width: 28px;
+}
+
+.nav .words {
+  gap: 3px;
+}
+
+.nav .letters {
+  width: 84px;
+}
+
+.nav .caption {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+}
+
+/* Sign-in card size: 36px mark, 112px letters, 11px caption. */
+.signin {
+  gap: var(--space-3);
+}
+
+.signin .mark {
+  width: 36px;
+}
+
+.signin .words {
+  gap: var(--space-1);
+}
+
+.signin .letters {
+  width: 112px;
+}
+
+.signin .caption {
+  font-size: var(--text-tiny);
+  letter-spacing: 0.14em;
+}

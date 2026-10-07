@@ -4,12 +4,16 @@ import { useSession } from './SessionProvider'
 import { PageError } from '../pages/shared'
 import { LoadingRows } from '../components/feedback/States'
 
-export const navigation: { to: string; label: string; capability: Capability }[] = [
-  { to: '/dashboard', label: 'Overview', capability: 'national:read' },
-  { to: '/catalog', label: 'Catalog', capability: 'preview:detail' },
-  { to: '/sql', label: 'SQL Explorer', capability: 'sql:execute' },
-  { to: '/refresh', label: 'Refresh', capability: 'refresh:read' },
-  { to: '/settings', label: 'Schedule', capability: 'settings:read' },
+/**
+ * Sidebar items. `main` items are for every role that has the capability;
+ * `admin` items appear under the "Administration" group label.
+ */
+export const navigation: { to: string; label: string; capability: Capability; group: 'main' | 'admin' }[] = [
+  { to: '/dashboard', label: 'Dashboard', capability: 'national:read', group: 'main' },
+  { to: '/catalog', label: 'Catalog', capability: 'preview:detail', group: 'main' },
+  { to: '/sql', label: 'SQL Explorer', capability: 'sql:execute', group: 'main' },
+  { to: '/refresh', label: 'Refresh', capability: 'refresh:read', group: 'admin' },
+  { to: '/settings', label: 'Settings', capability: 'settings:read', group: 'admin' },
 ]
 export const landingPath = (screen: LandingScreen) => ({ waiting: '/waiting', setup: '/setup', refresh_runs: '/refresh', national_dashboard: '/dashboard', explorer: '/dashboard' })[screen]
 

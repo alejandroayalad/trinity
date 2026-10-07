@@ -53,7 +53,7 @@ test('three rapid preset clicks cancel the older requests and render the last pr
   fireEvent.click(screen.getByRole('button', { name: '90 days' }))
   await waitFor(() => expect(calls.filter(isDashboard)).toHaveLength(3))
   fireEvent.click(screen.getByRole('button', { name: '30 days' }))
-  await screen.findByRole('heading', { name: 'Range end observation · 2026-10-02' })
+  await screen.findByRole('heading', { name: 'Latest observation · 2 Oct 2026' })
   const dashboardCalls = calls.filter(isDashboard)
   expect(dashboardCalls).toHaveLength(4)
   expect(dashboardCalls.slice(0, 3).map((call) => call.signal?.aborted)).toEqual([true, true, true])
@@ -67,7 +67,7 @@ test('catalog dates wait for Apply and Reset clears the draft', async () => {
     'GET /api/v1/datasets/national_outages/preview': json(200, page),
   })
   mount('/catalog/national_outages')
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
   const previews = () => calls.filter((call) => call.path.endsWith('/preview'))
   expect(previews()).toHaveLength(1)
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
@@ -91,7 +91,7 @@ test('facility choices load only when the control first opens', async () => {
     'GET /api/v1/datasets/facility_outages/facilities': json(200, { publication, range: page.range, items: [{ facility: '0046', facilityName: 'Example Plant' }], next_cursor: null }),
   })
   mount('/catalog/facility_outages')
-  await screen.findByText('1 rows · Combined share: 10.00%')
+  await screen.findByText('Combined offline share for these rows: 10 MW ÷ 100 MW = 10.00% (summed outage ÷ summed capacity).')
   const facilities = () => calls.filter((call) => call.path.endsWith('/facilities'))
   expect(facilities()).toHaveLength(0)
   fireEvent.focus(screen.getByLabelText('Search facilities'))
@@ -109,7 +109,7 @@ test('a 429 waits for Retry-After before the click refetches', async () => {
   expect(screen.getByRole('button', { name: 'Retry after 1s' })).toBeDisabled()
   await screen.findByRole('button', { name: 'Retry' }, { timeout: 2000 })
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-  await screen.findByRole('heading', { name: 'Range end observation · 2026-10-02' })
+  await screen.findByRole('heading', { name: 'Latest observation · 2 Oct 2026' })
   expect(calls.filter(isDashboard)).toHaveLength(2)
 })
 
@@ -119,7 +119,7 @@ test('a rate limit with a short wait retries once and recovers', async () => {
     'GET /api/v1/dashboard/national': [problem(429, 'rate_limited', {}, { 'Retry-After': '1' }), json(200, dashboardBody)],
   })
   mount('/dashboard', (cache) => { cache.setDefaultOptions({ queries: { retry: shouldRetry, retryDelay, refetchOnWindowFocus: false } }) })
-  await screen.findByRole('heading', { name: 'Range end observation · 2026-10-02' }, { timeout: 3000 })
+  await screen.findByRole('heading', { name: 'Latest observation · 2 Oct 2026' }, { timeout: 3000 })
   expect(calls.filter(isDashboard)).toHaveLength(2)
 })
 

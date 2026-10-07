@@ -1,0 +1,54 @@
+/* Schedule settings and initial setup (spec UF-T*). */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 420px;
+  margin-top: var(--space-7);
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.switchLabel {
+  font-size: var(--text-body);
+  font-weight: 500;
+}
+
+.switchHint {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.select {
+  padding: 0 10px;
+}
+
+.note {
+  color: var(--color-ink-2);
+  font-size: 13.5px;
+}
+
+.saveRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.saveRow button {
+  padding: 0 16px;
+}
+
+.saveStatus,
+.next {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}

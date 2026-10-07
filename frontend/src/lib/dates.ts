@@ -122,3 +122,16 @@ export function formatDuration(seconds: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`
   return `${Math.floor(seconds / 3600)}h ${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}m`
 }
+
+/**
+ * Format a local wall-clock time such as "2026-09-30T06:15:00-04:00" as
+ * "30 Sep 2026, 06:15". The text already holds the time in the schedule's
+ * own timezone, so this function reads its digits and never creates a Date:
+ * a browser in another timezone therefore cannot shift it (spec R19).
+ * Return the input unchanged when it does not start with a date and time.
+ */
+export function formatLocalTime(text: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(text)
+  if (match === null || !isDateText(match[1])) return text
+  return `${formatDay(match[1])}, ${match[2]}:${match[3]}`
+}

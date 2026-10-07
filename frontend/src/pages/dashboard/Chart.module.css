@@ -1,0 +1,278 @@
+/* National chart (spec UF-D07–D12). */
+@keyframes reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+
+.grid {
+  display: grid;
+  margin-top: var(--space-6);
+}
+
+.gutter {
+  position: relative;
+  height: 260px;
+}
+
+.tickY {
+  position: absolute;
+  right: 10px;
+  color: var(--color-muted-2);
+  font-size: var(--text-tiny);
+  line-height: 1;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+.plot {
+  position: relative;
+  min-width: 0;
+  height: 260px;
+}
+
+.svg {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 260px;
+  overflow: visible;
+}
+
+.svg:focus-visible {
+  outline-offset: 4px;
+}
+
+.gap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 1px dashed var(--color-gap-border);
+  border-left: 1px dashed var(--color-gap-border);
+  background: var(--gap-hatch);
+}
+
+.gridline {
+  stroke: var(--color-grid);
+  stroke-width: 1;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-slate);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.dot {
+  fill: var(--color-slate);
+}
+
+.outlier {
+  fill: var(--color-surface);
+  stroke: var(--color-warning-ring);
+  stroke-width: 2;
+}
+
+.reveal {
+  animation: reveal var(--duration-chart-draw) var(--ease-draw) both;
+}
+
+.crosshair {
+  stroke: var(--color-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.hoverDot {
+  fill: var(--color-surface);
+  stroke: var(--color-slate);
+  stroke-width: 2;
+}
+
+.pinLine {
+  stroke: var(--color-slate);
+  stroke-width: 1;
+}
+
+.pinDot {
+  fill: var(--color-orange);
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 0.5px var(--color-slate));
+}
+
+.tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-tooltip-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-tooltip);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.center {
+  transform: translateX(-50%);
+}
+
+.right {
+  transform: translateX(12px);
+}
+
+.left {
+  transform: translateX(calc(-100% - 12px));
+}
+
+.tooltipDate {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.tooltipGrid {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 16px;
+  color: var(--color-ink-2);
+}
+
+.tooltipGrid b {
+  color: var(--color-ink);
+  font-weight: 500;
+  text-align: right;
+}
+
+.tooltipWarning {
+  margin-top: 6px;
+  color: var(--color-warning-fg);
+}
+
+.ticksX {
+  position: relative;
+  height: 24px;
+  margin-top: 6px;
+}
+
+.tickX {
+  position: absolute;
+  top: 0;
+  color: var(--color-muted-2);
+  font-size: var(--text-tiny);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.legendItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.legendItems > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatchLine {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  background: var(--color-slate);
+}
+
+.swatchGap {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border-right: 1px dashed var(--color-gap-border);
+  border-left: 1px dashed var(--color-gap-border);
+  background: var(--gap-hatch-legend);
+}
+
+.empty {
+  margin-top: var(--space-6);
+  padding: var(--space-10);
+  border: 1px dashed var(--color-field-border);
+  border-radius: var(--radius-panel);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  text-align: center;
+}
+
+/* Facility sparkline (spec UF-D21). */
+.spark {
+  position: relative;
+  max-width: 360px;
+  margin-top: var(--space-4);
+  border-bottom: 1px solid var(--color-border-2);
+  animation: reveal var(--duration-sparkline) var(--ease-draw) both;
+}
+
+.spark svg {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sparkGap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--gap-hatch);
+}
+
+.sparkLine {
+  fill: none;
+  stroke: var(--color-slate);
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkPoint {
+  fill: var(--color-surface);
+  stroke: var(--color-slate);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkSelected {
+  fill: var(--color-orange);
+  stroke: none;
+}
+
+.sparkAxis {
+  display: flex;
+  justify-content: space-between;
+  max-width: 360px;
+  margin-top: 4px;
+  color: var(--color-muted-2);
+  font-size: var(--text-tiny);
+}
+
+.sparkCaption {
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
