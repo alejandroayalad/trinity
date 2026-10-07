@@ -153,3 +153,46 @@ Done: tested timeout change deployed and loaded limits verified on EC2.
 Pending: one user-started full refresh to assess behavior under current EIA load.
 Blocker: none observed for deployment.
 Next: [ME] start one refresh from the application's Refresh page.
+
+## Git delivery and image rebuilt from the pushed revision
+
+[ME] Requested commit, push and retrieval of the image on EC2. [YOU] committed
+only the timeout implementation/tests, selected README/NOTES paragraphs and
+associated decision/evidence records as
+`82a427bf14f4554b2cb68d50e48f8d91642e2c67` (`fix(refresh): separate EIA attempt and
+page timeouts`). The normal push to `origin/main` also delivered the already
+committed query-readability change `e646a6f`, announced before push. No history
+was rewritten. Uncommitted recovery/frontend and documentation reconciliation
+work remains local and was excluded from these commits.
+
+The existing deployment uses local Docker images and has no configured image
+publishing workflow. Fetched `origin/main` on EC2 and created a clean detached
+checkout at `/home/ec2-user/trinity-releases/82a427b`; preserved the older live
+checkout, its connector change and its untracked deployment files. Built with
+the committed `backend/Dockerfile` and dependency lock, tagged
+`trinity-api:82a427b`, with OCI revision label equal to the full commit ID.
+Image ID:
+`sha256:6c31d0dfd099dfc462e3d115fe333445dd1bdc4c1ddbc5c4abc39519d151afdd`.
+This was a Git fetch and on-EC2 build, not a pull from a container registry.
+
+Ran the committed `test_eia_client`, `test_eia_pagination`, `test_eia_retries`,
+`test_retrieval` and `test_prepare` suites inside that exact image. The disposable
+container used a read-only root/tests mount, writable `/tmp` tmpfs, no network,
+no credentials, no capabilities and no new privileges. All 74 tests passed
+in 32.413 seconds, with no skips.
+
+After rechecking that no refresh was active, retained the prior patched image
+as `trinity-api:before-release-82a427b`. Rollback metadata is saved on EC2 in
+`/var/backups/trinity/release-82a427b/rollout.json`. Tagged the committed image
+as `trinity-api:local` and recreated only `refresh` using the existing five
+Compose layers and server environment. Other container identities/start times
+and the active publication pointer were unchanged.
+
+Final live inspection confirms revision `82a427b`, the expected image ID,
+running status with zero restarts, the exact committed connector hash and
+90/150-second limits. Public EC2 HTTPS returned 200 and unauthenticated Vercel
+`/api/v1/me` returned expected 401. No full refresh was started in this delivery.
+
+Done: code pushed to main; exact committed image built, tested and running on EC2.
+Pending: a user-started full refresh remains the live EIA acceptance check.
+Blocker: none observed. This delivery receipt is a separate documentation commit.

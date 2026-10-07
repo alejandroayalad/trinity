@@ -1055,3 +1055,11 @@ and the exact tested source hash. Other containers and the active publication
 pointer were preserved; HTTPS/auth smoke checks passed. No full refresh was
 started, and no commit or push was performed. Deployment identifiers and rollback
 reference are in the same timeout session.
+
+[ME] Authorized commit/push and EC2 image retrieval. [YOU] pushed timeout commit
+`82a427b` to main, fetched it into a clean EC2 checkout, and built the versioned
+image from its committed Dockerfile/lockfile. All 74 focused tests passed inside
+that exact image with networking disabled. The idle refresh worker now runs the
+commit-labelled image with verified 90/150-second limits; other containers and
+publication were preserved. Recovery/frontend and unrelated documentation edits
+remain local. See the same timeout session for image and rollback identifiers.
