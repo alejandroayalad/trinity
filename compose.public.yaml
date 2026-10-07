@@ -1,0 +1,15 @@
+# Apply after all four EC2 layers only for the approved public HTTPS route.
+services:
+  web:
+    ports: !override
+      - "${TRINITY_HTTP_BIND:?Set the public HTTP redirect binding}:80"
+      - "${TRINITY_HTTPS_BIND:?Set the public HTTPS binding}:443"
+      # Preserve the existing encrypted SSH preview during certificate renewal.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - type: bind
+        source: ./deploy/ec2/Caddyfile.public
+        target: /etc/caddy/Caddyfile
+        read_only: true
+        bind:
+          create_host_path: false

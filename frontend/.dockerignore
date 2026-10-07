@@ -1,0 +1,18 @@
+# Exclude private settings and generated content from the build context.
+.env
+.env.*
+**/.env
+**/.env.*
+*.pem
+*.key
+**/*.pem
+**/*.key
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+blob-report/
+tests/
+**/*.tsbuildinfo
+**/.DS_Store

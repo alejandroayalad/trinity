@@ -1,0 +1,34 @@
+{
+	# Configuration changes use a reviewed image and service restart.
+	# Do not expose Caddy's administrative API.
+	admin off
+}
+
+{$TRINITY_SITE_ADDRESS} {
+	root * /srv
+	encode zstd gzip
+	header X-Content-Type-Options nosniff
+
+	# Keep API errors separate from the React fallback. Preserve /api/v1 paths.
+	# The backend still verifies sessions, roles and analytical permissions.
+	@api path /api /api/*
+	handle @api {
+		header Cache-Control no-store
+		reverse_proxy api:8000
+	}
+
+	# Vite gives generated assets content hashes. Missing assets must return 404,
+	# not index.html, so a broken release cannot look like a JavaScript response.
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# React owns page routing. A direct visit to /dashboard receives index.html.
+	# Revalidate the page and public files after each release.
+	handle {
+		header Cache-Control no-store
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,0 +1,7 @@
+# Non-secret EC2 configuration. Both profiles use the attached instance role.
+# Names select application usage; both profiles have the same IAM permissions.
+[profile trinity-reader]
+region = us-east-1
+
+[profile trinity-writer]
+region = us-east-1

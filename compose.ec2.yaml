@@ -1,0 +1,59 @@
+# Reviewed together with deploy/ec2/.env.example; apply LAST.
+# This draft replaces laptop credentials with a non-secret IAM profile file.
+x-ec2-aws: &ec2-aws
+  AWS_CONFIG_FILE: /run/trinity-aws/config
+  AWS_SHARED_CREDENTIALS_FILE: /dev/null
+services:
+  redis:
+    # Retain queue writes across normal restarts. AOF syncs once per second;
+    # it does not replace backups or prove recovery after abrupt host loss.
+    command: ["redis-server", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--appendfsync", "everysec"]
+  # Worker restart policies remain disabled for operator-controlled recovery.
+  api:
+    environment:
+      <<: *ec2-aws
+      # Clear the local login-cache setting; IAM profiles do not use AWS login.
+      AWS_LOGIN_CACHE_DIRECTORY: ""
+      TRINITY_PREVIEW_CURSOR_KEYS_JSON: ${TRINITY_PREVIEW_CURSOR_KEYS_JSON:?Set preview cursor signing keys}
+      TRINITY_PREVIEW_CURSOR_ACTIVE_KEY_ID: ${TRINITY_PREVIEW_CURSOR_ACTIVE_KEY_ID:?Set the preview active key ID}
+      TRINITY_REFRESH_CURSOR_KEYS_JSON: ${TRINITY_REFRESH_CURSOR_KEYS_JSON:?Set refresh cursor signing keys}
+      TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID: ${TRINITY_REFRESH_CURSOR_ACTIVE_KEY_ID:?Set the refresh active key ID}
+    volumes: !override
+      - query_stage:/var/lib/trinity/queries
+      - ${TRINITY_DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+      - type: bind
+        source: ${TRINITY_QUERY_AWS_DIRECTORY:?Set the EC2 AWS config directory}/config
+        target: /run/trinity-aws/config
+        read_only: true
+        bind:
+          create_host_path: false
+  refresh:
+    environment: *ec2-aws
+    volumes: !override
+      - refresh_root:/var/lib/trinity/refresh
+      - type: bind
+        source: ${TRINITY_QUERY_AWS_DIRECTORY:?Set the EC2 AWS config directory}/config
+        target: /run/trinity-aws/config
+        read_only: true
+        bind:
+          create_host_path: false
+  recovery:
+    environment: *ec2-aws
+    volumes: !override
+      - refresh_root:/var/lib/trinity/refresh
+      - type: bind
+        source: ${TRINITY_QUERY_AWS_DIRECTORY:?Set the EC2 AWS config directory}/config
+        target: /run/trinity-aws/config
+        read_only: true
+        bind:
+          create_host_path: false
+  publication:
+    environment: *ec2-aws
+    volumes: !override
+      - refresh_root:/var/lib/trinity/refresh
+      - type: bind
+        source: ${TRINITY_QUERY_AWS_DIRECTORY:?Set the EC2 AWS config directory}/config
+        target: /run/trinity-aws/config
+        read_only: true
+        bind:
+          create_host_path: false
