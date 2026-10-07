@@ -59,6 +59,14 @@ Pin one published version for the complete analytical request. Clients cannot ch
 
 S3 stays private. Separate reading, candidate creation and publication permissions. Publication is a PostgreSQL state transition, not a permission to rewrite objects. Every refresh creates a new version. Exact S3 policies, local S3 configuration/provider and trusted credential delivery remain to be implemented; no AWS hosting choice is implied.
 
+**Approved EC2 credential delivery — October 6, 2026:** A28 accepts one attached
+instance role for the trusted supervisor and storage workers on this host.
+Both named SDK profiles have the same candidate-prefix GetObject/PutObject IAM
+permissions. The downloader's read-only responsibility above is enforced by
+application behavior, not a separate IAM role in this deployment. Query
+executors still have no network, credentials or Docker access. This bounded
+tradeoff does not establish bucket-retention or full application acceptance.
+
 ## Query containers and supervision
 
 Use a separate container for each analytical query, including preview/dashboard calculations that execute analytical reads. Keep the runtime in the same backend codebase. A trusted supervisor outside the query container owns downloads, launch, deadlines, stop confirmation and cleanup.
@@ -200,7 +208,7 @@ before/after measurements must distinguish this from full-request latency.
 
 Viewer catalogs, data, diagnostics and errors contain national information only. Public errors expose no hidden schemas, storage paths, credentials or internal traces. Logs record actor, action, outcome and request/run ID; exclude tokens, raw SQL and raw source payloads. Use `Cache-Control: no-store` for authenticated responses. Any future result cache needs separate permission and invalidation rules.
 
-Prepare local execution with **Docker Compose first**. No Compose file or runnable command is supplied by this documentation change. AWS and public hosting remain undecided. The local challenge PDF was inspected: page 7 requires a locally running solution and source runnable from README; page 8 requests a repository link. No public application URL requirement was found in the supplied brief. This does not establish whether a separate submission message adds requirements.
+Prepare local execution with **Docker Compose first**. No Compose file or runnable command is supplied by this documentation change. A28 later selects [EC2 with a Caddy frontend/API ingress](../DECISIONS.md#a28--ec2-web-deployment); it supersedes the earlier undecided-hosting status without changing the security rules. The local challenge PDF was inspected: page 7 requires a locally running solution and source runnable from README; page 8 requests a repository link. No public application URL requirement was found in the supplied brief. This does not establish whether a separate submission message adds requirements.
 
 Use HTTPS outside local development and only configured frontend origins. Enforce backend authorization regardless of origin. Keep secrets in environment/deployment configuration and commit placeholders only in `.env.example`. PostgreSQL, Redis and query containers have no public access. Apply the same role/data rules locally. Preserve A17's locked dependency versions and perform compatibility and known-security-issue checks before delivery; this contract does not reselect versions.
 
