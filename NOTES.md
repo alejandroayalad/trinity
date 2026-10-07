@@ -1,5 +1,15 @@
 # Engineering Notes — Trinity
 
+## Local command shortcuts — October 7, 2026
+
+[ME] Alayala requested commands to run locally. [YOU] Codex added a root
+Makefile around the existing Compose and npm commands, then updated the README
+setup and restart instructions. Builds, migrations and persona seeding remain
+explicit actions. Full startup includes the scheduler; stop targets preserve
+named volumes. Help, dry runs, README target references, shell syntax and the
+diff were checked. No application startup or fresh-install result is claimed.
+See the [verification record](ai/sessions/2026-10-07-local-command-shortcuts.md).
+
 ## Data contract readability revision - October 6, 2026
 
 [ME] Alayala asked to make `docs/schema.md` better. [YOU] OpenCode restructured it

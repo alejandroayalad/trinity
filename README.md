@@ -10,6 +10,8 @@ Trinity turns the U.S. Energy Information Administration's daily nuclear outage 
 
 Built for the **Arkham Outage Explorer** engineering challenge.
 
+**View the deployed application:** [trinity-five-xi.vercel.app](https://trinity-five-xi.vercel.app/).
+
 [Run locally](#run-locally) · [Architecture](#architecture) · [Data and findings](#data-and-findings) · [SQL](#try-a-query) · [Verification](#verification) · [Documentation](#documentation)
 
 ## What you can do
@@ -57,6 +59,11 @@ The local application uses Docker Compose for the backend and Vite for the front
 
 Dependency locks are committed in `backend/uv.lock` and `frontend/package-lock.json`.
 
+The commands below use Make (`make --version`) from the repository root. Run
+`make help` to list them. The [Makefile](Makefile) wraps the existing Docker Compose
+and npm commands; it does not create credentials or change configuration.
+Run setup targets in order, not together with `make -j`.
+
 ### 1. Start the API and create the local accounts
 
 ```sh
@@ -69,9 +76,10 @@ From the repository root, enter a local PostgreSQL password. This prompt syntax 
 ```zsh
 read -rs 'TRINITY_POSTGRES_PASSWORD?Local PostgreSQL password: '
 export TRINITY_POSTGRES_PASSWORD
-docker compose up -d --build --wait
-docker compose run --rm api alembic upgrade head
-docker compose run --rm api python -m trinity.auth.seed
+make local-build
+make local-up
+make local-migrate
+make local-seed
 ```
 
 The seed command asks privately for `viewer`, `analyst`, and `admin` passwords of 15–1024 characters. Rerunning it preserves existing accounts and passwords. Reuse the original database password when restarting an existing installation.
@@ -79,7 +87,7 @@ The seed command asks privately for `viewer`, `analyst`, and `admin` passwords o
 Check liveness and open the implemented API documentation:
 
 ```sh
-curl --fail --silent --show-error http://127.0.0.1:8000/health
+make local-health
 ```
 
 Expected: `{"status":"ok"}`. API docs: <http://127.0.0.1:8000/docs>. Health reports process liveness, not database or data readiness. The API listens on `127.0.0.1:8000`; PostgreSQL is on `127.0.0.1:15432`.
@@ -89,9 +97,8 @@ Expected: `{"status":"ok"}`. API docs: <http://127.0.0.1:8000/docs>. Health repo
 In a second terminal, from the repository root:
 
 ```sh
-cd frontend
-npm ci
-npm run dev
+make local-install
+make local-web
 ```
 
 Open <http://127.0.0.1:5173> and use one of your provisioned accounts. Vite proxies `/api` to the local backend. No EIA key or AWS credential belongs in frontend configuration.
@@ -105,7 +112,7 @@ The base Compose file does not enable analytical execution. The complete local s
 Build the query image from this checkout and use its immutable image ID:
 
 ```sh
-docker build -f backend/Dockerfile.query -t trinity-query:local backend
+make query-build
 export TRINITY_QUERY_IMAGE="$(docker image inspect trinity-query:local --format '{{.Id}}')"
 ```
 
@@ -136,12 +143,16 @@ The Python application reads process environment variables; it does not automati
 With the configuration complete, run from the repository root in the configured terminal:
 
 ```sh
-docker compose -f compose.yaml -f compose.sql.yaml --profile workers config --quiet
-docker compose -f compose.yaml -f compose.sql.yaml build api
-docker compose -f compose.yaml -f compose.sql.yaml --profile workers up -d --wait
+make full-check
+make local-build
+make full-up
 ```
 
 The migration and account-seeding steps above must already be complete. Use one worker host and one publication consumer. The query image must match the API's runtime protocol.
+
+`make full-up` starts the scheduler too. If the saved schedule is enabled, it can
+start a live EIA/S3 refresh when due. Keep it disabled until you are ready. These
+targets start the backend; run `make local-web` in the second terminal for the UI.
 
 Sign in as `admin`, finish shared setup if needed, then open **Refresh → Start refresh**. A refresh retrieves EIA data and writes to your configured S3 storage. Follow the run to publication; review warnings require Admin approval, while required validation failures block publication. Once published, sign in as Viewer or Analyst to explore it.
 
@@ -150,10 +161,23 @@ Sign in as `admin`, finish shared setup if needed, then open **Refresh → Start
 To stop the complete stack while retaining its named volumes:
 
 ```sh
-docker compose -f compose.yaml -f compose.sql.yaml --profile workers down
+make full-stop
 ```
 
-For the base setup alone, use `docker compose down`. Do not add `-v` if you want to retain local state and evidence. See [troubleshooting](#troubleshooting) for first-run failures.
+For the base setup alone, use `make local-stop`. Both stop commands preserve named
+volumes. Stop Vite with Ctrl+C in its terminal. Do not add `-v` to Compose commands
+if you want to retain local state and evidence.
+
+### Daily restart
+
+In your configured terminal, run `make local-up` for the base setup, or
+`make full-up` for an installation configured for real data. Use the same mode
+when restarting and stopping; `local-up` applies only the base configuration.
+In a second terminal run `make local-web`, then open <http://127.0.0.1:5173>.
+Dependencies, migrations and seeding are first-setup steps; repeat them only when
+needed after source changes. Use `make local-status` or `make full-status` to inspect
+services, and `make local-health` for API liveness. See [troubleshooting](#troubleshooting)
+for first-run failures.
 
 ## Architecture
 
