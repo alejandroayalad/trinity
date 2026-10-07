@@ -1010,3 +1010,14 @@ completed deployment session.
 bundle-content checks passed. [ME] Authorized Git delivery including the schema
 documentation. Vercel deployment remains pending; EC2 is the deployed application.
 See the [preparation record](ai/sessions/2026-10-07-vercel-frontend-preparation.md).
+
+
+## Query execution readability — October 7, 2026
+
+[ME] Alayala requested clearer statements and lifecycle explanations in
+`QueryExecution.execute`. [YOU] Codex expanded the method and documented its
+execution, validation and cleanup stages. Response construction stays inline.
+The executable syntax tree is unchanged; 16 focused lifecycle tests passed.
+Real Docker/PostgreSQL acceptance was not rerun. [ME] Authorized commit and push
+of this bounded change.
+See the [readability record](ai/sessions/2026-10-07-query-execution-readability.md).

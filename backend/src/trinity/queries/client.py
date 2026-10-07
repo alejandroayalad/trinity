@@ -64,70 +64,144 @@ class QueryExecution:
         with self.database.transaction(QueryDeadline(10),error_code='dependency_unavailable') as connection:
             if not repository.release_removed(connection,reservation,outcome):raise Problem(503,'dependency_unavailable')
 
-    def execute(self,prepared):
-        """Emit no success until output, termination and owned cleanup are proven."""
-        reservation=prepared.reservation
-        attached=None
-        outcome='dependency_unavailable'
+    def execute(self, prepared):
+        """Run a prepared operation and return its response after owned cleanup.
+
+        The service supplies an authorized operation, a pinned publication,
+        a capacity reservation and a deadline. Stage the published files, run
+        the isolated container, and check that its output matches this request.
+        Build a SQL, preview or choice response within the size and time limits.
+
+        Always attempt cleanup and close the transports before returning.
+        Cleanup retains capacity when it cannot prove that release is safe.
+        Query failures keep their public error codes. Unexpected execution
+        errors become dependency_unavailable. Cleanup errors prevent success.
+        Authorization and capacity admission belong to the calling service.
+        """
+        reservation = prepared.reservation
+        attached = None
+        outcome = 'dependency_unavailable'
         try:
-            reservation=self.change(reservation,('reserved',),'staging')
+            # Record ownership before reading evidence or staging files. Preview
+            # needs verified diagnostics from the same pinned publication.
+            reservation = self.change(reservation, ('reserved',), 'staging')
             diagnostics = None
             if isinstance(prepared.query, PreviewOperation):
-                # Services authorize, pin and reserve before execution. Reuse
-                # only verified evidence; staging and container work stay owned
-                # by this reservation, including while a shared fill is pending.
+                # Reuse only verified evidence. This reservation still owns its
+                # staging and container work while a shared cache fill is pending.
                 if self.evidence_cache is None:
-                    diagnostics = read_preview_diagnostics(prepared.pinned, prepared.query.dataset,
-                                                           self.reader, prepared.deadline)
+                    diagnostics = read_preview_diagnostics(
+                        prepared.pinned,
+                        prepared.query.dataset,
+                        self.reader,
+                        prepared.deadline,
+                    )
                 else:
-                    diagnostics = self.evidence_cache.read(prepared.pinned, prepared.query.dataset,
-                                                          self.reader, prepared.deadline,
-                                                          namespace=self.evidence_namespace)
-            stage_query(self.root,reservation['request_id'],prepared.pinned,prepared.query,self.reader,prepared.deadline)
-            reservation=self.change(reservation,('staging',),'creating')
-            identifier=self.docker.create(reservation)
-            reservation=self.change(reservation,('creating',),'created',container_id=identifier)
-            info=self.docker.inspect(identifier)
-            self.docker.verify(info,reservation)
-            attached,stream=self.docker.attach(identifier,prepared.deadline)
-            reservation=self.change(reservation,('created',),'starting')
+                    diagnostics = self.evidence_cache.read(
+                        prepared.pinned,
+                        prepared.query.dataset,
+                        self.reader,
+                        prepared.deadline,
+                        namespace=self.evidence_namespace,
+                    )
+            stage_query(
+                self.root,
+                reservation['request_id'],
+                prepared.pinned,
+                prepared.query,
+                self.reader,
+                prepared.deadline,
+            )
+
+            # Save create intent before calling Docker. If the reply is lost,
+            # cleanup must resolve the container before releasing capacity.
+            reservation = self.change(reservation, ('staging',), 'creating')
+            identifier = self.docker.create(reservation)
+            reservation = self.change(
+                reservation, ('creating',), 'created', container_id=identifier,
+            )
+            info = self.docker.inspect(identifier)
+            self.docker.verify(info, reservation)
+
+            # Attach before starting so output is available from the first byte.
+            # Save start intent before Docker can begin running the query.
+            attached, stream = self.docker.attach(identifier, prepared.deadline)
+            reservation = self.change(reservation, ('created',), 'starting')
             self.docker.start(identifier)
-            reservation=self.change(reservation,('starting',),'running')
-            raw=read_frames(stream)
+            reservation = self.change(reservation, ('starting',), 'running')
+            raw = read_frames(stream)
+
+            # A complete output stream does not prove the container has stopped.
+            # Check termination within the original analytical deadline.
             while True:
                 prepared.deadline.remaining()
-                info=self.docker.inspect(identifier)
-                if info is None:raise Problem(503,'dependency_unavailable')
-                if not info['State']['Running']:break
+                info = self.docker.inspect(identifier)
+                if info is None:
+                    raise Problem(503, 'dependency_unavailable')
+                if not info['State']['Running']:
+                    break
                 time.sleep(0.02)
-            if info['State'].get('OOMKilled'):raise Problem(503,'query_resource_limit')
-            body=read_json(raw)
-            if info['State']['ExitCode']!=0:
-                code=body.get('error')
-                if set(body)=={'error'} and code in ('query_failed','query_resource_limit'):
-                    raise Problem(422 if code=='query_failed' else 503,code)
-                raise Problem(503,'dependency_unavailable')
-            result = read_result_binding(body, reservation['request_id'],
-                                         prepared.pinned.publication.version_id, prepared.query)
+            if info['State'].get('OOMKilled'):
+                raise Problem(503, 'query_resource_limit')
+
+            # Accept only the runtime's two known error messages on a failed exit.
+            # Malformed or unexpected output must not become a public query error.
+            body = read_json(raw)
+            if info['State']['ExitCode'] != 0:
+                code = body.get('error')
+                if set(body) == {'error'} and code in ('query_failed', 'query_resource_limit'):
+                    raise Problem(422 if code == 'query_failed' else 503, code)
+                raise Problem(503, 'dependency_unavailable')
+
+            # Bind successful output to this request, publication and operation
+            # before building a response or signing a pagination cursor.
+            result = read_result_binding(
+                body,
+                reservation['request_id'],
+                prepared.pinned.publication.version_id,
+                prepared.query,
+            )
             if isinstance(prepared.query, PreviewOperation):
-                response = build_preview_batch_response(prepared.query, prepared.pinned.publication,
-                                                        result, diagnostics=diagnostics, codec=prepared.codec)
+                response = build_preview_batch_response(
+                    prepared.query,
+                    prepared.pinned.publication,
+                    result,
+                    diagnostics=diagnostics,
+                    codec=prepared.codec,
+                )
             elif isinstance(prepared.query, ChoiceOperation):
-                response = build_choice_response(prepared.query, prepared.pinned.publication,
-                                                 result, codec=prepared.codec)
+                response = build_choice_response(
+                    prepared.query,
+                    prepared.pinned.publication,
+                    result,
+                    codec=prepared.codec,
+                )
             else:
-                data = {**result, 'publication': prepared.pinned.publication,
-                        'execution_ms': int((time.monotonic() - prepared.started) * 1000)}
+                data = {
+                    **result,
+                    'publication': prepared.pinned.publication,
+                    'execution_ms': int((time.monotonic() - prepared.started) * 1000),
+                }
                 response = QueryResponse.model_validate(data)
-            if len(response.model_dump_json().encode())>5*1024*1024:raise Problem(503,'query_resource_limit')
+
+            # Measure the full serialized response, including metadata and cursors.
+            # Exactly 5 MiB is allowed; one byte more fails the response limit.
+            if len(response.model_dump_json().encode()) > 5 * 1024 * 1024:
+                raise Problem(503, 'query_resource_limit')
             prepared.deadline.remaining()
-            outcome='succeeded'
+            outcome = 'succeeded'
         except Problem as error:
-            if error.code in ('query_failed','query_timeout','query_resource_limit'):outcome=error.code
+            # Cleanup records known query failures. Other failures retain the
+            # default dependency outcome without changing the raised Problem.
+            if error.code in ('query_failed', 'query_timeout', 'query_resource_limit'):
+                outcome = error.code
             raise
         except Exception:
-            raise Problem(503,'dependency_unavailable') from None
+            raise Problem(503, 'dependency_unavailable') from None
         finally:
+            # Each nested finally runs even if the preceding close or cleanup
+            # fails. Keep the return below this block so failed cleanup cannot
+            # send a successful response. Cleanup owns safe capacity release.
             try:
                 if attached is not None:
                     attached.close()
