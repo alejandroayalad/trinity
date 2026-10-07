@@ -1,5 +1,17 @@
 # Engineering Notes — Trinity
 
+## Data contract readability revision - October 6, 2026
+
+[ME] Alayala asked to make `docs/schema.md` better. [YOU] OpenCode restructured it
+for reading: a precedence table for amendments, a contents line, a terms table,
+a data-flow diagram, a run-state diagram, grouped model tables, and the A23/0007
+addenda moved from after "Sources" into Section 6. Scripts confirmed that every
+original rule line remains apart from seven reviewed original lines, and that all six
+inbound anchors and 38 internal links resolve. Two stale statements were corrected
+against evidence: the registration budget is 150 seconds under the A23 amendment and
+`REGISTRATION_SECONDS`, and the two-year source exports are bundled in the repository.
+Diagram rendering was not checked. See the [session](ai/sessions/2026-10-06-schema-contract-readability.md).
+
 ## UI fidelity to the Figma handoff - October 6, 2026
 
 [ME] Alayala reported that the frontend did not match his Figma mockups. He asked for

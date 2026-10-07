@@ -1,6 +1,37 @@
 # Trinity data contract v1
 
-Status: finalized specification, October 2, 2026 (America/Merida). Prepared by AI at alayala's request to finalize the data contract. These are implementation requirements, not implemented behavior or new runtime findings. [A9](../DECISIONS.md#a9--data-contract-v1-finalized) records the choice, alternatives, and limits. A20 supersedes A8 for challenge authentication and adds local identity records below. Other A1–A8 choices remain in force except where the approved [A16 workflow](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) supersedes selectable publication policy and recovery behavior. October 3 amendment: analytical fields/checks remain v1; application control fields and lifecycle below implement the approved warning-based flow. The original decisions/history remain recorded. [A19 security contract](security-contract.md) reaffirms SHA-256 identity and adds query admission/container rules; it does not change analytical fields or required data checks.
+This contract defines Trinity's outage data and the application state around it: which rows exist, how they are identified and measured, which checks make a version ready, and how a validated version becomes the one that users query.
+
+> **Status:** canonical specification. AI prepared it at alayala's request, and [A9](../DECISIONS.md#a9--data-contract-v1-finalized) finalized it on October 2, 2026 (America/Merida). A9 records the choice, alternatives and limits. This document states requirements. It is not runtime evidence; implementation results are in the linked sessions.
+
+**Amendments and precedence.** The original decisions and their history remain in [DECISIONS.md](../DECISIONS.md).
+
+| Decision | Effect on this contract |
+|---|---|
+| A9 | Analytical fields, keys, metric rules and the `trinity-data-v1` checks. These remain v1. Other A1–A8 choices remain in force except where A16 or A20 replace them. |
+| [A16](../DECISIONS.md#a16--approved-api-flow-and-detailed-contract) | October 3 amendment. Replaces the selectable publication policy and the original recovery behavior with the fixed warning-based workflow in Sections 6 and 7. Analytical fields and checks are unchanged. |
+| [A19](security-contract.md) | Reaffirms SHA-256 identity and adds query admission and container rules. It does not change analytical fields or required data checks. |
+| [A20](../DECISIONS.md#a20--seeded-local-authentication-for-the-challenge-closed) | Supersedes A8 for challenge authentication and adds local identity records. |
+| [A22](../DECISIONS.md#a22--refresh-evidence-writer-and-preview-compatibility), [A23](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution), [A27](../DECISIONS.md#a27---compressed-refresh-evidence) | Add physical evidence, worker and storage fields. See [Physical implementation amendments](#physical-implementation-amendments). |
+| [A24](../DECISIONS.md#a24--build-publication-first-delivery) | Narrows Publication's first delivery to one worker host with operator crash reconciliation. See Section 7. |
+
+**Contents:** [1. Boundary](#1-boundary-and-data-flow) · [2. Datasets and keys](#2-analytical-datasets-and-keys) · [3. Metric](#3-metric-and-missing-observations) · [4. Window and extraction](#4-window-revisions-and-extraction-evidence) · [5. Validation](#5-validation-and-readiness) · [6. Application model](#6-postgresql-application-model) · [7. Lifecycle](#7-lifecycle-and-publication-consistency) · [8. Verification](#8-verification-required-during-implementation) · [Sources](#sources-and-evidence-limits)
+
+### Terms used in this contract
+
+| Term | Meaning here |
+|---|---|
+| Version, candidate | One `data_versions` row and its frozen files. It is a candidate until a publication event selects it. |
+| Manifest | The frozen list of a version's files with their paths, checksums, schema fingerprints, row counts and date bounds. Its digest is `manifest_sha256`. |
+| Check set | `trinity-data-v1`: the 16 required result rows from V01–V08 in Section 5. |
+| Validation attempt | One complete run of the required checks and diagnostics for one manifest. Only one complete passing attempt proves readiness. |
+| Review warning | A diagnostic with `warning` severity in the `warnings-v1` registry (D01–D06). A nonempty frozen warning set requires Admin approval. |
+| Publication event, active pointer | A `publication_events` row records one publication. The `active_publication` singleton points to the current event. |
+| Admission slot | `refresh_control.holder_run_id`. It allows one refresh lifecycle at a time. |
+| Execution fence | `refresh_runs.execution_fence`. A worker with an older fence cannot commit outcomes. |
+| Publication / dispatch generation | `publication_generation` increases on an explicit same-candidate publication retry. `dispatch_generation` changes on queue repair. They are different counters. |
+| Disposition | `active`, `discarded` or `superseded`. It is separate from the validation status of a version. |
+| `not_reported` | No observation exists for that entity and date. It never means zero outage. |
 
 ## 1. Boundary and data flow
 
@@ -8,7 +39,20 @@ Input: the three EIA API v2 nuclear-outage routes. Output: one validated, immuta
 
 Flow: record refresh and outbox request together → fetch a fixed window → parse and prepare files → validate the exact manifest → publish automatically without review warnings or wait for Admin approval of frozen warnings. A manifest lists the exact files and their checksums. Required failure at any stage keeps the candidate unpublished and leaves the previous publication available. Before the first publication, analytical data is unavailable.
 
-This document closes the logical data model and publication invariants. It does not select a language, web framework, SQL parser, allowed SQL grammar, queue tuning, or migration library. The original challenge PDF and source exports are absent from this repository; scope follows the current project documents.
+```mermaid
+flowchart LR
+    R["Refresh run + outbox<br/>one PostgreSQL transaction"] --> X["Fetch fixed window<br/>national, facility, generator"]
+    X --> P["Parse exactly and<br/>write Parquet"]
+    P --> M["Freeze manifest"]
+    M --> V{"Required checks and<br/>diagnostics complete?"}
+    V -->|"required failure or incomplete"| F["Candidate unpublished<br/>previous publication stays"]
+    V -->|"pass, no review warnings"| A["Publish automatically"]
+    V -->|"pass, review warnings"| W["Wait for bound<br/>Admin approval"]
+    W --> A
+    A --> Q["Active pointer changes atomically<br/>queries read published Parquet"]
+```
+
+This document closes the logical data model and publication invariants. It does not select a language, web framework, SQL parser, allowed SQL grammar, queue tuning, or migration library; those choices are recorded separately in A10–A13 and A17–A19. The original challenge PDF is not in this repository. The reviewed two-year source exports used by the findings are bundled in [evidence/findings/inputs/](../evidence/findings/inputs/). Scope follows the current project documents.
 
 ## 2. Analytical datasets and keys
 
@@ -151,89 +195,56 @@ A20 adds local account/session records and replaces external actor identity with
 
 Notation: fields are required unless suffixed `?`. Every `id` is its table's primary key. IDs are UUID except singleton `id = 1`, positive monotonic `run_seq`, and stable local text actor IDs under A20. Event times are `timestamptz`; observation bounds are `date`; counters/revisions are nonnegative `bigint`. Statuses and codes are constrained text. `details`, `policy_snapshot`, and sanitized payloads are JSONB. These are logical constraints; migrations must enforce row-local rules and transaction rules must enforce cross-row invariants.
 
+The model tables below are grouped by responsibility. The grouping does not change any field or constraint.
+
+### Identity and access models
+
 | Model | Fields | Keys and constraints |
 |---|---|---|
 | `local_users` | `id`, `username`, `password_hash`, `role`, `is_active`, `created_at` | Stable text actor ID; unique username. Role constrained to viewer/analyst/admin. Salted password hash only, with algorithm/parameters encoded for verification. Trusted seed/administrative changes only; no public credential or role writes. Preserve disabled accounts and actor history. |
 | `local_sessions` | `id`, `user_id`, `token_digest`, `created_at`, `expires_at`, `revoked_at?` | UUID PK; FK user_id to local_users. Unique digest of unpredictable bearer token, never its reusable plaintext. Require expiry after creation; expired/revoked sessions or inactive users deny access. Current role comes from local_users, not client claims or a session role snapshot. |
 | `auth_login_limits` | `scope`, `key_digest`, `window_start`, `attempts` | A21 internal login-only counters; composite PK `(scope,key_digest)`. Scope global/peer/username; SHA-256 key digest, nonnegative attempts and UTC window start. Atomic global-first reservations across processes; bounded expired-row cleanup. No token/password/raw peer value. Separate from analytical admission. |
+
+### Settings, refresh run and dispatch models
+
+| Model | Fields | Keys and constraints |
+|---|---|---|
 | `shared_settings` | `id`, `setup_completed_at?`, `schedule_enabled`, `daily_time?`, `schedule_timezone?`, `revision`, `updated_at`, `updated_by?` | Singleton id=1. Before setup: disabled, null time/timezone. After setup: HH:mm daily time, valid IANA timezone and actor. No configurable publication_mode. Revision is the compare-and-swap token. |
 | `refresh_runs` | `id`, `run_seq`, `revision`, `rerun_of_run_id?`, `publication_generation`, `trigger_kind`, `requested_by?`, `request_key`, `requested_at`, `started_at?`, `finished_at?`, `status`, `settings_revision`, `policy_snapshot`, `requested_start`, `requested_end?`, `window_frozen_at?`, `execution_fence`, `lease_until?`, `error_code?`, `error_summary?` | Unique `run_seq` and `request_key`; rerun_of_run_id references the prior failed run. trigger_kind is manual/scheduled/rerun. Revision changes on public state/progress; publication_generation starts at 0 and increases on explicit publication retry. publication_failed is nonterminal. Manual/rerun actor required; scheduled actor null. Freeze policy/start/end strategy at creation. End and window-freeze time are null only before successful window discovery; set both once before extraction. Then start ≤ end and the bounds cannot change. A changed request cannot reuse its request key. Terminal states require finish time; failed requires sanitized error. |
 | `refresh_steps` | `id`, `run_id`, `step_seq`, `stage`, `work_key`, `attempt`, `status`, `execution_fence`, `started_at?`, `finished_at?`, `heartbeat_at?`, `processed_count`, `total_count?`, `progress_unit`, `error_code?`, `error_summary?` | FK to run; immutable per-run step_seq allocated monotonically for attempt pagination; unique (run_id, step_seq); unique `(run_id, stage, work_key, attempt)`; attempt ≥1. Stages `extract/prepare/validate/publish`; work key distinguishes route/partition work. States `pending/running/succeeded/failed/abandoned`. Finished states require finish time. Progress unit rows/files/checks/tasks; total_count is null until measured, never trusted from the known bad facility advertised total. A stale execution fence cannot commit outcomes. |
 | `job_outbox` | `id`, `run_id`, `job_kind`, `deduplication_key`, `payload`, `status`, `available_at`, `dispatch_attempts`, `dispatch_generation`, `lease_token?`, `lease_until?`, `delivered_at?`, `last_error?` | FK to run; unique deduplication key and `(run_id, job_kind)`. Kinds `refresh_pipeline/publish_version`. Payload includes a schema version and stable run/version IDs, never credentials. States `pending/dispatching/delivered`. Dispatching requires lease token and expiry. Delivered requires acknowledgment time; it does not mean pipeline success. |
+
+### Candidate, file and validation models
+
+| Model | Fields | Keys and constraints |
+|---|---|---|
 | `data_versions` | `id`, `run_id`, `revision`, `status`, `disposition`, `discarded_at?`, `discarded_by?`, `approval_required?`, `review_warning_count?`, `review_warning_digest?`, `diagnostics_frozen_at?`, `created_at`, `manifest_frozen_at?`, `manifest_sha256?`, `validated_at?`, `validation_step_id?`, `coverage_start`, `coverage_end`, `latest_observation_date`, `contract_version`, `validation_checkset` | Unique FK `run_id` (zero or one version per run). Validation states `preparing/validating/validated/rejected`; separate disposition active/discarded/superseded. Published versions cannot be discarded. Review fields remain null until diagnostic completion, then freeze with validated evidence; revision increments on review/publication/disposition changes. Validating requires frozen manifest. Validated requires one successful validation step for this version, manifest, and check set. Coverage equals fixed run bounds. |
 | `dataset_artifacts` | `id`, `version_id`, `dataset_key`, `storage_path`, `sha256`, `byte_size`, `row_count`, `min_period`, `max_period`, `schema_fingerprint` | FK to version; unique `(version_id, storage_path)`. Relative normalized path under the version root; no traversal, URL, or arbitrary user path. Dataset key constrained to the three values. Counts positive for data files. Date bounds within version. Many files per dataset are allowed. |
 | `validation_results` | `id`, `version_id`, `step_id`, `manifest_sha256`, `checkset_version`, `check_code`, `check_revision`, `dataset_key`, `required`, `severity`, `status`, `checked_count`, `failed_count`, `details`, `checked_at` | FKs to version and validation step; unique `(version_id, step_id, check_code, dataset_key)`. Dataset scope `national/facility/generator/all`, never null. Severity required/info/warning; required=true implies severity=required. Diagnostic registry fixes severity; diagnostic fail means condition observed, while error means incomplete evaluation. Status `pass/fail/error`; pass has zero failed count. Step's run must own version. Exact expected rows are defined below. |
+
+### Approval and publication models
+
+| Model | Fields | Keys and constraints |
+|---|---|---|
 | `approvals` | `id`, `version_id`, `approved_by`, `approved_at`, `manifest_sha256`, `validation_step_id`, `review_warning_digest` | Unique FK `version_id`. Only an authorized Admin can approve a validated, immutable, eligible candidate. The version's immutable manifest binds the approval. No approval bypass or comment feature. Discard is a separate permanent candidate disposition under A16; approvals retain their original binding/history. |
 | `publication_events` | `id`, `version_id`, `previous_publication_event_id?`, `approval_id?`, `published_at`, `publication_mode`, `actor_id?`, `idempotency_key` | Unique FK `version_id` and unique idempotency key. Previous-event self-FK is null only for first publication. publication_mode is derived from frozen warnings, not settings. Approval mode requires matching approval/version and its Admin actor; automatic mode has null approval and actor. |
 | `active_publication` | `id`, `publication_event_id?`, `revision` | Singleton `id=1`, created empty at bootstrap. Nullable FK to event; null until first publication. Insert event, update pointer, and succeed run in one transaction. |
+
+### Admission, failure and command models
+
+| Model | Fields | Keys and constraints |
+|---|---|---|
 | `refresh_control` | `id`, `holder_run_id?`, `revision` | Singleton id=1; FK holder to refresh_runs. Serializes admission/commands/final publication. Retained through review, publication_failed and unresolved terminal failure; cleared or atomically transferred only by legal completion/recovery. |
 | `failure_warnings` | `id`, `run_id`, `version_id?`, `stage`, `code`, `message`, `created_at`, `resolved_at?`, `resolution?`, `resolved_by?` | FKs to run/candidate. At most one unresolved warning globally via a partial unique constraint. Resolved rows immutable; Unresolved rows have null resolution/time/actor; resolved Admin actions require all three. Resolution rerun/delete_warning/publication_retry/discard/superseded. Internal supersession uses resolution=superseded with resolved_at and a null actor, never a fabricated Admin identity. |
 | `api_commands` | `id`, `idempotency_key`, `actor_id`, `action`, `target_id?`, `request_fingerprint`, `accepted_at`, `run_id`, `version_id?`, `result`, `status_url` | Globally unique UUID idempotency_key. Bind actor/action/target/canonical body; conflicting reuse is rejected. No credentials/raw SQL. Accepted effect and receipt commit together. References identify original accepted work; replay uses same operation ID. Retain for v1. |
+
+### Required result rows, policy snapshot and actors
 
 Expected required result rows: V01/V02/V03/V08 each once for each of `national`, `facility`, `generator`; V04/V05/V06/V07 each once with scope `all`. There are **16 required result rows** per completed validation attempt. V08's three rows together verify the complete manifest and dataset-key set. Diagnostic results use the registered `Dxx` codes and frozen severity with `required=false`; they cannot substitute for these rows. Persist a failed/error result when a check cannot run; a failed attempt cannot establish readiness.
 
 The immutable policy snapshot contains `settings_revision`, `workflow_policy=warnings-v1`, `diagnostic_registry=warnings-v1`, `contract_version`, `validation_checkset`, `requested_start`, `end_strategy`, and `explicit_end` only for the fixed strategy. It agrees with the corresponding run/version columns. approval_required is derived only after diagnostic completion, not selected in the policy snapshot. Resolved bounds live on the run and are frozen separately by the worker; no candidate version can be created before that freeze. Changing the deployed contract cannot reinterpret an existing candidate; a worker must execute its recorded contract version or fail it as unsupported. A pass on a later check set cannot authorize an older candidate implicitly. Candidate bounds are expectations during preparation and must match measured artifact bounds at validation. A validated version requires non-null `validated_at`, manifest digest, and successful validation-step ID.
 
 A20 replaces external Clerk actor references with stable local text user IDs. Human actor fields reference `local_users.id`; nullable automatic/scheduled actors remain null under the existing rules. Disable users instead of deleting their action history; no cascade may remove audit evidence. API actor fields remain output-only, and clients cannot set `requested_by`, `approved_by` or a role. Local auth records are application state, never available to user SQL. The [security contract](security-contract.md#authentication-and-trusted-roles) defines session/current-role checks. A future Clerk integration must map identities without rewriting historical actors.
-
-### Refresh writer and Preview evidence binding
-
-Implementation amendment under [A22](../DECISIONS.md#a22--refresh-evidence-writer-and-preview-compatibility).
-The physical chain extends `0004_preview_evidence` with `0005_refresh_evidence`
-and `0006_refresh_dispatch`; it does not fork from `0002_app_entry`.
-
-| Record | Added or reused physical fields | Binding |
-|---|---|---|
-| `data_versions` | Existing Preview `evidence_bundle_sha256?`, `validation_attempt_id?`; new `preparation_receipt_sha256?`, `storage_verified_at?` | Map receipt `bundle_sha256` to the existing bundle column. Receipt-bearing validated candidates require both Preview fields and exact selected-step attempt identity. |
-| `refresh_steps` | `validation_attempt_id?`, `validation_sha256?`, `diagnostics_sha256?`, `deadline_at?` | Attempt UUID is unique and allowed only for validate steps; distinct from the database step ID and numeric attempt ordinal. Successful registration freezes summary hashes and selected step. |
-| `validation_results` | Canonical fields plus `details_path`, `details_sha256` | Details retain their original canonical-byte hash; JSONB rendering is not hash authority. Same-run validate-step ownership is checked. |
-| `refresh_runs` | `execution_deadline_at?`, `worker_owner_id?`, `worker_execution_ref?` | Reserved for the pending supervised worker. No secrets in execution references. Worker timing/ownership behavior is not implemented by adding columns. |
-
-The new migrations create `dataset_artifacts`, `validation_results`, `job_outbox`
-and `api_commands`. Existing rows receive no invented proof. A non-null preparation
-receipt enables stronger selected-step and immutable-evidence constraints on new
-registered candidates. Historical Preview records without that receipt retain their
-existing validation rules and values; this migration does not retroactively verify them.
-
-`CandidateRegistration.register` verifies the original saved/remote evidence before
-its SQL transaction, then checks current run/fence/slot and freezes the existing
-Preview fields. It stores 16 required and 23 diagnostic results. Automatic readiness
-queues publication; review readiness retains the slot without an approval. Preparation
-lease is released at either handoff. Registration never changes the active pointer.
-The broader lifecycle and remaining constraints below remain requirements, not proof
-that the full refresh/publisher path is implemented.
-
-### Compressed evidence storage
-
-[A27](../DECISIONS.md#a27---compressed-refresh-evidence) adds storage bundle format
-2; the analytical manifest and `trinity-data-v1` checks remain unchanged. Each
-member retains `storage_path`, `sha256` and `byte_size` for its original file.
-A compressed member adds exactly `encoding: "gzip-v1"`, `stored_sha256` and
-`stored_byte_size`. These extra fields identify the exact S3 bytes. The pinned
-bundle SHA-256 binds both identities. Format 1 accepts only the original three
-fields; format 2 accepts those fields or the complete gzip descriptor. Unknown
-formats, encodings, incomplete descriptors and surplus fields fail closed.
-
-Eligible members are `source-evidence.json` and JSON/JSONL under `evidence/`.
-New writers use gzip level 1 with `mtime=0`, only when smaller. Keys remain stable;
-encoding comes from the trusted descriptor, never a filename guess, S3 header or
-magic-byte detection. The local files remain original. `bundle.json`,
-`manifest.json`, `reservation.json` and Parquet remain unencoded so existing
-publication hashes and manifest reads can establish the initial trust boundary.
-
-Storage readback, registration, publication and diagnostic-summary reads verify
-the exact stored length/hash and the decoded length/hash. Both representations
-must fit the existing 64 MiB per-object limit; a reader's smaller limit also
-applies to decoded bytes. Decompression emits at most 1 MiB per chunk and checks
-deadlines/cancellation between chunks. Truncated gzip, bad checksums, trailing
-bytes, concatenated members and excess decoded output are rejected. No original
-detail is removed or replaced by its compressed representation in validation.
-
-Readers retain format 1 support for persisted publications and recoverable
-candidates. No migration or in-place recompression is required. Rollout must
-upgrade API, recovery and publication readers before a refresh/CLI writer emits
-format 2. Rolling back readers after creating format 2 is not supported; do not
-rewrite an immutable version to make an old binary accept it.
 
 ### Application relationships
 
@@ -279,6 +290,112 @@ A19's provisional analytical limits are 1,000 SQL output rows, 5 MiB encoded out
 
 Temporary external failures permit at most three total attempts, with one- and three-second waits inside the operation deadline. Preserve attempt accounting across automatic redelivery; do not reset an exhausted budget merely by reclaiming a worker. Invalid SQL, denied access and failed validation are not retried. Refresh-stage deadlines remain unresolved; an explicit Admin rerun is a new run under A16, not an automatic bypass of failed validation. See [security rules](security-contract.md) for authority, supervision and required tests.
 
+### Physical implementation amendments
+
+The following subsections record physical fields and storage formats added during implementation under A22, A23 and A27. They refine the logical models above. They do not change analytical fields or the `trinity-data-v1` checks.
+
+### Refresh writer and Preview evidence binding
+
+Implementation amendment under [A22](../DECISIONS.md#a22--refresh-evidence-writer-and-preview-compatibility).
+The physical chain extends `0004_preview_evidence` with `0005_refresh_evidence`
+and `0006_refresh_dispatch`; it does not fork from `0002_app_entry`.
+
+| Record | Added or reused physical fields | Binding |
+|---|---|---|
+| `data_versions` | Existing Preview `evidence_bundle_sha256?`, `validation_attempt_id?`; new `preparation_receipt_sha256?`, `storage_verified_at?` | Map receipt `bundle_sha256` to the existing bundle column. Receipt-bearing validated candidates require both Preview fields and exact selected-step attempt identity. |
+| `refresh_steps` | `validation_attempt_id?`, `validation_sha256?`, `diagnostics_sha256?`, `deadline_at?` | Attempt UUID is unique and allowed only for validate steps; distinct from the database step ID and numeric attempt ordinal. Successful registration freezes summary hashes and selected step. |
+| `validation_results` | Canonical fields plus `details_path`, `details_sha256` | Details retain their original canonical-byte hash; JSONB rendering is not hash authority. Same-run validate-step ownership is checked. |
+| `refresh_runs` | `execution_deadline_at?`, `worker_owner_id?`, `worker_execution_ref?` | Reserved for the pending supervised worker. No secrets in execution references. Worker timing/ownership behavior is not implemented by adding columns. |
+
+The new migrations create `dataset_artifacts`, `validation_results`, `job_outbox`
+and `api_commands`. Existing rows receive no invented proof. A non-null preparation
+receipt enables stronger selected-step and immutable-evidence constraints on new
+registered candidates. Historical Preview records without that receipt retain their
+existing validation rules and values; this migration does not retroactively verify them.
+
+`CandidateRegistration.register` verifies the original saved/remote evidence before
+its SQL transaction, then checks current run/fence/slot and freezes the existing
+Preview fields. It stores 16 required and 23 diagnostic results. Automatic readiness
+queues publication; review readiness retains the slot without an approval. Preparation
+lease is released at either handoff. Registration never changes the active pointer.
+The broader lifecycle and remaining constraints below remain requirements, not proof
+that the full refresh/publisher path is implemented.
+
+### Refresh execution — A23
+The task 3–4 implementation uses the worker ownership/deadline fields added by
+`0006_refresh_dispatch`. `execution_deadline_at` is set once at first claim;
+`refresh_steps.deadline_at` is set at stage start. Triggers reject later changes
+to those budgets and to a frozen end/window timestamp or started policy/start.
+Worker-created candidate coverage and latest discovery date must match the frozen
+run bounds. The registration reader also compares the saved national maximum.
+
+`worker_execution_ref` retains trusted host/owner, lock inode, child PID for
+observability, stage/step identity, operation count and last attempt, sanitized
+discovery evidence, validation attempt/step, original receipt hash and confirmed
+stop/completion flags. These fields are private worker custody, not public progress.
+The PID alone cannot authorize recovery: local exclusive lifetime-lock acquisition
+is required after supervisor/child shared locks have ended. Unknown ownership holds
+the slot. External operation details are fsynced in the local preparation journal
+before the database counter and child acknowledgment.
+
+Preparation stage mapping follows the integration contract: route extraction,
+`prepare/files`, `validate/candidate`, then `prepare/storage`. Unknown source totals
+remain null. Failure import preserves actual completed result rows and rejects the
+candidate; absent manifest/checks remain absent. A completed parent receipt retains
+custody for task 5 and does not independently grant readiness or publication.
+See [A23](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
+and the [measured session](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
+
+#### Registration budget persistence (0007)
+`refresh_runs.registration_deadline_at` is null until the first verification starts.
+It becomes the earlier of the original execution deadline and 150 seconds from
+that start. The October 5, 2026 [A23 amendment](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
+raised this budget from the original 30 seconds (`REGISTRATION_SECONDS` in
+`refresh/registration.py`). Once set it is immutable. `registration_attempts` starts at zero, cannot
+decrease and cannot exceed three. Each verification invocation consumes an attempt
+before remote I/O. Neither a recovered owner nor a new queue delivery resets it.
+Historical rows gain no invented verification timestamps or receipt evidence.
+
+After exclusive same-host lifetime-lock acquisition confirms termination, recovery
+increments the execution fence, replaces the owner and rebinds the same validation
+step to that fence. It preserves all original stage/execution/registration deadlines,
+validation attempt and receipt hash. Remote verification stays outside SQL; final
+registration rechecks authority and time, and writes evidence plus routing atomically.
+The active publication remains unchanged. See the
+[Task 5 verification record](../ai/sessions/2026-10-04-refresh-task5-receipt-routing.md).
+
+### Compressed evidence storage
+
+[A27](../DECISIONS.md#a27---compressed-refresh-evidence) adds storage bundle format
+2; the analytical manifest and `trinity-data-v1` checks remain unchanged. Each
+member retains `storage_path`, `sha256` and `byte_size` for its original file.
+A compressed member adds exactly `encoding: "gzip-v1"`, `stored_sha256` and
+`stored_byte_size`. These extra fields identify the exact S3 bytes. The pinned
+bundle SHA-256 binds both identities. Format 1 accepts only the original three
+fields; format 2 accepts those fields or the complete gzip descriptor. Unknown
+formats, encodings, incomplete descriptors and surplus fields fail closed.
+
+Eligible members are `source-evidence.json` and JSON/JSONL under `evidence/`.
+New writers use gzip level 1 with `mtime=0`, only when smaller. Keys remain stable;
+encoding comes from the trusted descriptor, never a filename guess, S3 header or
+magic-byte detection. The local files remain original. `bundle.json`,
+`manifest.json`, `reservation.json` and Parquet remain unencoded so existing
+publication hashes and manifest reads can establish the initial trust boundary.
+
+Storage readback, registration, publication and diagnostic-summary reads verify
+the exact stored length/hash and the decoded length/hash. Both representations
+must fit the existing 64 MiB per-object limit; a reader's smaller limit also
+applies to decoded bytes. Decompression emits at most 1 MiB per chunk and checks
+deadlines/cancellation between chunks. Truncated gzip, bad checksums, trailing
+bytes, concatenated members and excess decoded output are rejected. No original
+detail is removed or replaced by its compressed representation in validation.
+
+Readers retain format 1 support for persisted publications and recoverable
+candidates. No migration or in-place recompression is required. Rollout must
+upgrade API, recovery and publication readers before a refresh/CLI writer emits
+format 2. Rolling back readers after creating format 2 is not supported; do not
+rewrite an immutable version to make an old binary accept it.
+
 ## 7. Lifecycle and publication consistency
 
 A16 supersedes the original selectable `publication_mode` workflow. One shared admission row serializes the entire lifecycle, including required review and unresolved failure. A run owns that slot until success or an atomic recovery/abandonment releases or transfers it. Daily scheduling and manual requests use the same admission service. Queue worker concurrency is an additional operational limit, not the admission invariant.
@@ -296,6 +413,35 @@ A16 supersedes the original selectable `publication_mode` workflow. One shared a
 | `awaiting_approval/publication_failed` | `discarded` | Allowed candidate discard marks disposition permanently discarded, resolves warning, invalidates old fences and releases slot. |
 | `publication_failed` | `failed` | Run-again or warning deletion abandons this candidate and closes this run; run-again additionally creates a separate new run. |
 | `requested/running/awaiting_approval/publishing/publication_failed` | `superseded` | A newer publication already exists. Supersede disposition, invalidate stale work and resolve/release any slot only if it still belongs to this run. |
+
+The diagram shows the same run transitions as the table. The table remains the authority for each condition.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> requested
+    requested --> running: worker claims lease and new fence
+    running --> awaiting_approval: checks pass, review warnings frozen
+    running --> publishing: checks pass, no review warnings
+    awaiting_approval --> publishing: bound Admin approval
+    publishing --> succeeded: event, pointer and slot release commit together
+    publishing --> publication_failed: retries exhausted, permanent error, or operator reconciliation
+    publication_failed --> publishing: eligible same-candidate retry
+    requested --> failed: required failure or recovery budget exhausted
+    running --> failed: required failure or recovery budget exhausted
+    awaiting_approval --> discarded: candidate discard
+    publication_failed --> discarded: candidate discard
+    publication_failed --> failed: run-again or warning deletion
+    requested --> superseded: newer publication exists
+    running --> superseded: newer publication exists
+    awaiting_approval --> superseded: newer publication exists
+    publishing --> superseded: newer publication exists
+    publication_failed --> superseded: newer publication exists
+    succeeded --> [*]
+    failed --> [*]
+    discarded --> [*]
+    superseded --> [*]
+```
 
 `failed`, `succeeded`, `discarded`, and `superseded` are terminal. `publication_failed` is deliberately nonterminal so publication can be retried without reopening a terminal refresh. `finished_at` is null for that waiting state; failed steps and warnings have their own event times. Run-again always creates a new run and version. Warning deletion preserves a previously failed run's status and history. Cancellation of active execution, rollback of a publication, and republishing an already published version remain outside v1.
 
@@ -390,7 +536,7 @@ Schedule edits apply to newly accepted work and future occurrences; they cannot 
 
 ## 8. Verification required during implementation
 
-These are acceptance scenarios, not tests that have run:
+These are acceptance scenarios, not tests that have run. The table defines the required behavior; it does not report results. Measured implementation results are in the linked sessions and SDD task records:
 
 | Input or failure | Required result |
 |---|---|
@@ -425,48 +571,3 @@ The detailed SQL grammar, resource limits, table-reference detection, and authen
 - [Parquet logical types](https://parquet.apache.org/docs/file-format/types/logicaltypes/) and [Arrow Parquet mappings](https://arrow.apache.org/docs/cpp/parquet.html): decimal, date, and string representation. The chosen precision and validation thresholds are Trinity decisions.
 
 Maintain data evidence — ongoing. Source methodology and omissions common to all routes remain evidence limits. No API data extraction, migration, worker, query, or authentication test was executed while authoring this specification.
-
-
-## Refresh execution implementation — A23
-
-The task 3–4 implementation uses the worker ownership/deadline fields added by
-`0006_refresh_dispatch`. `execution_deadline_at` is set once at first claim;
-`refresh_steps.deadline_at` is set at stage start. Triggers reject later changes
-to those budgets and to a frozen end/window timestamp or started policy/start.
-Worker-created candidate coverage and latest discovery date must match the frozen
-run bounds. The registration reader also compares the saved national maximum.
-
-`worker_execution_ref` retains trusted host/owner, lock inode, child PID for
-observability, stage/step identity, operation count and last attempt, sanitized
-discovery evidence, validation attempt/step, original receipt hash and confirmed
-stop/completion flags. These fields are private worker custody, not public progress.
-The PID alone cannot authorize recovery: local exclusive lifetime-lock acquisition
-is required after supervisor/child shared locks have ended. Unknown ownership holds
-the slot. External operation details are fsynced in the local preparation journal
-before the database counter and child acknowledgment.
-
-Preparation stage mapping follows the integration contract: route extraction,
-`prepare/files`, `validate/candidate`, then `prepare/storage`. Unknown source totals
-remain null. Failure import preserves actual completed result rows and rejects the
-candidate; absent manifest/checks remain absent. A completed parent receipt retains
-custody for task 5 and does not independently grant readiness or publication.
-See [A23](../DECISIONS.md#a23--durable-refresh-dispatch-and-one-fenced-preparation-execution)
-and the [measured session](../ai/sessions/2026-10-04-refresh-dispatch-and-worker.md).
-
-
-### Registration budget persistence (0007)
-
-`refresh_runs.registration_deadline_at` is null until the first verification starts.
-It becomes the earlier of the original execution deadline and thirty seconds from
-that start. Once set it is immutable. `registration_attempts` starts at zero, cannot
-decrease and cannot exceed three. Each verification invocation consumes an attempt
-before remote I/O. Neither a recovered owner nor a new queue delivery resets it.
-Historical rows gain no invented verification timestamps or receipt evidence.
-
-After exclusive same-host lifetime-lock acquisition confirms termination, recovery
-increments the execution fence, replaces the owner and rebinds the same validation
-step to that fence. It preserves all original stage/execution/registration deadlines,
-validation attempt and receipt hash. Remote verification stays outside SQL; final
-registration rechecks authority and time, and writes evidence plus routing atomically.
-The active publication remains unchanged. See the
-[Task 5 verification record](../ai/sessions/2026-10-04-refresh-task5-receipt-routing.md).
