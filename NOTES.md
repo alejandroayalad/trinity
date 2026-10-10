@@ -1,5 +1,14 @@
 # Engineering Notes — Trinity
 
+## Function complexity audit — October 10, 2026
+
+[ME] Alayala asked for a function complexity audit table to study. [YOU] Cursor
+ran the supplied inventory script against HEAD with TypeScript AST coverage,
+wrote `evidence/trinity-function-audit-2026-10-10/` (CSV/HTML/JSON plus
+`STUDY.md` for production score ≥ 4), and added `scripts/trinity_function_audit.py`.
+3112 functions scored; 100 production functions are High / Very high. See the
+[session](ai/sessions/2026-10-10-function-complexity-audit.md).
+
 ## Local command shortcuts — October 7, 2026
 
 [ME] Alayala requested commands to run locally. [YOU] Codex added a root
